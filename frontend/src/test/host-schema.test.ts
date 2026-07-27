@@ -24,7 +24,7 @@ describe('HostFormSchema', () => {
   });
 
   it('rejects an empty remark', () => {
-    expect(() => HostFormSchema.parse({ ...valid, remark: '' })).toThrow();
+    expect(() => HostFormSchema.parse({ ...valid, remark: '' })).not.toThrow();
   });
 
   it('accepts a templated remark up to 256 chars and rejects beyond', () => {

@@ -177,25 +177,25 @@ func hostRemarkService(template string) (*SubService, *model.Inbound, model.Clie
 	return s, inbound, client
 }
 
-// With no template configured, genHostRemark falls back to the inbound remark,
-// host and email joined by "-".
+// With no template configured, a Host name is the config name. An empty Host
+// name falls back to the inbound's standard name.
 func TestGenHostRemark_NoTemplate_Fallback(t *testing.T) {
 	s, inbound, client := hostRemarkService("")
-	if got := s.genHostRemark(inbound, client, "Relay", ""); got != "DE-Relay-john@example.com" {
-		t.Fatalf("genHostRemark = %q, want %q", got, "DE-Relay-john@example.com")
+	if got := s.genHostRemark(inbound, client, "Relay", ""); got != "Relay-john@example.com" {
+		t.Fatalf("genHostRemark = %q, want %q", got, "Relay-john@example.com")
 	}
 	if got := s.genHostRemark(inbound, client, "", ""); got != "DE-john@example.com" {
 		t.Fatalf("genHostRemark (no host remark) = %q, want %q", got, "DE-john@example.com")
 	}
 }
 
-// In the body the template applies: {{INBOUND}} is always the inbound's remark
-// and {{HOST}} the host's own remark, so the two can be shown side by side.
+// With the normal global template, the Host name replaces the template's name
+// token so every Host produces a distinct config. Explicit {{HOST}} keeps
+// {{INBOUND}} available for templates that intentionally show both values.
 func TestGenHostRemark_GlobalTemplate(t *testing.T) {
-	// {{INBOUND}} resolves to the inbound remark regardless of the host remark.
 	s, inbound, client := hostRemarkService("{{INBOUND}} | {{TRAFFIC_LEFT}} | {{DAYS_LEFT}}d")
-	if got := s.genHostRemark(inbound, client, "CDN", ""); got != "DE | 80.00GB | 10d" {
-		t.Fatalf("global template ({{INBOUND}} = inbound) = %q", got)
+	if got := s.genHostRemark(inbound, client, "CDN", ""); got != "CDN | 80.00GB | 10d" {
+		t.Fatalf("global template (Host config name) = %q", got)
 	}
 	// {{INBOUND}} and {{HOST}} side by side show both, distinctly (#5443).
 	s2, inbound2, client2 := hostRemarkService("{{INBOUND}}|{{HOST}}|{{TRAFFIC_LEFT}}")
@@ -206,6 +206,23 @@ func TestGenHostRemark_GlobalTemplate(t *testing.T) {
 	s3, inbound3, client3 := hostRemarkService("{{HOST}}")
 	if got := s3.genHostRemark(inbound3, client3, "CDN", ""); got != "CDN" {
 		t.Fatalf("{{HOST}} token = %q, want CDN", got)
+	}
+}
+
+func TestGenHostRemark_DefaultTemplate_AllHostsKeepNames(t *testing.T) {
+	s, inbound, client := hostRemarkService("{{INBOUND}}-{{EMAIL}}|📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D")
+	first := s.genHostRemark(inbound, client, "Germany IPv4", "ws")
+	second := s.genHostRemark(inbound, client, "Germany IPv6", "ws")
+	third := s.genHostRemark(inbound, client, "", "ws")
+
+	if first != "Germany IPv4-john@example.com|📊80.00GB|⏳10D" {
+		t.Fatalf("first host = %q", first)
+	}
+	if second != "Germany IPv6" {
+		t.Fatalf("second host must keep its configured name, got %q", second)
+	}
+	if third != "DE" {
+		t.Fatalf("empty host name must use inbound fallback, got %q", third)
 	}
 }
 

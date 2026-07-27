@@ -287,7 +287,7 @@ type HostGroup struct {
 	Hosts      []string `json:"hosts" validate:"omitempty"`
 
 	SortOrder              int      `json:"sortOrder"`
-	Remark                 string   `json:"remark" validate:"required,max=256"`
+	Remark                 string   `json:"remark" validate:"omitempty,max=256"`
 	ServerDescription      string   `json:"serverDescription" validate:"omitempty,max=64"`
 	IsDisabled             bool     `json:"isDisabled"`
 	IsHidden               bool     `json:"isHidden"`

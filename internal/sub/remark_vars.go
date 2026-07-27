@@ -599,13 +599,48 @@ func (s *SubService) genTemplatedRemark(inbound *model.Inbound, client model.Cli
 	return ctx.configName()
 }
 
-// genHostRemark builds one host endpoint's remark for a specific client. With a
-// remark template set it is template-driven (body shows the full template on the
-// first link and the name-only part thereafter; displays render the name-only
-// part). With no template it falls back to inbound, host and email joined by "-".
+// genHostRemark builds one host endpoint's display name for a specific client.
+// A non-empty Host remark is the config name for that endpoint. The global
+// template still supplies optional email/usage/status suffixes. When a template
+// does not explicitly contain {{HOST}}, its {{INBOUND}} name token is replaced
+// by {{HOST}} for host endpoints only. An empty Host remark falls back to the
+// standard inbound-based name/template.
 func (s *SubService) genHostRemark(inbound *model.Inbound, client model.Client, hostRemark string, transport string) string {
-	if s.remarkTemplate != "" {
-		return s.genTemplatedRemark(inbound, client, hostRemark, transport)
+	hostRemark = strings.TrimSpace(hostRemark)
+	if hostRemark == "" {
+		if s.remarkTemplate != "" {
+			return s.genTemplatedRemark(inbound, client, "", transport)
+		}
+		return fallbackRemark(inbound.Remark, client.Email)
 	}
-	return fallbackRemark(inbound.Remark, hostRemark, client.Email)
+
+	if s.remarkTemplate == "" {
+		return fallbackRemark(hostRemark, client.Email)
+	}
+
+	ctx := remarkContext{
+		client:     client,
+		stats:      s.statsForClient(inbound, client),
+		inbound:    inbound,
+		hostRemark: hostRemark,
+		transport:  transport,
+		security:   inboundSecurity(inbound),
+	}
+	var tmpl string
+	if s.subscriptionBody {
+		tmpl = s.effectiveTemplate(client.Email)
+	} else {
+		tmpl = filterRemarkTemplate(translateUISingleBrackets(s.remarkTemplate), displayRemoveTokens)
+	}
+	if !strings.Contains(tmpl, "{{HOST}}") {
+		if strings.Contains(tmpl, "{{INBOUND}}") {
+			tmpl = strings.ReplaceAll(tmpl, "{{INBOUND}}", "{{HOST}}")
+		} else {
+			tmpl = "{{HOST}}|" + tmpl
+		}
+	}
+	if out := expandRemarkVars(tmpl, ctx); strings.TrimSpace(out) != "" {
+		return out
+	}
+	return hostRemark
 }

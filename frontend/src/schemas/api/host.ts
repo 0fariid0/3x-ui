@@ -14,7 +14,7 @@ export const HostFormSchema = z.object({
   id: z.number().optional(),
   inboundId: z.number().int().positive(),
   sortOrder: z.number().int().default(0),
-  remark: z.string().trim().min(1).max(256),
+  remark: z.string().trim().max(256).default(''),
   serverDescription: z.string().max(64).default(''),
   isDisabled: z.boolean().default(false),
   isHidden: z.boolean().default(false),
