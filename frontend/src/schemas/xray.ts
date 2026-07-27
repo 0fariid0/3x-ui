@@ -40,6 +40,10 @@ export const XrayConfigPayloadSchema = z.object({
   inboundTags: z.array(z.string()).optional(),
   clientReverseTags: z.array(z.string()).optional(),
   outboundTestUrl: z.string().optional(),
+  scheduledRestartEnable: z.boolean().optional(),
+  scheduledRestartInterval: z.number().int().min(1).optional(),
+  scheduledRestartUnit: z.enum(['minutes', 'hours', 'days']).optional(),
+  scheduledRestartPanel: z.boolean().optional(),
   // Subscription outbounds are injected at runtime (not persisted in xraySetting).
   // They are provided here so the UI can display them and use their tags in
   // balancers / routing rules.

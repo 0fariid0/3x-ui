@@ -122,6 +122,10 @@ var defaultValueMap = map[string]string{
 	"externalTrafficInformEnable": "false",
 	"externalTrafficInformURI":    "",
 	"restartXrayOnClientDisable":  "true",
+	"scheduledRestartEnable":      "false",
+	"scheduledRestartInterval":    "24",
+	"scheduledRestartUnit":        "hours",
+	"scheduledRestartPanel":       "false",
 	"xrayOutboundTestUrl":         "https://www.google.com/generate_204",
 	"panelOutbound":               "",
 	"devChannelEnable":            "false",
@@ -915,6 +919,38 @@ func (s *SettingService) GetRestartXrayOnClientDisable() (bool, error) {
 
 func (s *SettingService) SetRestartXrayOnClientDisable(value bool) error {
 	return s.setBool("restartXrayOnClientDisable", value)
+}
+
+func (s *SettingService) GetScheduledRestartEnable() (bool, error) {
+	return s.getBool("scheduledRestartEnable")
+}
+
+func (s *SettingService) SetScheduledRestartEnable(value bool) error {
+	return s.setBool("scheduledRestartEnable", value)
+}
+
+func (s *SettingService) GetScheduledRestartInterval() (int, error) {
+	return s.getInt("scheduledRestartInterval")
+}
+
+func (s *SettingService) SetScheduledRestartInterval(value int) error {
+	return s.setInt("scheduledRestartInterval", value)
+}
+
+func (s *SettingService) GetScheduledRestartUnit() (string, error) {
+	return s.getString("scheduledRestartUnit")
+}
+
+func (s *SettingService) SetScheduledRestartUnit(value string) error {
+	return s.setString("scheduledRestartUnit", value)
+}
+
+func (s *SettingService) GetScheduledRestartPanel() (bool, error) {
+	return s.getBool("scheduledRestartPanel")
+}
+
+func (s *SettingService) SetScheduledRestartPanel(value bool) error {
+	return s.setBool("scheduledRestartPanel", value)
 }
 
 // GetDevChannelEnable reports whether the panel self-update tracks the rolling

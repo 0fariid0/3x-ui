@@ -5,6 +5,14 @@ This repository is an independently maintained modified version of 3x-ui.
 Base version: v3.5.0
 Repository: https://github.com/0fariid0/3x-ui
 
+## v3.5.3
+
+- Removed the @XrayUI Telegram link from the dashboard.
+- Removed the Sanaei documentation and donation buttons from the sidebar.
+- Added configurable scheduled restarts under Xray Settings > Basic.
+- Supports minute, hour, and day intervals.
+- Restarts Xray Core by default, with an optional full x-ui panel restart.
+
 ## v3.5.2
 
 - Host config names are now complete per-Host templates and are never combined with another name.

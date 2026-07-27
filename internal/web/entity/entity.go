@@ -90,6 +90,10 @@ type AllSetting struct {
 	ExternalTrafficInformEnable bool   `json:"externalTrafficInformEnable" form:"externalTrafficInformEnable"`
 	ExternalTrafficInformURI    string `json:"externalTrafficInformURI" form:"externalTrafficInformURI"`
 	RestartXrayOnClientDisable  bool   `json:"restartXrayOnClientDisable" form:"restartXrayOnClientDisable"`
+	ScheduledRestartEnable      bool   `json:"scheduledRestartEnable" form:"scheduledRestartEnable"`
+	ScheduledRestartInterval    int    `json:"scheduledRestartInterval" form:"scheduledRestartInterval"`
+	ScheduledRestartUnit        string `json:"scheduledRestartUnit" form:"scheduledRestartUnit"`
+	ScheduledRestartPanel       bool   `json:"scheduledRestartPanel" form:"scheduledRestartPanel"`
 	SubEncrypt                  bool   `json:"subEncrypt" form:"subEncrypt"`
 	SubURI                      string `json:"subURI" form:"subURI"`
 	SubJsonPath                 string `json:"subJsonPath" form:"subJsonPath"`
@@ -172,6 +176,16 @@ func (s *AllSetting) CheckValid() error {
 
 	if s.SubPort <= 0 || s.SubPort > math.MaxUint16 {
 		return common.NewError("Sub port is not a valid port:", s.SubPort)
+	}
+
+	if s.ScheduledRestartInterval == 0 {
+		s.ScheduledRestartInterval = 24
+	}
+	if s.ScheduledRestartUnit == "" {
+		s.ScheduledRestartUnit = ScheduledRestartUnitHours
+	}
+	if _, err := ScheduledRestartDuration(s.ScheduledRestartInterval, s.ScheduledRestartUnit); err != nil {
+		return common.NewError("scheduled restart setting is invalid:", err)
 	}
 
 	if (s.SubPort == s.WebPort) && listenAddressesConflict(s.WebListen, s.SubListen) {

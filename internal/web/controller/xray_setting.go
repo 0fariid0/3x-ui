@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/entity"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service/integration"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service/outbound"
@@ -101,11 +102,19 @@ func (a *XraySettingController) getXraySetting(c *gin.Context) {
 	if outboundTestUrl == "" {
 		outboundTestUrl = "https://www.google.com/generate_204"
 	}
+	scheduledRestartEnable, _ := a.SettingService.GetScheduledRestartEnable()
+	scheduledRestartInterval, _ := a.SettingService.GetScheduledRestartInterval()
+	scheduledRestartUnit, _ := a.SettingService.GetScheduledRestartUnit()
+	scheduledRestartPanel, _ := a.SettingService.GetScheduledRestartPanel()
 	xrayResponse := map[string]any{
-		"xraySetting":       json.RawMessage(xraySetting),
-		"inboundTags":       json.RawMessage(inboundTags),
-		"clientReverseTags": json.RawMessage(clientReverseTags),
-		"outboundTestUrl":   outboundTestUrl,
+		"xraySetting":              json.RawMessage(xraySetting),
+		"inboundTags":              json.RawMessage(inboundTags),
+		"clientReverseTags":        json.RawMessage(clientReverseTags),
+		"outboundTestUrl":          outboundTestUrl,
+		"scheduledRestartEnable":   scheduledRestartEnable,
+		"scheduledRestartInterval": scheduledRestartInterval,
+		"scheduledRestartUnit":     scheduledRestartUnit,
+		"scheduledRestartPanel":    scheduledRestartPanel,
 	}
 
 	// Surface subscription outbounds (and their tags) so the frontend can:
@@ -142,6 +151,45 @@ func (a *XraySettingController) updateSetting(c *gin.Context) {
 	if err := a.SettingService.SetXrayOutboundTestUrl(outboundTestUrl); err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
 		return
+	}
+
+	if rawEnable, present := c.GetPostForm("scheduledRestartEnable"); present {
+		enable, parseErr := strconv.ParseBool(rawEnable)
+		if parseErr != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), parseErr)
+			return
+		}
+		interval, parseErr := strconv.Atoi(c.PostForm("scheduledRestartInterval"))
+		if parseErr != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), parseErr)
+			return
+		}
+		unit := c.PostForm("scheduledRestartUnit")
+		if _, validErr := entity.ScheduledRestartDuration(interval, unit); validErr != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), validErr)
+			return
+		}
+		panelRestart, parseErr := strconv.ParseBool(c.PostForm("scheduledRestartPanel"))
+		if parseErr != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), parseErr)
+			return
+		}
+		if err := a.SettingService.SetScheduledRestartInterval(interval); err != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
+			return
+		}
+		if err := a.SettingService.SetScheduledRestartUnit(unit); err != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
+			return
+		}
+		if err := a.SettingService.SetScheduledRestartPanel(panelRestart); err != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
+			return
+		}
+		if err := a.SettingService.SetScheduledRestartEnable(enable); err != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
+			return
+		}
 	}
 	// Only reconcile a running core; a manually stopped xray stays stopped.
 	if a.XrayService.IsXrayRunning() {

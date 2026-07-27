@@ -2012,7 +2012,18 @@
         "poolSize": "Pool Size"
       },
       "defaultOutbound": "Default Outbound",
-      "defaultOutboundDesc": "Traffic that does not match any routing rule uses this outbound (Xray uses the first outbound in the list)."
+      "defaultOutboundDesc": "Traffic that does not match any routing rule uses this outbound (Xray uses the first outbound in the list).",
+      "scheduledRestart": "Scheduled restart",
+      "scheduledRestartDesc": "Automatically restart Xray on a recurring schedule.",
+      "scheduledRestartInterval": "Restart every",
+      "scheduledRestartIntervalDesc": "The countdown starts after saving or after the panel starts.",
+      "scheduledRestartPanel": "Restart the complete x-ui service",
+      "scheduledRestartPanelDesc": "Off: restart only Xray Core. On: restart the complete panel service, equivalent to x-ui restart.",
+      "scheduledRestartXrayHint": "Only Xray Core will restart. The panel remains online.",
+      "scheduledRestartPanelHint": "The complete x-ui panel service will restart and the web panel may be unavailable briefly.",
+      "restartUnitMinutes": "Minutes",
+      "restartUnitHours": "Hours",
+      "restartUnitDays": "Days"
     }
   },
   "tgbot": {

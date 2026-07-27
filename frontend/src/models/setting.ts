@@ -52,6 +52,10 @@ export class AllSetting {
   externalTrafficInformEnable = false;
   externalTrafficInformURI = '';
   restartXrayOnClientDisable = true;
+  scheduledRestartEnable = false;
+  scheduledRestartInterval = 24;
+  scheduledRestartUnit: 'minutes' | 'hours' | 'days' = 'hours';
+  scheduledRestartPanel = false;
   subCertFile = '';
   subKeyFile = '';
   subUpdates = 12;

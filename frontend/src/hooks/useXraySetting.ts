@@ -30,6 +30,7 @@ export function isUdpOutbound(outbound: unknown): boolean {
 }
 
 export type OutboundTestMode = 'tcp' | 'http' | 'real';
+export type ScheduledRestartUnit = 'minutes' | 'hours' | 'days';
 
 export type { OutboundTrafficRow, OutboundTestResult };
 
@@ -56,6 +57,14 @@ export interface UseXraySettingResult {
   setTemplateSettings: SetTemplate;
   outboundTestUrl: string;
   setOutboundTestUrl: (v: string) => void;
+  scheduledRestartEnable: boolean;
+  setScheduledRestartEnable: (v: boolean) => void;
+  scheduledRestartInterval: number;
+  setScheduledRestartInterval: (v: number) => void;
+  scheduledRestartUnit: ScheduledRestartUnit;
+  setScheduledRestartUnit: (v: ScheduledRestartUnit) => void;
+  scheduledRestartPanel: boolean;
+  setScheduledRestartPanel: (v: boolean) => void;
   inboundTags: string[];
   clientReverseTags: string[];
   subscriptionOutbounds: unknown[];
@@ -129,6 +138,10 @@ export function useXraySetting(): UseXraySettingResult {
   const [xraySetting, setXraySettingState] = useState('');
   const [templateSettings, setTemplateSettingsState] = useState<XraySettingsValue | null>(null);
   const [outboundTestUrl, setOutboundTestUrlState] = useState(DEFAULT_TEST_URL);
+  const [scheduledRestartEnable, setScheduledRestartEnable] = useState(false);
+  const [scheduledRestartInterval, setScheduledRestartInterval] = useState(24);
+  const [scheduledRestartUnit, setScheduledRestartUnit] = useState<ScheduledRestartUnit>('hours');
+  const [scheduledRestartPanel, setScheduledRestartPanel] = useState(false);
   const [inboundTags, setInboundTags] = useState<string[]>([]);
   const [clientReverseTags, setClientReverseTags] = useState<string[]>([]);
   const [subscriptionOutbounds, setSubscriptionOutbounds] = useState<unknown[]>([]);
@@ -141,14 +154,22 @@ export function useXraySetting(): UseXraySettingResult {
 
   const oldXraySettingRef = useRef('');
   const oldOutboundTestUrlRef = useRef('');
+  const oldScheduledRestartRef = useRef('');
   const syncingRef = useRef(false);
   const xraySettingRef = useRef('');
   const outboundTestUrlRef = useRef(outboundTestUrl);
+  const scheduledRestartRef = useRef('');
   const templateSettingsRef = useRef<XraySettingsValue | null>(null);
   const subscriptionOutboundsRef = useRef<unknown[]>([]);
 
   xraySettingRef.current = xraySetting;
   outboundTestUrlRef.current = outboundTestUrl;
+  scheduledRestartRef.current = JSON.stringify({
+    enabled: scheduledRestartEnable,
+    interval: scheduledRestartInterval,
+    unit: scheduledRestartUnit,
+    panel: scheduledRestartPanel,
+  });
   templateSettingsRef.current = templateSettings;
   subscriptionOutboundsRef.current = subscriptionOutbounds;
 
@@ -170,6 +191,20 @@ export function useXraySetting(): UseXraySettingResult {
     const nextUrl = obj.outboundTestUrl || DEFAULT_TEST_URL;
     setOutboundTestUrlState(nextUrl);
     oldOutboundTestUrlRef.current = nextUrl;
+    const nextScheduledEnable = !!obj.scheduledRestartEnable;
+    const nextScheduledInterval = obj.scheduledRestartInterval || 24;
+    const nextScheduledUnit = obj.scheduledRestartUnit || 'hours';
+    const nextScheduledPanel = !!obj.scheduledRestartPanel;
+    setScheduledRestartEnable(nextScheduledEnable);
+    setScheduledRestartInterval(nextScheduledInterval);
+    setScheduledRestartUnit(nextScheduledUnit);
+    setScheduledRestartPanel(nextScheduledPanel);
+    oldScheduledRestartRef.current = JSON.stringify({
+      enabled: nextScheduledEnable,
+      interval: nextScheduledInterval,
+      unit: nextScheduledUnit,
+      panel: nextScheduledPanel,
+    });
     setSaveDisabled(true);
   }, [configQuery.data]);
 
@@ -221,16 +256,27 @@ export function useXraySetting(): UseXraySettingResult {
     mutationFn: async () => {
       const sentXraySetting = xraySettingRef.current;
       const sentTestUrl = outboundTestUrlRef.current || DEFAULT_TEST_URL;
+      const sentScheduled = JSON.parse(scheduledRestartRef.current || '{}') as {
+        enabled?: boolean;
+        interval?: number;
+        unit?: ScheduledRestartUnit;
+        panel?: boolean;
+      };
       const msg = await HttpUtil.post('/panel/api/xray/update', {
         xraySetting: sentXraySetting,
         outboundTestUrl: sentTestUrl,
+        scheduledRestartEnable: !!sentScheduled.enabled,
+        scheduledRestartInterval: sentScheduled.interval || 24,
+        scheduledRestartUnit: sentScheduled.unit || 'hours',
+        scheduledRestartPanel: !!sentScheduled.panel,
       });
-      return { msg, sentXraySetting, sentTestUrl };
+      return { msg, sentXraySetting, sentTestUrl, sentScheduled };
     },
-    onSuccess: ({ msg, sentXraySetting, sentTestUrl }) => {
+    onSuccess: ({ msg, sentXraySetting, sentTestUrl, sentScheduled }) => {
       if (!msg?.success) return;
       oldXraySettingRef.current = sentXraySetting;
       oldOutboundTestUrlRef.current = sentTestUrl;
+      oldScheduledRestartRef.current = JSON.stringify(sentScheduled);
       setSaveDisabled(true);
       queryClient.invalidateQueries({ queryKey: keys.xray.config() });
     },
@@ -429,7 +475,8 @@ export function useXraySetting(): UseXraySettingResult {
     const timer = window.setInterval(() => {
       const dirtyXray = oldXraySettingRef.current !== xraySettingRef.current;
       const dirtyUrl = oldOutboundTestUrlRef.current !== outboundTestUrlRef.current;
-      setSaveDisabled(!(dirtyXray || dirtyUrl));
+      const dirtyScheduled = oldScheduledRestartRef.current !== scheduledRestartRef.current;
+      setSaveDisabled(!(dirtyXray || dirtyUrl || dirtyScheduled));
     }, DIRTY_POLL_MS);
     return () => window.clearInterval(timer);
   }, []);
@@ -448,6 +495,14 @@ export function useXraySetting(): UseXraySettingResult {
       setTemplateSettings,
       outboundTestUrl,
       setOutboundTestUrl,
+      scheduledRestartEnable,
+      setScheduledRestartEnable,
+      scheduledRestartInterval,
+      setScheduledRestartInterval,
+      scheduledRestartUnit,
+      setScheduledRestartUnit,
+      scheduledRestartPanel,
+      setScheduledRestartPanel,
       inboundTags,
       clientReverseTags,
       subscriptionOutbounds,
@@ -476,6 +531,10 @@ export function useXraySetting(): UseXraySettingResult {
       setTemplateSettings,
       outboundTestUrl,
       setOutboundTestUrl,
+      scheduledRestartEnable,
+      scheduledRestartInterval,
+      scheduledRestartUnit,
+      scheduledRestartPanel,
       inboundTags,
       clientReverseTags,
       subscriptionOutbounds,

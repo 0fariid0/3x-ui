@@ -34,7 +34,6 @@ import {
   DatabaseOutlined,
   ForkOutlined,
   CopyOutlined,
-  TelegramFilled,
 } from '@ant-design/icons';
 
 import { HttpUtil, SizeFormatter, TimeFormatter, ClipboardManager, FileManager } from '@/utils';
@@ -139,9 +138,6 @@ export default function IndexPage() {
     if (msg?.success && msg.obj) setPanelUpdateInfo(msg.obj);
   }
 
-  function openTelegram() {
-    window.open('https://t.me/XrayUI', '_blank', 'noopener,noreferrer');
-  }
 
   async function openConfig() {
     setLoading(true);
@@ -245,10 +241,6 @@ export default function IndexPage() {
                       }
                       hoverable
                       actions={[
-                        <Space className="action" key="tg" role="button" tabIndex={0} aria-label="@XrayUI" onClick={openTelegram} onKeyDown={activateOnKey(openTelegram)}>
-                          <TelegramFilled aria-hidden="true" />
-                          {!isMobile && <span>@XrayUI</span>}
-                        </Space>,
                         <Space
                           key="panel-version"
                           className={`action ${panelUpdateInfo.updateAvailable ? 'action-update' : ''}`}

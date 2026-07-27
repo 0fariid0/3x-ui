@@ -284,16 +284,17 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 // node/xray state is unchanged, and export per-job duration/skipped/error
 // counters.
 const (
-	cadenceXrayRunning   = "@every 1s"
-	cadenceXrayRestart   = "@every 30s"
-	cadenceXrayTraffic   = "@every 5s"
-	cadenceMtproto       = "@every 10s"
-	cadenceClientIPScan  = "@every 10s"
-	cadenceNodeHeartbeat = "@every 5s"
-	cadenceNodeTraffic   = "@every 5s"
-	cadenceOutboundSub   = "@every 5m"
-	cadenceXrayLogPrune  = "@every 10m"
-	cadenceCheckHash     = "@every 2m"
+	cadenceXrayRunning      = "@every 1s"
+	cadenceXrayRestart      = "@every 30s"
+	cadenceScheduledRestart = "@every 15s"
+	cadenceXrayTraffic      = "@every 5s"
+	cadenceMtproto          = "@every 10s"
+	cadenceClientIPScan     = "@every 10s"
+	cadenceNodeHeartbeat    = "@every 5s"
+	cadenceNodeTraffic      = "@every 5s"
+	cadenceOutboundSub      = "@every 5m"
+	cadenceXrayLogPrune     = "@every 10m"
+	cadenceCheckHash        = "@every 2m"
 	// cpu.Percent samples over a full minute (blocking), so a finer cadence just
 	// stacks overlapping samplers; subscribers rate-limit alerts to 1/min anyway.
 	cadenceCPUAlarm    = "@every 1m"
@@ -315,6 +316,40 @@ func (s *Server) startTask(restartXray bool) {
 	// Check if xray needs to be restarted every 30 seconds
 	_, _ = s.cron.AddFunc(cadenceXrayRestart, func() {
 		s.xrayService.ApplyPendingRestart()
+	})
+
+	scheduledRestart := &scheduledRestartState{}
+	_, _ = s.cron.AddFunc(cadenceScheduledRestart, func() {
+		settings, err := s.settingService.GetAllSetting()
+		if err != nil {
+			logger.Warning("scheduled restart: unable to read settings:", err)
+			return
+		}
+		due, err := scheduledRestart.shouldRun(
+			time.Now(),
+			settings.ScheduledRestartEnable,
+			settings.ScheduledRestartInterval,
+			settings.ScheduledRestartUnit,
+			settings.ScheduledRestartPanel,
+		)
+		if err != nil {
+			logger.Warning("scheduled restart: invalid settings:", err)
+			return
+		}
+		if !due {
+			return
+		}
+		if settings.ScheduledRestartPanel {
+			logger.Info("scheduled restart: restarting x-ui panel service")
+			if err := (&panel.PanelService{}).RestartPanel(time.Second); err != nil {
+				logger.Warning("scheduled panel restart failed:", err)
+			}
+			return
+		}
+		logger.Info("scheduled restart: restarting Xray core")
+		if err := s.xrayService.RestartXray(true); err != nil {
+			logger.Warning("scheduled Xray restart failed:", err)
+		}
 	})
 
 	go func() {

@@ -1894,7 +1894,18 @@
         "poolSize": "اندازه استخر"
       },
       "defaultOutbound": "خروجی پیش‌فرض",
-      "defaultOutboundDesc": "ترافیکی که با هیچ قانون مسیریابی جور نشود از این خروجی استفاده می‌کند (اولین خروجی در فهرست)."
+      "defaultOutboundDesc": "ترافیکی که با هیچ قانون مسیریابی جور نشود از این خروجی استفاده می‌کند (اولین خروجی در فهرست).",
+      "scheduledRestart": "راه‌اندازی مجدد زمان‌بندی‌شده",
+      "scheduledRestartDesc": "هسته Xray را به‌صورت خودکار و در بازه دلخواه راه‌اندازی مجدد می‌کند.",
+      "scheduledRestartInterval": "تکرار راه‌اندازی مجدد",
+      "scheduledRestartIntervalDesc": "شمارش زمان پس از ذخیره تنظیمات یا اجرای پنل شروع می‌شود.",
+      "scheduledRestartPanel": "راه‌اندازی مجدد کامل سرویس x-ui",
+      "scheduledRestartPanelDesc": "خاموش: فقط Xray ری‌استارت می‌شود. روشن: کل سرویس پنل مشابه دستور x-ui restart ری‌استارت می‌شود.",
+      "scheduledRestartXrayHint": "فقط هسته Xray راه‌اندازی مجدد می‌شود و پنل در دسترس باقی می‌ماند.",
+      "scheduledRestartPanelHint": "کل سرویس x-ui راه‌اندازی مجدد می‌شود و ممکن است پنل چند ثانیه در دسترس نباشد.",
+      "restartUnitMinutes": "دقیقه",
+      "restartUnitHours": "ساعت",
+      "restartUnitDays": "روز"
     },
     "hosts": {
       "addHost": "افزودن میزبان",

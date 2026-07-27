@@ -14,7 +14,7 @@ import { HappyEyeballsSchema } from '@/schemas/protocols/stream/sockopt';
 import { SettingListItem } from '@/components/ui';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { catTabLabel } from '@/pages/settings/catTabLabel';
-import type { XraySettingsValue, SetTemplate } from '@/hooks/useXraySetting';
+import type { XraySettingsValue, SetTemplate, ScheduledRestartUnit } from '@/hooks/useXraySetting';
 import './BasicsTab.css';
 
 import {
@@ -30,6 +30,14 @@ interface BasicsTabProps {
   setTemplateSettings: SetTemplate;
   outboundTestUrl: string;
   onChangeOutboundTestUrl: (v: string) => void;
+  scheduledRestartEnable: boolean;
+  onChangeScheduledRestartEnable: (v: boolean) => void;
+  scheduledRestartInterval: number;
+  onChangeScheduledRestartInterval: (v: number) => void;
+  scheduledRestartUnit: ScheduledRestartUnit;
+  onChangeScheduledRestartUnit: (v: ScheduledRestartUnit) => void;
+  scheduledRestartPanel: boolean;
+  onChangeScheduledRestartPanel: (v: boolean) => void;
   onResetDefault: () => void;
 }
 
@@ -38,6 +46,14 @@ export default function BasicsTab({
   setTemplateSettings,
   outboundTestUrl,
   onChangeOutboundTestUrl,
+  scheduledRestartEnable,
+  onChangeScheduledRestartEnable,
+  scheduledRestartInterval,
+  onChangeScheduledRestartInterval,
+  scheduledRestartUnit,
+  onChangeScheduledRestartUnit,
+  scheduledRestartPanel,
+  onChangeScheduledRestartPanel,
   onResetDefault,
 }: BasicsTabProps) {
   const { t } = useTranslation();
@@ -265,6 +281,65 @@ export default function BasicsTab({
               />
             }
           />
+          <SettingListItem
+            title={t('pages.xray.scheduledRestart')}
+            description={t('pages.xray.scheduledRestartDesc')}
+            paddings="small"
+            control={
+              <Switch
+                checked={scheduledRestartEnable}
+                onChange={onChangeScheduledRestartEnable}
+              />
+            }
+          />
+          {scheduledRestartEnable && (
+            <>
+              <SettingListItem
+                title={t('pages.xray.scheduledRestartInterval')}
+                description={t('pages.xray.scheduledRestartIntervalDesc')}
+                paddings="small"
+                control={
+                  <Space.Compact block>
+                    <InputNumber
+                      min={1}
+                      value={scheduledRestartInterval}
+                      style={{ width: '60%' }}
+                      onChange={(value) => onChangeScheduledRestartInterval(Math.max(1, Number(value) || 1))}
+                    />
+                    <Select
+                      value={scheduledRestartUnit}
+                      style={{ width: '40%' }}
+                      options={[
+                        { value: 'minutes', label: t('pages.xray.restartUnitMinutes') },
+                        { value: 'hours', label: t('pages.xray.restartUnitHours') },
+                        { value: 'days', label: t('pages.xray.restartUnitDays') },
+                      ]}
+                      onChange={(value) => onChangeScheduledRestartUnit(value as ScheduledRestartUnit)}
+                    />
+                  </Space.Compact>
+                }
+              />
+              <SettingListItem
+                title={t('pages.xray.scheduledRestartPanel')}
+                description={t('pages.xray.scheduledRestartPanelDesc')}
+                paddings="small"
+                control={
+                  <Switch
+                    checked={scheduledRestartPanel}
+                    onChange={onChangeScheduledRestartPanel}
+                  />
+                }
+              />
+              <Alert
+                type="info"
+                showIcon
+                className="mb-12 hint-alert"
+                title={scheduledRestartPanel
+                  ? t('pages.xray.scheduledRestartPanelHint')
+                  : t('pages.xray.scheduledRestartXrayHint')}
+              />
+            </>
+          )}
         </>
       ),
     },

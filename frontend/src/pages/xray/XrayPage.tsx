@@ -57,6 +57,14 @@ export default function XrayPage() {
     setTemplateSettings,
     outboundTestUrl,
     setOutboundTestUrl,
+    scheduledRestartEnable,
+    setScheduledRestartEnable,
+    scheduledRestartInterval,
+    setScheduledRestartInterval,
+    scheduledRestartUnit,
+    setScheduledRestartUnit,
+    scheduledRestartPanel,
+    setScheduledRestartPanel,
     inboundTags,
     clientReverseTags,
     subscriptionOutbounds,
@@ -298,6 +306,14 @@ export default function XrayPage() {
             setTemplateSettings={setTemplateSettings}
             outboundTestUrl={outboundTestUrl}
             onChangeOutboundTestUrl={setOutboundTestUrl}
+            scheduledRestartEnable={scheduledRestartEnable}
+            onChangeScheduledRestartEnable={setScheduledRestartEnable}
+            scheduledRestartInterval={scheduledRestartInterval}
+            onChangeScheduledRestartInterval={setScheduledRestartInterval}
+            scheduledRestartUnit={scheduledRestartUnit}
+            onChangeScheduledRestartUnit={setScheduledRestartUnit}
+            scheduledRestartPanel={scheduledRestartPanel}
+            onChangeScheduledRestartPanel={setScheduledRestartPanel}
             onResetDefault={resetToDefault}
           />
         );
