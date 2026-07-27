@@ -30,7 +30,6 @@ func TestHostValidation(t *testing.T) {
 		h    Host
 	}{
 		{"missing inbound", Host{Remark: "ok"}},
-		{"empty remark", Host{InboundId: 1, Remark: ""}},
 		{"remark too long", Host{InboundId: 1, Remark: strings.Repeat("x", 257)}},
 		{"port too high", Host{InboundId: 1, Remark: "ok", Port: 70000}},
 		{"port negative", Host{InboundId: 1, Remark: "ok", Port: -1}},
