@@ -156,7 +156,7 @@ func TestSubscriptionLinkOptionsAndExclusions(t *testing.T) {
 	if !strings.HasPrefix(disabledKey, "host:vip-pool:") {
 		t.Fatalf("unstable host key: %q", disabledKey)
 	}
-	if err := svc.SetSubscriptionLinkExclusionsByEmail(rec.Email, []string{disabledKey}); err != nil {
+	if err := svc.SetSubscriptionLinkExclusionsByEmail(rec.Email, []string{disabledKey, options[2].Key}); err != nil {
 		t.Fatal(err)
 	}
 	options, err = svc.GetSubscriptionLinkOptionsByEmail(rec.Email, nil)

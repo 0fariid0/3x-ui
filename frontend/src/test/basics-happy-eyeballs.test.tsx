@@ -27,6 +27,26 @@ describe('BasicsTab malformed happyEyeballs', () => {
           setTemplateSettings={vi.fn()}
           outboundTestUrl=""
           onChangeOutboundTestUrl={vi.fn()}
+          scheduledRestartEnable={false}
+          onChangeScheduledRestartEnable={vi.fn()}
+          scheduledRestartInterval={1}
+          onChangeScheduledRestartInterval={vi.fn()}
+          scheduledRestartUnit="hours"
+          onChangeScheduledRestartUnit={vi.fn()}
+          scheduledRestartPanel={false}
+          onChangeScheduledRestartPanel={vi.fn()}
+          scheduledRestartTimezone="local"
+          onChangeScheduledRestartTimezone={vi.fn()}
+          xrayHealthEnable={false}
+          onChangeXrayHealthEnable={vi.fn()}
+          xrayHealthFailureThreshold={2}
+          onChangeXrayHealthFailureThreshold={vi.fn()}
+          xrayHealthRestartCooldown={5}
+          onChangeXrayHealthRestartCooldown={vi.fn()}
+          xrayHealthMaxRestarts={3}
+          onChangeXrayHealthMaxRestarts={vi.fn()}
+          xrayHealthWindowMinutes={30}
+          onChangeXrayHealthWindowMinutes={vi.fn()}
           onResetDefault={vi.fn()}
         />,
       ),

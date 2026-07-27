@@ -21,10 +21,6 @@ type hostEndpointSelection struct {
 	endpoints []map[string]any
 }
 
-func (s *SubService) hostEndpoints(inbound *model.Inbound, format string) []map[string]any {
-	return s.hostEndpointsForClient(inbound, format, 0).endpoints
-}
-
 // hostEndpointsForClient returns the managed endpoints visible to one client.
 // managed remains true when hosts exist but all were disabled for the client;
 // callers use that distinction to avoid falling back to the inbound's default

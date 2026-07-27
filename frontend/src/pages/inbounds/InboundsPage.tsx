@@ -289,7 +289,7 @@ export default function InboundsPage() {
   }, [openText, t]);
 
   const exportInboundSubs = useCallback((dbInbound: DBInbound) => {
-    const settings = coerceInboundJsonField(dbInbound.settings) as { clients?: { subId?: string }[] };
+    const settings = coerceInboundJsonField(dbInbound.settings) as { clients?: { subId?: string; email?: string }[] };
     const clients = settings.clients || [];
     const subLinks: string[] = [];
     for (const c of clients) {
@@ -316,7 +316,7 @@ export default function InboundsPage() {
     );
     const out: string[] = [];
     for (const ib of hydrated) {
-      const settings = coerceInboundJsonField(ib.settings) as { clients?: { subId?: string }[] };
+      const settings = coerceInboundJsonField(ib.settings) as { clients?: { subId?: string; email?: string }[] };
       const clients = settings.clients || [];
       for (const c of clients) {
         if (c.subId && subSettings.subURI) {

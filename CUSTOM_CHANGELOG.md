@@ -1,5 +1,13 @@
 # Custom Changelog
 
+## v3.5.12
+
+- Removed the Docker GitHub Actions workflow.
+- Fixed Windows release compilation by using the platform-specific detached-process helper.
+- Fixed golangci findings in scheduled panel restart and subscription-link selection code.
+- Fixed frontend type checking for restart/health props, client email exports, and optional template selection.
+- Corrected the per-client subscription visibility regression test so globally disabled hosts stay off unless explicitly enabled.
+
 This repository is an independently maintained modified version of 3x-ui.
 
 Base version: v3.5.0

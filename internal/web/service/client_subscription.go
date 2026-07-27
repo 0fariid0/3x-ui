@@ -341,7 +341,7 @@ func (s *ClientService) GetSubscriptionLinkOptionsByEmail(email string, inboundI
 			}
 			key := host.SubscriptionLinkKey()
 			globallyEnabled := !host.IsDisabled
-			effectiveEnabled := globallyEnabled
+			var effectiveEnabled bool
 			if globallyEnabled {
 				_, excluded := disabled[key]
 				effectiveEnabled = !excluded

@@ -127,7 +127,10 @@ func (s *PanelService) RestartPanelService() error {
 	// systemctl stops the current process.
 	if systemdRun, lookupErr := exec.LookPath("systemd-run"); lookupErr == nil {
 		unit := fmt.Sprintf("x-ui-scheduled-restart-%d", time.Now().UnixNano())
-		cmd := exec.Command(
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(
+			ctx,
 			systemdRun,
 			"--unit="+unit,
 			"--collect",
@@ -146,8 +149,8 @@ func (s *PanelService) RestartPanelService() error {
 	// OpenRC and other non-systemd systems do not have transient units. Start a
 	// detached command; once it submits the service restart request, the new
 	// process will consume the persistent Xray follow-up flag.
-	cmd := exec.Command(xuiPath, "restart")
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	cmd := exec.CommandContext(context.Background(), xuiPath, "restart")
+	setDetachedProcess(cmd)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
