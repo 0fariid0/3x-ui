@@ -19,7 +19,7 @@ describe('QrPanel', () => {
   });
 
   it('copies the represented link when the QR image is clicked', async () => {
-    const value = 'https://sub.example.com/sub/ABC?name=email';
+    const value = 'https://sub.example.com/sub/ABC?name=client-123';
     const { container } = render(<QrPanel value={value} remark="client@example.com" size={180} />);
     const canvas = container.querySelector('.qr-panel-canvas');
     expect(canvas).not.toBeNull();

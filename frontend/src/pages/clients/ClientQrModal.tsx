@@ -45,14 +45,14 @@ export default function ClientQrModal({
 
   const subLink = useMemo(() => {
     if (!client?.subId || !subSettings?.enable || !subSettings?.subURI) return '';
-    return withEmailConfigNames(subSettings.subURI + client.subId);
-  }, [client?.subId, subSettings?.enable, subSettings?.subURI]);
+    return withEmailConfigNames(subSettings.subURI + client.subId, client.email);
+  }, [client?.subId, client?.email, subSettings?.enable, subSettings?.subURI]);
 
   const subJsonLink = useMemo(() => {
     if (!client?.subId || !subSettings?.enable) return '';
     if (!subSettings?.subJsonEnable || !subSettings?.subJsonURI) return '';
-    return withEmailConfigNames(subSettings.subJsonURI + client.subId);
-  }, [client?.subId, subSettings?.enable, subSettings?.subJsonEnable, subSettings?.subJsonURI]);
+    return withEmailConfigNames(subSettings.subJsonURI + client.subId, client.email);
+  }, [client?.subId, client?.email, subSettings?.enable, subSettings?.subJsonEnable, subSettings?.subJsonURI]);
 
   const wgInbound = useMemo(() => findWireguardInbound(client, inboundsById), [client, inboundsById]);
   const wgConfigText = useMemo(() => {

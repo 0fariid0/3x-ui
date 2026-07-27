@@ -967,6 +967,32 @@ _install_xui_service_unit() {
     return 0
 }
 
+download_xui_release_archive() {
+    local tag="$1"
+    local output="$2"
+    local asset="x-ui-linux-$(arch).tar.gz"
+    local url="https://github.com/0fariid0/3x-ui/releases/download/${tag}/${asset}"
+    local curl_args=(-fL --retry 6 --retry-delay 3 --retry-connrefused --connect-timeout 20 --max-time 900)
+
+    rm -f "$output" > /dev/null 2>&1
+    echo -e "${green}Release URL: ${url}${plain}"
+
+    # First use the system's normal route. Some VPS providers resolve GitHub's
+    # release CDN to an unreachable IPv6 path, so retry over IPv4 before failing.
+    if ${curl_bin} "${curl_args[@]}" -o "$output" "$url"; then
+        [[ -s "$output" ]] && tar -tzf "$output" > /dev/null 2>&1 && return 0
+    fi
+
+    rm -f "$output" > /dev/null 2>&1
+    echo -e "${yellow}Normal download failed; retrying GitHub release over IPv4...${plain}"
+    if ${curl_bin} -4 "${curl_args[@]}" -o "$output" "$url"; then
+        [[ -s "$output" ]] && tar -tzf "$output" > /dev/null 2>&1 && return 0
+    fi
+
+    rm -f "$output" > /dev/null 2>&1
+    return 1
+}
+
 update_x-ui() {
     cd ${xui_folder%/x-ui}/
 
@@ -987,19 +1013,18 @@ update_x-ui() {
         tag_version="${XUI_UPDATE_TAG}"
         echo -e "${green}Using update tag: ${tag_version}${plain}"
     else
-        tag_version=$(${curl_bin} -Ls "https://api.github.com/repos/0fariid0/3x-ui/releases/latest" 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        tag_version=$(${curl_bin} -fLs --retry 5 --retry-delay 3 --retry-connrefused --connect-timeout 15 --max-time 90 "https://api.github.com/repos/0fariid0/3x-ui/releases/latest" 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
         if [[ ! -n "$tag_version" ]]; then
-            _fail "ERROR: Failed to fetch x-ui version, it may be due to GitHub API restrictions, please try it later"
+            tag_version=$(${curl_bin} -4 -fLs --retry 5 --retry-delay 3 --retry-connrefused --connect-timeout 15 --max-time 90 "https://api.github.com/repos/0fariid0/3x-ui/releases/latest" 2> /dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        fi
+        if [[ ! -n "$tag_version" ]]; then
+            _fail "ERROR: Failed to fetch x-ui version from GitHub API (normal and IPv4 attempts failed)"
         fi
     fi
     echo -e "Got x-ui latest version: ${tag_version}, beginning the installation..."
-    ${curl_bin} -fLRo ${xui_folder}-linux-$(arch).tar.gz https://github.com/0fariid0/3x-ui/releases/download/${tag_version}/x-ui-linux-$(arch).tar.gz 2> /dev/null
-    if [[ $? -ne 0 ]]; then
-        _fail "ERROR: Failed to download x-ui, please be sure that your server can access GitHub"
-    fi
-    if [[ ! -s ${xui_folder}-linux-$(arch).tar.gz ]]; then
-        rm ${xui_folder}-linux-$(arch).tar.gz -f > /dev/null 2>&1
-        _fail "ERROR: Downloaded x-ui release archive is empty, please be sure that your server can access GitHub"
+    archive_path="${xui_folder}-linux-$(arch).tar.gz"
+    if ! download_xui_release_archive "${tag_version}" "${archive_path}"; then
+        _fail "ERROR: Failed to download or validate x-ui release archive from GitHub (normal and IPv4 attempts failed)"
     fi
 
     if [[ -e ${xui_folder}/ ]]; then

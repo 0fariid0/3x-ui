@@ -5,6 +5,14 @@ This repository is an independently maintained modified version of 3x-ui.
 Base version: v3.5.0
 Repository: https://github.com/0fariid0/3x-ui
 
+## v3.5.5
+
+- Subscription links shown in the panel now contain the actual URL-encoded client email in `?name=...` instead of the literal word `email`.
+- Raw, JSON, and Clash subscription endpoints accept that exact name value and apply it consistently to every generated config.
+- Legacy `?name=email` links remain supported.
+- Public subscription-page copy links also use the owning client's actual email when it is known.
+- Improved updater downloads with retries, archive validation, and an automatic IPv4 fallback for VPS networks whose GitHub release CDN route over IPv6 is broken.
+
 ## v3.5.4
 
 - Added configurable Xray health monitoring with confirmed-failure detection.

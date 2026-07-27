@@ -1,6 +1,6 @@
 # راهنمای انتشار نسخه اختصاصی 3x-ui
 
-نسخه این بسته: `v3.5.4`
+نسخه این بسته: `v3.5.5`
 
 ## تغییرات اصلی
 
@@ -20,10 +20,10 @@
 bash <(curl -Ls https://raw.githubusercontent.com/0fariid0/3x-ui/main/install.sh)
 ```
 
-## نصب یا آپدیت دقیق نسخه 3.5.4
+## نصب یا آپدیت دقیق نسخه 3.5.5
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/0fariid0/3x-ui/main/install.sh) v3.5.4
+bash <(curl -Ls https://raw.githubusercontent.com/0fariid0/3x-ui/main/install.sh) v3.5.5
 ```
 
 ## انتشار
@@ -31,8 +31,8 @@ bash <(curl -Ls https://raw.githubusercontent.com/0fariid0/3x-ui/main/install.sh
 پس از Commit و Push فایل‌ها، تگ زیر را Push کنید:
 
 ```bash
-git tag -a v3.5.4 -m "v3.5.4 - Xray health, aligned restarts and per-address headers"
-git push origin v3.5.4
+git tag -a v3.5.5 -m "v3.5.5 - actual client names and resilient updater downloads"
+git push origin v3.5.5
 ```
 
 Workflow بخش Actions فایل‌های Linux و Windows را ساخته و به Release همان تگ اضافه می‌کند.

@@ -342,7 +342,11 @@ func (a *SUBController) buildSubPageData(c *gin.Context) (PageData, bool) {
 		writeSubError(c, err)
 		return PageData{}, false
 	}
-	subURL, subJsonURL, subClashURL := subReq.BuildURLs(a.subPath, a.subJsonPath, a.subClashPath, subId)
+	configName := ""
+	if len(emails) > 0 {
+		configName = emails[0]
+	}
+	subURL, subJsonURL, subClashURL := subReq.BuildURLs(a.subPath, a.subJsonPath, a.subClashPath, subId, configName)
 	if !a.jsonEnabled {
 		subJsonURL = ""
 	}

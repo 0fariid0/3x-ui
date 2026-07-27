@@ -86,15 +86,32 @@ func (s *SubService) ForRequest(host string) *SubService {
 	return &req
 }
 
-// SetNameMode applies a safe request-level config naming mode. Unknown values
-// are ignored so adding query parameters never breaks existing subscriptions.
+// SetNameMode applies a safe request-level config-name override. The legacy
+// value "email" still means "use the owning client's email". Any other safe,
+// non-empty value is treated as the exact display name requested in the URL,
+// e.g. ?name=client-123. This lets the panel expose the real client email in
+// the visible subscription URL while keeping older ?name=email links working.
 func (s *SubService) SetNameMode(mode string) {
-	mode = strings.ToLower(strings.TrimSpace(mode))
-	if mode == "email" {
-		s.nameMode = mode
+	mode = strings.TrimSpace(mode)
+	if mode == "" || len(mode) > 256 || strings.ContainsAny(mode, "\r\n\x00") {
+		s.nameMode = ""
 		return
 	}
-	s.nameMode = ""
+	if strings.EqualFold(mode, "email") {
+		s.nameMode = "email"
+		return
+	}
+	s.nameMode = mode
+}
+
+func (s *SubService) requestedConfigName(clientEmail string) string {
+	if s.nameMode == "" {
+		return ""
+	}
+	if strings.EqualFold(s.nameMode, "email") {
+		return clientEmail
+	}
+	return s.nameMode
 }
 
 // PrepareForRequest sets per-request state (host + nodes map) on this
@@ -337,8 +354,8 @@ func (s *SubService) getSubs(subId string) ([]string, []string, int64, xray.Clie
 		}
 		for _, el := range expandEntry(ext) {
 			name := el.Name
-			if s.nameMode == "email" {
-				name = ext.Email
+			if forced := s.requestedConfigName(ext.Email); forced != "" {
+				name = forced
 			}
 			if link := applyRemarkToLink(el.Link, name); link != "" {
 				result = append(result, link)
@@ -2539,7 +2556,7 @@ func (s *SubService) ResolveRequest(c *gin.Context) (scheme string, host string,
 
 // BuildURLs constructs absolute subscription and JSON subscription URLs for a given subscription ID.
 // It prioritizes configured URIs, then individual settings, and finally falls back to request-derived components.
-func (s *SubService) BuildURLs(subPath, subJsonPath, subClashPath, subId string) (subURL, subJsonURL, subClashURL string) {
+func (s *SubService) BuildURLs(subPath, subJsonPath, subClashPath, subId string, configName ...string) (subURL, subJsonURL, subClashURL string) {
 	if subId == "" {
 		return "", "", ""
 	}
@@ -2569,10 +2586,14 @@ func (s *SubService) BuildURLs(subPath, subJsonPath, subClashPath, subId string)
 	subJsonURL = s.buildSingleURL(configuredSubJsonURI, jsonClashBase, subJsonPath, subId)
 	subClashURL = s.buildSingleURL(configuredSubClashURI, jsonClashBase, subClashPath, subId)
 
-	return appendSubscriptionNameMode(subURL), appendSubscriptionNameMode(subJsonURL), appendSubscriptionNameMode(subClashURL)
+	name := "email"
+	if len(configName) > 0 && strings.TrimSpace(configName[0]) != "" {
+		name = strings.TrimSpace(configName[0])
+	}
+	return appendSubscriptionName(subURL, name), appendSubscriptionName(subJsonURL, name), appendSubscriptionName(subClashURL, name)
 }
 
-func appendSubscriptionNameMode(rawURL string) string {
+func appendSubscriptionName(rawURL string, name string) string {
 	if rawURL == "" {
 		return ""
 	}
@@ -2581,7 +2602,10 @@ func appendSubscriptionNameMode(rawURL string) string {
 		return rawURL
 	}
 	q := u.Query()
-	q.Set("name", "email")
+	if strings.TrimSpace(name) == "" {
+		name = "email"
+	}
+	q.Set("name", name)
 	u.RawQuery = q.Encode()
 	return u.String()
 }

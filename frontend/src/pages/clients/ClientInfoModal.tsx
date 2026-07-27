@@ -128,20 +128,20 @@ export default function ClientInfoModal({
 
   const subLink = useMemo(() => {
     if (!client?.subId || !subSettings?.subURI) return '';
-    return withEmailConfigNames(subSettings.subURI + client.subId);
-  }, [client?.subId, subSettings?.subURI]);
+    return withEmailConfigNames(subSettings.subURI + client.subId, client.email);
+  }, [client?.subId, client?.email, subSettings?.subURI]);
 
   const subJsonLink = useMemo(() => {
     if (!client?.subId) return '';
     if (!subSettings?.subJsonEnable || !subSettings?.subJsonURI) return '';
-    return withEmailConfigNames(subSettings.subJsonURI + client.subId);
-  }, [client?.subId, subSettings?.subJsonEnable, subSettings?.subJsonURI]);
+    return withEmailConfigNames(subSettings.subJsonURI + client.subId, client.email);
+  }, [client?.subId, client?.email, subSettings?.subJsonEnable, subSettings?.subJsonURI]);
 
   const subClashLink = useMemo(() => {
     if (!client?.subId) return '';
     if (!subSettings?.subClashEnable || !subSettings?.subClashURI) return '';
-    return withEmailConfigNames(subSettings.subClashURI + client.subId);
-  }, [client?.subId, subSettings?.subClashEnable, subSettings?.subClashURI]);
+    return withEmailConfigNames(subSettings.subClashURI + client.subId, client.email);
+  }, [client?.subId, client?.email, subSettings?.subClashEnable, subSettings?.subClashURI]);
 
   const showSubscription = !!(subSettings?.enable && client?.subId);
   const wgInbound = useMemo(() => findWireguardInbound(client, inboundsById), [client, inboundsById]);

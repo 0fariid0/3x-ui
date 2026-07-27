@@ -54,8 +54,8 @@ export default function SubLinksModal({
         key: email,
         email,
         subId: c.subId,
-        link: withEmailConfigNames(subSettings!.subURI + c.subId),
-        jsonLink: jsonEnabled ? withEmailConfigNames(subSettings!.subJsonURI + c.subId) : '',
+        link: withEmailConfigNames(subSettings!.subURI + c.subId, c.email),
+        jsonLink: jsonEnabled ? withEmailConfigNames(subSettings!.subJsonURI + c.subId, c.email) : '',
       });
     }
     return out;

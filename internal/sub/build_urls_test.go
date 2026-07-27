@@ -164,9 +164,23 @@ func TestBuildURLs_MalformedSubURIFallsBackToRequestBase(t *testing.T) {
 	}
 }
 
-func TestAppendSubscriptionNameModePreservesExistingQuery(t *testing.T) {
-	got := appendSubscriptionNameMode("https://example.com/sub/ABC?view=raw")
+func TestAppendSubscriptionNamePreservesExistingQuery(t *testing.T) {
+	got := appendSubscriptionName("https://example.com/sub/ABC?view=raw", "email")
 	if got != "https://example.com/sub/ABC?name=email&view=raw" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestBuildURLs_UsesActualClientName(t *testing.T) {
+	initSubDB(t)
+	s := &SubService{}
+	s.PrepareForRequest("sub.example.com")
+
+	subURL, jsonURL, clashURL := s.BuildURLs("/sub/", "/json/", "/clash/", "ABC", "john@example.com")
+	wantSub := "http://sub.example.com:2096/sub/ABC?name=john%40example.com"
+	wantJSON := "http://sub.example.com:2096/json/ABC?name=john%40example.com"
+	wantClash := "http://sub.example.com:2096/clash/ABC?name=john%40example.com"
+	if subURL != wantSub || jsonURL != wantJSON || clashURL != wantClash {
+		t.Fatalf("actual-name URLs = %q %q %q, want %q %q %q", subURL, jsonURL, clashURL, wantSub, wantJSON, wantClash)
 	}
 }

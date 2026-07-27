@@ -294,7 +294,7 @@ export default function InboundsPage() {
     const subLinks: string[] = [];
     for (const c of clients) {
       if (c.subId && subSettings.subURI) {
-        subLinks.push(withEmailConfigNames(subSettings.subURI + c.subId));
+        subLinks.push(withEmailConfigNames(subSettings.subURI + c.subId, c.email));
       }
     }
     openText({
@@ -320,7 +320,7 @@ export default function InboundsPage() {
       const clients = settings.clients || [];
       for (const c of clients) {
         if (c.subId && subSettings.subURI) {
-          out.push(withEmailConfigNames(subSettings.subURI + c.subId));
+          out.push(withEmailConfigNames(subSettings.subURI + c.subId, c.email));
         }
       }
     }

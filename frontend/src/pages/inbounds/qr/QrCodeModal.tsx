@@ -98,8 +98,8 @@ export default function QrCodeModal({
     let nextSub = '';
     let nextSubJson = '';
     if (subSettings?.enable && subId) {
-      nextSub = withEmailConfigNames((subSettings.subURI || '') + subId);
-      nextSubJson = subSettings.subJsonEnable ? withEmailConfigNames((subSettings.subJsonURI || '') + subId) : '';
+      nextSub = withEmailConfigNames((subSettings.subURI || '') + subId, client?.email);
+      nextSubJson = subSettings.subJsonEnable ? withEmailConfigNames((subSettings.subJsonURI || '') + subId, client?.email) : '';
     }
     setSubLink(nextSub);
     setSubJsonLink(nextSubJson);

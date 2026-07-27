@@ -693,3 +693,24 @@ func TestNameModeEmailOverridesGlobalAndHostTemplates(t *testing.T) {
 		t.Fatalf("host remark=%q", got)
 	}
 }
+
+func TestNameModeLiteralOverridesGlobalAndHostTemplates(t *testing.T) {
+	client := model.Client{Email: "john@example.com"}
+	inbound := &model.Inbound{Remark: "Germany", StreamSettings: `{"security":"tls","network":"ws"}`}
+	s := &SubService{remarkTemplate: "{{INBOUND}}-{{EMAIL}}", subscriptionBody: true}
+	s.SetNameMode("visible-client-name")
+	if got := s.genTemplatedRemark(inbound, client, "", "ws"); got != "visible-client-name" {
+		t.Fatalf("global remark=%q", got)
+	}
+	if got := s.genHostRemark(inbound, client, "Custom host", "ws"); got != "visible-client-name" {
+		t.Fatalf("host remark=%q", got)
+	}
+}
+
+func TestNameModeRejectsControlCharacters(t *testing.T) {
+	s := &SubService{}
+	s.SetNameMode("bad\nname")
+	if s.nameMode != "" {
+		t.Fatalf("unsafe name mode accepted: %q", s.nameMode)
+	}
+}

@@ -149,9 +149,9 @@ export default function InboundInfoModal({
     }
 
     if (clientSet?.subId) {
-      setSubLink(withEmailConfigNames((subSettings?.subURI || '') + clientSet.subId));
+      setSubLink(withEmailConfigNames((subSettings?.subURI || '') + clientSet.subId, clientSet.email));
       setSubJsonLink(
-        subSettings?.subJsonEnable ? withEmailConfigNames((subSettings?.subJsonURI || '') + clientSet.subId) : '',
+        subSettings?.subJsonEnable ? withEmailConfigNames((subSettings?.subJsonURI || '') + clientSet.subId, clientSet.email) : '',
       );
     } else {
       setSubLink('');
