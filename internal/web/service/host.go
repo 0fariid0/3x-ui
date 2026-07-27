@@ -17,16 +17,6 @@ import (
 
 type HostService struct{}
 
-func formatHostAddr(addr string, port int) string {
-	if port <= 0 {
-		return addr
-	}
-	if strings.Contains(addr, ":") {
-		return "[" + addr + "]:" + strconv.Itoa(port)
-	}
-	return addr + ":" + strconv.Itoa(port)
-}
-
 func newHostGroup(h *model.Host, groupId string) *entity.HostGroup {
 	return &entity.HostGroup{
 		GroupId:                groupId,
@@ -42,6 +32,7 @@ func newHostGroup(h *model.Host, groupId string) *entity.HostGroup {
 		Security:               h.Security,
 		Sni:                    h.Sni,
 		HostHeader:             h.HostHeader,
+		HostHeaders:            map[string]string{},
 		Path:                   h.Path,
 		Alpn:                   h.Alpn,
 		Fingerprint:            h.Fingerprint,
@@ -83,9 +74,12 @@ func groupHosts(hosts []*model.Host) []*entity.HostGroup {
 		if !slices.Contains(g.InboundIds, h.InboundId) {
 			g.InboundIds = append(g.InboundIds, h.InboundId)
 		}
-		hostStr := formatHostAddr(h.Address, h.Port)
+		hostStr := h.Address
 		if !slices.Contains(g.Hosts, hostStr) {
 			g.Hosts = append(g.Hosts, hostStr)
+		}
+		if hostStr != "" {
+			g.HostHeaders[hostStr] = h.HostHeader
 		}
 		if h.SortOrder < g.SortOrder {
 			g.SortOrder = h.SortOrder
@@ -114,7 +108,18 @@ func buildHostRows(groupId string, req *entity.HostGroup) []*model.Host {
 	}
 	var rows []*model.Host
 	for _, hostStr := range hostsToProcess {
-		addr, port := parseHostAndPort(hostStr, req.Port)
+		addr := normalizeHostAddress(hostStr)
+		port := req.Port
+		hostHeader := req.HostHeader
+		if req.HostHeaders != nil {
+			mapped, ok := req.HostHeaders[addr]
+			if !ok {
+				mapped, ok = req.HostHeaders[strings.TrimSpace(hostStr)]
+			}
+			if ok {
+				hostHeader = strings.TrimSpace(mapped)
+			}
+		}
 		for _, inboundId := range req.InboundIds {
 			rows = append(rows, &model.Host{
 				GroupId:                groupId,
@@ -129,7 +134,7 @@ func buildHostRows(groupId string, req *entity.HostGroup) []*model.Host {
 				Port:                   port,
 				Security:               req.Security,
 				Sni:                    req.Sni,
-				HostHeader:             req.HostHeader,
+				HostHeader:             hostHeader,
 				Path:                   req.Path,
 				Alpn:                   req.Alpn,
 				Fingerprint:            req.Fingerprint,
@@ -330,28 +335,22 @@ func (s *HostService) GetAllTags() ([]string, error) {
 	return out, nil
 }
 
-func parseHostAndPort(hostStr string, defaultPort int) (string, int) {
+func normalizeHostAddress(hostStr string) string {
 	hostStr = strings.TrimSpace(hostStr)
 	if hostStr == "" {
-		return "", defaultPort
+		return ""
 	}
-	if strings.Count(hostStr, ":") > 1 && !strings.Contains(hostStr, "[") {
-		return hostStr, defaultPort
-	}
-	lastColon := strings.LastIndex(hostStr, ":")
-	if lastColon != -1 && lastColon < len(hostStr)-1 {
-		pStr := hostStr[lastColon+1:]
-		if p, err := strconv.Atoi(pStr); err == nil && p >= 0 && p <= 65535 {
-			addr := hostStr[:lastColon]
-			if strings.HasPrefix(addr, "[") && strings.HasSuffix(addr, "]") {
-				addr = addr[1 : len(addr)-1]
-			}
-			return addr, p
+	if strings.HasPrefix(hostStr, "[") {
+		if end := strings.Index(hostStr, "]"); end > 0 {
+			return hostStr[1:end]
 		}
 	}
-	addr := hostStr
-	if strings.HasPrefix(addr, "[") && strings.HasSuffix(addr, "]") {
-		addr = addr[1 : len(addr)-1]
+	// A single colon is treated as host:port and the port is deliberately
+	// discarded. Host rows have one explicit Port field shared by all addresses;
+	// Port=0 means inherit the inbound port. Bare IPv6 contains multiple colons
+	// and is preserved unchanged.
+	if strings.Count(hostStr, ":") == 1 {
+		return strings.TrimSpace(strings.SplitN(hostStr, ":", 2)[0])
 	}
-	return addr, defaultPort
+	return strings.Trim(hostStr, "[]")
 }

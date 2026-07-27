@@ -73,17 +73,6 @@ export default function QrPanel({
     FileManager.downloadTextFile(value, downloadName);
   }
 
-  async function copyImage() {
-    const svgEl = qrRef.current?.querySelector('svg') as SVGSVGElement | null;
-    const blob = await svgToPngBlob(svgEl, size);
-    if (!blob) return;
-    try {
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      messageApi.success(t('copied'));
-    } catch {
-      downloadImageBlob(blob, remark);
-    }
-  }
 
   async function downloadImage() {
     const svgEl = qrRef.current?.querySelector('svg') as SVGSVGElement | null;
@@ -117,8 +106,8 @@ export default function QrPanel({
           role="button"
           tabIndex={0}
           aria-label={t('copy')}
-          onClick={copyImage}
-          onKeyDown={activateOnKey(copyImage)}
+          onClick={copy}
+          onKeyDown={activateOnKey(copy)}
         >
           <Tooltip title={t('copy')}>
             <QRCode

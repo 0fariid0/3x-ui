@@ -418,3 +418,41 @@ func TestSub_ExcludeFromSubTypes(t *testing.T) {
 		t.Fatalf("host excluded from clash must not appear in GetClash:\n%s", yaml)
 	}
 }
+
+func TestHostPortZeroInheritsInboundAtSubscriptionTime(t *testing.T) {
+	h := &model.Host{Address: "1.1.1.1", Port: 0}
+	ep := hostToExternalProxyMap(h, "fallback.example.com", 53152)
+	if got := int(ep["port"].(float64)); got != 53152 {
+		t.Fatalf("port=%d, want inbound port 53152", got)
+	}
+	if got := ep["dest"]; got != "1.1.1.1" {
+		t.Fatalf("dest=%v", got)
+	}
+}
+
+func TestSub_PerAddressHostHeaderAndSharedPort(t *testing.T) {
+	seedSubDB(t)
+	ib := seedSubInbound(t, "s1", "multi-header", 53152, 1,
+		`{"network":"ws","security":"tls","wsSettings":{"path":"/ws"},"tlsSettings":{"serverName":"base.example.com"}}`)
+	groupID := "multi-address-header"
+	seedHost(t, &model.Host{
+		GroupId: groupID, InboundId: ib.Id, SortOrder: 0, Remark: "IP1",
+		Address: "1.1.1.1", Port: 0, Security: "tls", HostHeader: "one.example.com",
+	})
+	seedHost(t, &model.Host{
+		GroupId: groupID, InboundId: ib.Id, SortOrder: 0, Remark: "IP2",
+		Address: "2.2.2.2", Port: 0, Security: "tls", HostHeader: "two.example.com",
+	})
+
+	links, _, _, _, err := NewSubService("").GetSubs("s1", "req.example.com")
+	if err != nil {
+		t.Fatalf("GetSubs: %v", err)
+	}
+	joined := strings.Join(links, "\n")
+	if !strings.Contains(joined, "1.1.1.1:53152") || !strings.Contains(joined, "host=one.example.com") {
+		t.Fatalf("first address must inherit inbound port and its own Host header:\n%s", joined)
+	}
+	if !strings.Contains(joined, "2.2.2.2:53152") || !strings.Contains(joined, "host=two.example.com") {
+		t.Fatalf("second address must inherit inbound port and use its own Host header:\n%s", joined)
+	}
+}

@@ -65,6 +65,16 @@ export default function XrayPage() {
     setScheduledRestartUnit,
     scheduledRestartPanel,
     setScheduledRestartPanel,
+    xrayHealthEnable,
+    setXrayHealthEnable,
+    xrayHealthFailureThreshold,
+    setXrayHealthFailureThreshold,
+    xrayHealthRestartCooldown,
+    setXrayHealthRestartCooldown,
+    xrayHealthMaxRestarts,
+    setXrayHealthMaxRestarts,
+    xrayHealthWindowMinutes,
+    setXrayHealthWindowMinutes,
     inboundTags,
     clientReverseTags,
     subscriptionOutbounds,
@@ -314,6 +324,16 @@ export default function XrayPage() {
             onChangeScheduledRestartUnit={setScheduledRestartUnit}
             scheduledRestartPanel={scheduledRestartPanel}
             onChangeScheduledRestartPanel={setScheduledRestartPanel}
+            xrayHealthEnable={xrayHealthEnable}
+            onChangeXrayHealthEnable={setXrayHealthEnable}
+            xrayHealthFailureThreshold={xrayHealthFailureThreshold}
+            onChangeXrayHealthFailureThreshold={setXrayHealthFailureThreshold}
+            xrayHealthRestartCooldown={xrayHealthRestartCooldown}
+            onChangeXrayHealthRestartCooldown={setXrayHealthRestartCooldown}
+            xrayHealthMaxRestarts={xrayHealthMaxRestarts}
+            onChangeXrayHealthMaxRestarts={setXrayHealthMaxRestarts}
+            xrayHealthWindowMinutes={xrayHealthWindowMinutes}
+            onChangeXrayHealthWindowMinutes={setXrayHealthWindowMinutes}
             onResetDefault={resetToDefault}
           />
         );

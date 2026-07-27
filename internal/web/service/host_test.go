@@ -1,6 +1,8 @@
 package service
 
 import (
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
@@ -44,7 +46,7 @@ func TestAddHost_GetHostsByInbound(t *testing.T) {
 	if got[0].GroupId != h2.GroupId || got[1].GroupId != h1.GroupId {
 		t.Fatalf("order = [%s,%s], want [%s,%s] (sort_order asc)", got[0].GroupId, got[1].GroupId, h2.GroupId, h1.GroupId)
 	}
-	if got[0].Hosts[0] != "a.example.com:8443" {
+	if got[0].Hosts[0] != "a.example.com" {
 		t.Fatalf("address not persisted: %q", got[0].Hosts[0])
 	}
 }
@@ -188,118 +190,64 @@ func TestAddHostsGroup(t *testing.T) {
 		Remark:     "BulkRemark",
 		Port:       8443,
 		Security:   "same",
+		HostHeader: "default.example.com",
+		HostHeaders: map[string]string{
+			"h1.com":      "h1-header.example.com",
+			"h2.com:443":  "h2-header.example.com",
+			"2001:db8::1": "v6-header.example.com",
+		},
 	}
 
 	created, err := svc.AddHostGroup(req)
 	if err != nil {
 		t.Fatalf("AddHostGroup: %v", err)
 	}
-
 	if len(created) != 6 {
 		t.Fatalf("expected 6 created hosts, got %d", len(created))
+	}
+	for _, row := range created {
+		if row.Port != 8443 {
+			t.Fatalf("all rows must use group port 8443, got %d for %q", row.Port, row.Address)
+		}
+		if strings.Contains(row.Address, "]:") || (strings.Count(row.Address, ":") == 1 && strings.Contains(row.Address, ".com:")) {
+			t.Fatalf("stored address must not contain a port: %q", row.Address)
+		}
 	}
 
 	got1, _ := svc.GetHostsByInbound(ib1.Id)
 	if len(got1) != 1 {
 		t.Fatalf("expected 1 group for inbound 1, got %d", len(got1))
 	}
-
 	g := got1[0]
-	if g.Remark != "BulkRemark" {
-		t.Errorf("expected remark BulkRemark, got %s", g.Remark)
-	}
-
-	var foundH2Port443 bool
-	var foundIPv6Port80 bool
-	var foundH1DefaultPort8443 bool
-
-	for _, hostStr := range g.Hosts {
-		if hostStr == "h2.com:443" {
-			foundH2Port443 = true
-		}
-		if hostStr == "[2001:db8::1]:80" {
-			foundIPv6Port80 = true
-		}
-		if hostStr == "h1.com:8443" {
-			foundH1DefaultPort8443 = true
+	wantHosts := []string{"h1.com", "h2.com", "2001:db8::1"}
+	for _, want := range wantHosts {
+		if !slices.Contains(g.Hosts, want) {
+			t.Fatalf("group hosts %v missing %q", g.Hosts, want)
 		}
 	}
-
-	if !foundH2Port443 {
-		t.Error("missing custom port override host h2.com:443")
+	if got := g.HostHeaders["h1.com"]; got != "h1-header.example.com" {
+		t.Fatalf("h1 header=%q", got)
 	}
-	if !foundIPv6Port80 {
-		t.Error("missing IPv6 host with port override [2001:db8::1]:80")
+	if got := g.HostHeaders["h2.com"]; got != "h2-header.example.com" {
+		t.Fatalf("h2 header=%q", got)
 	}
-	if !foundH1DefaultPort8443 {
-		t.Error("missing default port fallback host h1.com:8443")
+	if got := g.HostHeaders["2001:db8::1"]; got != "v6-header.example.com" {
+		t.Fatalf("v6 header=%q", got)
 	}
 }
 
-func TestParseHostAndPort_IPv6EdgeCases(t *testing.T) {
-	tests := []struct {
-		input       string
-		defaultPort int
-		wantAddr    string
-		wantPort    int
-	}{
-		{"2001:db8::1", 8443, "2001:db8::1", 8443},
-		{"[2001:db8::1]:80", 8443, "2001:db8::1", 80},
-		{"h1.com:443", 8443, "h1.com", 443},
-		{"h1.com", 8443, "h1.com", 8443},
+func TestNormalizeHostAddress(t *testing.T) {
+	tests := map[string]string{
+		"":                 "",
+		" h1.com ":         "h1.com",
+		"h1.com:443":       "h1.com",
+		"2001:db8::1":      "2001:db8::1",
+		"[2001:db8::1]:80": "2001:db8::1",
+		"[2001:db8::1]":    "2001:db8::1",
 	}
-
-	for _, tc := range tests {
-		addr, port := parseHostAndPort(tc.input, tc.defaultPort)
-		if addr != tc.wantAddr || port != tc.wantPort {
-			t.Errorf("parseHostAndPort(%q, %d) = (%q, %d); want (%q, %d)",
-				tc.input, tc.defaultPort, addr, port, tc.wantAddr, tc.wantPort)
-		}
-	}
-}
-
-func TestParseHostAndPort_AdversarialStressCases(t *testing.T) {
-	tests := []struct {
-		input       string
-		defaultPort int
-		wantAddr    string
-		wantPort    int
-	}{
-		{"", 8443, "", 8443},
-		{" ", 8443, "", 8443},
-		{"h1.com: ", 8443, "h1.com:", 8443},
-		{"h1.com: -1", 8443, "h1.com: -1", 8443},
-		{"h1.com:-1", 8443, "h1.com:-1", 8443},
-		{"h1.com:0", 8443, "h1.com", 0},
-		{"h1.com:65535", 8443, "h1.com", 65535},
-		{"h1.com:65536", 8443, "h1.com:65536", 8443},
-		{"h1.com:80a", 8443, "h1.com:80a", 8443},
-		{"h1.com:123:456", 8443, "h1.com:123:456", 8443},
-		{"[2001:db8::1]", 8443, "2001:db8::1", 8443},
-		{"[2001:db8::1]:80", 8443, "2001:db8::1", 80},
-		{"2001:db8::1", 8443, "2001:db8::1", 8443},
-		{"[2001:db8::1]:65536", 8443, "[2001:db8::1]:65536", 8443},
-		{"[]:80", 8443, "", 80},
-		{"[:]::80", 8443, "[:]:", 80},
-		{"h1.com:", 8443, "h1.com:", 8443},
-		{"h1.com:123:", 8443, "h1.com:123:", 8443},
-		{" h1.com : 80 ", 8443, "h1.com : 80", 8443},
-		{" [2001:db8::1]:80 ", 8443, "2001:db8::1", 80},
-		{"[2001:db8::1]:+80", 8443, "2001:db8::1", 80},
-		{"[2001:db8::1]:080", 8443, "2001:db8::1", 80},
-		{"[2001:db8::1]80", 8443, "[2001:db8::1]80", 8443},
-		{"[::1]", 8443, "::1", 8443},
-		{"[2001:db8::1", 8443, "[2001:db8:", 1},
-		{"[2001:db8::1]:-80", 8443, "[2001:db8::1]:-80", 8443},
-		{"h1.com:443:80", 8443, "h1.com:443:80", 8443},
-		{"[2001:db8::1]::80", 8443, "[2001:db8::1]:", 80},
-	}
-
-	for _, tc := range tests {
-		addr, port := parseHostAndPort(tc.input, tc.defaultPort)
-		if addr != tc.wantAddr || port != tc.wantPort {
-			t.Errorf("parseHostAndPort(%q, %d) = (%q, %d); want (%q, %d)",
-				tc.input, tc.defaultPort, addr, port, tc.wantAddr, tc.wantPort)
+	for input, want := range tests {
+		if got := normalizeHostAddress(input); got != want {
+			t.Errorf("normalizeHostAddress(%q)=%q, want %q", input, got, want)
 		}
 	}
 }
@@ -328,8 +276,8 @@ func TestAddHostGroup_OptionalAddress(t *testing.T) {
 		t.Fatalf("GetHostGroup failed: %v", err)
 	}
 
-	if len(g.Hosts) != 1 || g.Hosts[0] != ":8443" {
-		t.Fatalf("expected Hosts list to contain default port fallback ':8443', got %v", g.Hosts)
+	if len(g.Hosts) != 1 || g.Hosts[0] != "" {
+		t.Fatalf("expected blank address to stay blank, got %v", g.Hosts)
 	}
 }
 

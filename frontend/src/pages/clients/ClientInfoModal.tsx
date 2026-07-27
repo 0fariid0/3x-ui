@@ -5,6 +5,7 @@ import { CopyOutlined, DownloadOutlined, EyeOutlined, QrcodeOutlined, ReloadOutl
 
 import { ClipboardManager, FileManager, HttpUtil, IntlUtil, SizeFormatter } from '@/utils';
 import { formatInboundLabel } from '@/lib/inbounds/label';
+import { withEmailConfigNames } from '@/lib/subscription-url';
 import { normalizeClientIps, type ClientIpInfo } from '@/lib/clients/ip-log';
 import { useDatepicker } from '@/hooks/useDatepicker';
 import type { ClientRecord, InboundOption } from '@/hooks/useClients';
@@ -127,19 +128,19 @@ export default function ClientInfoModal({
 
   const subLink = useMemo(() => {
     if (!client?.subId || !subSettings?.subURI) return '';
-    return subSettings.subURI + client.subId;
+    return withEmailConfigNames(subSettings.subURI + client.subId);
   }, [client?.subId, subSettings?.subURI]);
 
   const subJsonLink = useMemo(() => {
     if (!client?.subId) return '';
     if (!subSettings?.subJsonEnable || !subSettings?.subJsonURI) return '';
-    return subSettings.subJsonURI + client.subId;
+    return withEmailConfigNames(subSettings.subJsonURI + client.subId);
   }, [client?.subId, subSettings?.subJsonEnable, subSettings?.subJsonURI]);
 
   const subClashLink = useMemo(() => {
     if (!client?.subId) return '';
     if (!subSettings?.subClashEnable || !subSettings?.subClashURI) return '';
-    return subSettings.subClashURI + client.subId;
+    return withEmailConfigNames(subSettings.subClashURI + client.subId);
   }, [client?.subId, subSettings?.subClashEnable, subSettings?.subClashURI]);
 
   const showSubscription = !!(subSettings?.enable && client?.subId);

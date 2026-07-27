@@ -37,6 +37,10 @@ export interface AllSetting {
   panelOutbound: string;
   remarkTemplate: string;
   restartXrayOnClientDisable: boolean;
+  scheduledRestartEnable: boolean;
+  scheduledRestartInterval: number;
+  scheduledRestartPanel: boolean;
+  scheduledRestartUnit: string;
   sessionMaxAge: number;
   smtpCpu: number;
   smtpEnable: boolean;
@@ -109,6 +113,11 @@ export interface AllSetting {
   webKeyFile: string;
   webListen: string;
   webPort: number;
+  xrayHealthEnable: boolean;
+  xrayHealthFailureThreshold: number;
+  xrayHealthMaxRestarts: number;
+  xrayHealthRestartCooldown: number;
+  xrayHealthWindowMinutes: number;
 }
 
 export interface AllSettingView {
@@ -149,6 +158,10 @@ export interface AllSettingView {
   panelOutbound: string;
   remarkTemplate: string;
   restartXrayOnClientDisable: boolean;
+  scheduledRestartEnable: boolean;
+  scheduledRestartInterval: number;
+  scheduledRestartPanel: boolean;
+  scheduledRestartUnit: string;
   sessionMaxAge: number;
   smtpCpu: number;
   smtpEnable: boolean;
@@ -221,6 +234,11 @@ export interface AllSettingView {
   webKeyFile: string;
   webListen: string;
   webPort: number;
+  xrayHealthEnable: boolean;
+  xrayHealthFailureThreshold: number;
+  xrayHealthMaxRestarts: number;
+  xrayHealthRestartCooldown: number;
+  xrayHealthWindowMinutes: number;
 }
 
 export interface ApiToken {
@@ -378,6 +396,7 @@ export interface HostGroup {
   fingerprint: string;
   groupId: string;
   hostHeader: string;
+  hostHeaders: Record<string, string>;
   hosts: string[];
   inboundIds: number[];
   isDisabled: boolean;

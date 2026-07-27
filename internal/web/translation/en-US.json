@@ -1043,7 +1043,8 @@
         "tags": "Tags",
         "nodeGuids": "Nodes",
         "excludeFromSubTypes": "Exclude from formats",
-        "inheritAddress": "Inherits"
+        "inheritAddress": "Inherits",
+        "hostHeaders": "Header per address"
       },
       "hints": {
         "address": "Leave blank to inherit the inbound's own address.",
@@ -1053,7 +1054,8 @@
         "serverDescription": "Optional note shown under the remark.",
         "allowInsecure": "Skip TLS certificate verification (allowInsecure / skip-cert-verify).",
         "vlessRoute": "Single VLESS route value (0-65535) baked into the UUID, e.g. 443. Leave blank for none.",
-        "remark": "Complete name or template for this Host's subscription config. When set, only this value is used; it is not combined with the global name. Leave empty to use the global/inbound default."
+        "remark": "Complete name or template for this Host's subscription config. When set, only this value is used; it is not combined with the global name. Leave empty to use the global/inbound default.",
+        "hostHeaders": "Optional WS/HTTPUpgrade/XHTTP Host header for each IP or domain. Empty rows use the default Host header above."
       },
       "remarkVars": {
         "title": "Template Variables",
@@ -2014,16 +2016,27 @@
       "defaultOutbound": "Default Outbound",
       "defaultOutboundDesc": "Traffic that does not match any routing rule uses this outbound (Xray uses the first outbound in the list).",
       "scheduledRestart": "Scheduled restart",
-      "scheduledRestartDesc": "Automatically restart Xray on a recurring schedule.",
+      "scheduledRestartDesc": "Restart Xray automatically on aligned clock boundaries.",
       "scheduledRestartInterval": "Restart every",
-      "scheduledRestartIntervalDesc": "The countdown starts after saving or after the panel starts.",
+      "scheduledRestartIntervalDesc": "Runs on real clock boundaries: 15 minutes at :00/:15/:30/:45, 30 minutes at :00/:30, and hourly schedules at full hours.",
       "scheduledRestartPanel": "Restart the complete x-ui service",
       "scheduledRestartPanelDesc": "Off: restart only Xray Core. On: restart the complete panel service, equivalent to x-ui restart.",
       "scheduledRestartXrayHint": "Only Xray Core will restart. The panel remains online.",
       "scheduledRestartPanelHint": "The complete x-ui panel service will restart and the web panel may be unavailable briefly.",
       "restartUnitMinutes": "Minutes",
       "restartUnitHours": "Hours",
-      "restartUnitDays": "Days"
+      "restartUnitDays": "Days",
+      "xrayHealthMonitor": "Xray health monitor",
+      "xrayHealthMonitorDesc": "Detect confirmed Xray crashes and restart the core automatically. Manual stops are never restarted.",
+      "xrayHealthFailureThreshold": "Failed checks before restart",
+      "xrayHealthFailureThresholdDesc": "The number of consecutive failed health checks required before an automatic restart.",
+      "xrayHealthRestartCooldown": "Restart cooldown",
+      "xrayHealthRestartCooldownDesc": "Minimum time between automatic restart attempts.",
+      "xrayHealthMaxRestarts": "Maximum restart attempts",
+      "xrayHealthMaxRestartsDesc": "Maximum automatic restart attempts allowed inside the protection window.",
+      "xrayHealthWindowMinutes": "Protection window",
+      "xrayHealthWindowMinutesDesc": "Rolling time window used to detect a restart loop.",
+      "xrayHealthLoopProtectionHint": "If Xray repeatedly crashes, the circuit breaker stops automatic retries until the protection window expires."
     }
   },
   "tgbot": {

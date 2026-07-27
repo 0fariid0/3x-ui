@@ -23,7 +23,12 @@ func NewSubClashService(enableRouting bool, clashRules string, subService *SubSe
 }
 
 func (s *SubClashService) GetClash(subId string, host string) (string, string, error) {
+	return s.GetClashNamed(subId, host, "")
+}
+
+func (s *SubClashService) GetClashNamed(subId string, host string, nameMode string) (string, string, error) {
 	subReq := s.SubService.ForRequest(host)
+	subReq.SetNameMode(nameMode)
 	subReq.subscriptionBody = true
 	inbounds, err := subReq.getInboundsBySubId(subId)
 	if err != nil {
@@ -57,7 +62,7 @@ func (s *SubClashService) GetClash(subId string, host string) (string, string, e
 	for _, ext := range externalLinks {
 		for _, el := range expandEntry(ext) {
 			name := el.Name
-			if name == "" {
+			if subReq.nameMode == "email" || name == "" {
 				name = ext.Email
 			}
 			if proxy := s.clashProxyFromExternal(el.Link, name); proxy != nil {

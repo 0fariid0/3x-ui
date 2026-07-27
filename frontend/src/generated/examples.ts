@@ -31,6 +31,10 @@ export const EXAMPLES: Record<string, unknown> = {
     "panelOutbound": "",
     "remarkTemplate": "",
     "restartXrayOnClientDisable": false,
+    "scheduledRestartEnable": false,
+    "scheduledRestartInterval": 0,
+    "scheduledRestartPanel": false,
+    "scheduledRestartUnit": "",
     "sessionMaxAge": 1,
     "smtpCpu": 0,
     "smtpEnable": false,
@@ -102,7 +106,12 @@ export const EXAMPLES: Record<string, unknown> = {
     "webDomain": "",
     "webKeyFile": "",
     "webListen": "",
-    "webPort": 1
+    "webPort": 1,
+    "xrayHealthEnable": false,
+    "xrayHealthFailureThreshold": 1,
+    "xrayHealthMaxRestarts": 1,
+    "xrayHealthRestartCooldown": 1,
+    "xrayHealthWindowMinutes": 1
   },
   "AllSettingView": {
     "datepicker": "",
@@ -142,6 +151,10 @@ export const EXAMPLES: Record<string, unknown> = {
     "panelOutbound": "",
     "remarkTemplate": "",
     "restartXrayOnClientDisable": false,
+    "scheduledRestartEnable": false,
+    "scheduledRestartInterval": 0,
+    "scheduledRestartPanel": false,
+    "scheduledRestartUnit": "",
     "sessionMaxAge": 1,
     "smtpCpu": 0,
     "smtpEnable": false,
@@ -213,7 +226,12 @@ export const EXAMPLES: Record<string, unknown> = {
     "webDomain": "",
     "webKeyFile": "",
     "webListen": "",
-    "webPort": 1
+    "webPort": 1,
+    "xrayHealthEnable": false,
+    "xrayHealthFailureThreshold": 1,
+    "xrayHealthMaxRestarts": 1,
+    "xrayHealthRestartCooldown": 1,
+    "xrayHealthWindowMinutes": 1
   },
   "ApiToken": {
     "createdAt": 0,
@@ -376,6 +394,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "fingerprint": "",
     "groupId": "",
     "hostHeader": "",
+    "hostHeaders": {},
     "hosts": [
       ""
     ],

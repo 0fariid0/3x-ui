@@ -1,14 +1,18 @@
 # راهنمای انتشار نسخه اختصاصی 3x-ui
 
-نسخه این بسته: `v3.5.3`
+نسخه این بسته: `v3.5.4`
 
 ## تغییرات اصلی
 
-- حذف لینک تلگرام XrayUI از داشبورد
-- حذف دکمه‌های مستندات و حمایت مالی Sanaei از نوار کناری
-- افزودن ری‌استارت زمان‌بندی‌شده در تنظیمات Xray > پایه
-- انتخاب بازه برحسب دقیقه، ساعت یا روز
-- ری‌استارت فقط Xray در حالت عادی و ری‌استارت کامل x-ui با گزینه اختیاری
+- مانیتور سلامت Xray و ری‌استارت خودکار فقط پس از تشخیص خرابی واقعی
+- تأیید چند بررسی ناموفق، فاصله امن و مدار محافظ برای جلوگیری از حلقه ری‌استارت
+- نادیده‌گرفتن توقف دستی و بازه ری‌استارت عمدی در تشخیص خرابی
+- اجرای ری‌استارت زمان‌بندی‌شده روی مرزهای واقعی ساعت؛ مانند :۰۰، :۱۵، :۳۰ و :۴۵
+- کپی لینک با کلیک روی QR به‌جای دانلود خودکار تصویر
+- افزودن `?name=email` به لینک‌های Subscription و نام‌گذاری کانفیگ‌ها با ایمیل کاربر
+- حذف پورت از انتهای آدرس‌های Host؛ پورت مشترک Host روی همه آدرس‌ها و مقدار ۰ برابر پورت Inbound
+- هدر Host جداگانه برای هر IP یا دامنه
+- هماهنگ‌سازی تست‌های Host، Subscription، زمان‌بندی و فایل‌های تولیدشده OpenAPI
 
 ## آدرس نصب آخرین نسخه پایدار
 
@@ -16,10 +20,10 @@
 bash <(curl -Ls https://raw.githubusercontent.com/0fariid0/3x-ui/main/install.sh)
 ```
 
-## نصب دقیق نسخه 3.5.3
+## نصب یا آپدیت دقیق نسخه 3.5.4
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/0fariid0/3x-ui/main/install.sh) v3.5.3
+bash <(curl -Ls https://raw.githubusercontent.com/0fariid0/3x-ui/main/install.sh) v3.5.4
 ```
 
 ## انتشار
@@ -27,8 +31,8 @@ bash <(curl -Ls https://raw.githubusercontent.com/0fariid0/3x-ui/main/install.sh
 پس از Commit و Push فایل‌ها، تگ زیر را Push کنید:
 
 ```bash
-git tag -a v3.5.3 -m "v3.5.3 - scheduled Xray and panel restarts"
-git push origin v3.5.3
+git tag -a v3.5.4 -m "v3.5.4 - Xray health, aligned restarts and per-address headers"
+git push origin v3.5.4
 ```
 
 Workflow بخش Actions فایل‌های Linux و Windows را ساخته و به Release همان تگ اضافه می‌کند.

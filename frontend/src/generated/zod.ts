@@ -49,6 +49,10 @@ export const AllSettingSchema = z.object({
   panelOutbound: z.string(),
   remarkTemplate: z.string(),
   restartXrayOnClientDisable: z.boolean(),
+  scheduledRestartEnable: z.boolean(),
+  scheduledRestartInterval: z.number().int(),
+  scheduledRestartPanel: z.boolean(),
+  scheduledRestartUnit: z.string(),
   sessionMaxAge: z.number().int().min(1).max(525600),
   smtpCpu: z.number().int().min(0).max(100),
   smtpEnable: z.boolean(),
@@ -121,6 +125,11 @@ export const AllSettingSchema = z.object({
   webKeyFile: z.string(),
   webListen: z.string(),
   webPort: z.number().int().min(1).max(65535),
+  xrayHealthEnable: z.boolean(),
+  xrayHealthFailureThreshold: z.number().int().min(1).max(60),
+  xrayHealthMaxRestarts: z.number().int().min(1).max(100),
+  xrayHealthRestartCooldown: z.number().int().min(1).max(1440),
+  xrayHealthWindowMinutes: z.number().int().min(1).max(1440),
 });
 export type AllSetting = z.infer<typeof AllSettingSchema>;
 
@@ -162,6 +171,10 @@ export const AllSettingViewSchema = z.object({
   panelOutbound: z.string(),
   remarkTemplate: z.string(),
   restartXrayOnClientDisable: z.boolean(),
+  scheduledRestartEnable: z.boolean(),
+  scheduledRestartInterval: z.number().int(),
+  scheduledRestartPanel: z.boolean(),
+  scheduledRestartUnit: z.string(),
   sessionMaxAge: z.number().int().min(1).max(525600),
   smtpCpu: z.number().int().min(0).max(100),
   smtpEnable: z.boolean(),
@@ -234,6 +247,11 @@ export const AllSettingViewSchema = z.object({
   webKeyFile: z.string(),
   webListen: z.string(),
   webPort: z.number().int().min(1).max(65535),
+  xrayHealthEnable: z.boolean(),
+  xrayHealthFailureThreshold: z.number().int().min(1).max(60),
+  xrayHealthMaxRestarts: z.number().int().min(1).max(100),
+  xrayHealthRestartCooldown: z.number().int().min(1).max(1440),
+  xrayHealthWindowMinutes: z.number().int().min(1).max(1440),
 });
 export type AllSettingView = z.infer<typeof AllSettingViewSchema>;
 
@@ -402,6 +420,7 @@ export const HostGroupSchema = z.object({
   fingerprint: z.string(),
   groupId: z.string(),
   hostHeader: z.string(),
+  hostHeaders: z.record(z.string(), z.string()),
   hosts: z.array(z.string()),
   inboundIds: z.array(z.number().int()),
   isDisabled: z.boolean(),

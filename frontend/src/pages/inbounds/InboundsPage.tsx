@@ -26,6 +26,7 @@ import { HttpUtil, SizeFormatter, RandomUtil } from '@/utils';
 import { createDefaultInboundSettings } from '@/lib/xray/inbound-defaults';
 import { genInboundLinks, genWireguardLinks, preferPublicHost } from '@/lib/xray/inbound-link';
 import { inboundFromDb } from '@/lib/xray/inbound-from-db';
+import { withEmailConfigNames } from '@/lib/subscription-url';
 import { coerceInboundJsonField, type DBInbound } from '@/models/dbinbound';
 import { useTheme } from '@/hooks/useTheme';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -293,7 +294,7 @@ export default function InboundsPage() {
     const subLinks: string[] = [];
     for (const c of clients) {
       if (c.subId && subSettings.subURI) {
-        subLinks.push(subSettings.subURI + c.subId);
+        subLinks.push(withEmailConfigNames(subSettings.subURI + c.subId));
       }
     }
     openText({
@@ -319,7 +320,7 @@ export default function InboundsPage() {
       const clients = settings.clients || [];
       for (const c of clients) {
         if (c.subId && subSettings.subURI) {
-          out.push(subSettings.subURI + c.subId);
+          out.push(withEmailConfigNames(subSettings.subURI + c.subId));
         }
       }
     }

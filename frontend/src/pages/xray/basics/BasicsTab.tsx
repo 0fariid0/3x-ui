@@ -38,6 +38,16 @@ interface BasicsTabProps {
   onChangeScheduledRestartUnit: (v: ScheduledRestartUnit) => void;
   scheduledRestartPanel: boolean;
   onChangeScheduledRestartPanel: (v: boolean) => void;
+  xrayHealthEnable: boolean;
+  onChangeXrayHealthEnable: (v: boolean) => void;
+  xrayHealthFailureThreshold: number;
+  onChangeXrayHealthFailureThreshold: (v: number) => void;
+  xrayHealthRestartCooldown: number;
+  onChangeXrayHealthRestartCooldown: (v: number) => void;
+  xrayHealthMaxRestarts: number;
+  onChangeXrayHealthMaxRestarts: (v: number) => void;
+  xrayHealthWindowMinutes: number;
+  onChangeXrayHealthWindowMinutes: (v: number) => void;
   onResetDefault: () => void;
 }
 
@@ -54,6 +64,16 @@ export default function BasicsTab({
   onChangeScheduledRestartUnit,
   scheduledRestartPanel,
   onChangeScheduledRestartPanel,
+  xrayHealthEnable,
+  onChangeXrayHealthEnable,
+  xrayHealthFailureThreshold,
+  onChangeXrayHealthFailureThreshold,
+  xrayHealthRestartCooldown,
+  onChangeXrayHealthRestartCooldown,
+  xrayHealthMaxRestarts,
+  onChangeXrayHealthMaxRestarts,
+  xrayHealthWindowMinutes,
+  onChangeXrayHealthWindowMinutes,
   onResetDefault,
 }: BasicsTabProps) {
   const { t } = useTranslation();
@@ -338,6 +358,71 @@ export default function BasicsTab({
                   ? t('pages.xray.scheduledRestartPanelHint')
                   : t('pages.xray.scheduledRestartXrayHint')}
               />
+            </>
+          )}
+          <SettingListItem
+            title={t('pages.xray.xrayHealthMonitor')}
+            description={t('pages.xray.xrayHealthMonitorDesc')}
+            paddings="small"
+            control={<Switch checked={xrayHealthEnable} onChange={onChangeXrayHealthEnable} />}
+          />
+          {xrayHealthEnable && (
+            <>
+              <SettingListItem
+                title={t('pages.xray.xrayHealthFailureThreshold')}
+                description={t('pages.xray.xrayHealthFailureThresholdDesc')}
+                paddings="small"
+                control={
+                  <InputNumber
+                    min={1}
+                    max={60}
+                    value={xrayHealthFailureThreshold}
+                    onChange={(value) => onChangeXrayHealthFailureThreshold(Math.max(1, Number(value) || 1))}
+                  />
+                }
+              />
+              <SettingListItem
+                title={t('pages.xray.xrayHealthRestartCooldown')}
+                description={t('pages.xray.xrayHealthRestartCooldownDesc')}
+                paddings="small"
+                control={
+                  <InputNumber
+                    min={1}
+                    max={1440}
+                    addonAfter={t('pages.xray.restartUnitMinutes')}
+                    value={xrayHealthRestartCooldown}
+                    onChange={(value) => onChangeXrayHealthRestartCooldown(Math.max(1, Number(value) || 1))}
+                  />
+                }
+              />
+              <SettingListItem
+                title={t('pages.xray.xrayHealthMaxRestarts')}
+                description={t('pages.xray.xrayHealthMaxRestartsDesc')}
+                paddings="small"
+                control={
+                  <InputNumber
+                    min={1}
+                    max={100}
+                    value={xrayHealthMaxRestarts}
+                    onChange={(value) => onChangeXrayHealthMaxRestarts(Math.max(1, Number(value) || 1))}
+                  />
+                }
+              />
+              <SettingListItem
+                title={t('pages.xray.xrayHealthWindowMinutes')}
+                description={t('pages.xray.xrayHealthWindowMinutesDesc')}
+                paddings="small"
+                control={
+                  <InputNumber
+                    min={1}
+                    max={1440}
+                    addonAfter={t('pages.xray.restartUnitMinutes')}
+                    value={xrayHealthWindowMinutes}
+                    onChange={(value) => onChangeXrayHealthWindowMinutes(Math.max(1, Number(value) || 1))}
+                  />
+                }
+              />
+              <Alert type="info" showIcon className="mb-12 hint-alert" title={t('pages.xray.xrayHealthLoopProtectionHint')} />
             </>
           )}
         </>

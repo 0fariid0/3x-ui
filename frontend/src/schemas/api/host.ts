@@ -26,6 +26,7 @@ export const HostFormSchema = z.object({
   security: HostSecuritySchema.default('same'),
   sni: z.string().default(''),
   hostHeader: z.string().default(''),
+  hostHeaders: z.record(z.string(), z.string()).default({}),
   path: z.string().default(''),
   alpn: z.array(AlpnSchema).default([]),
   fingerprint: z.preprocess(
@@ -80,6 +81,7 @@ export const HostRecordSchema = z.object({
   security: z.string().optional(),
   sni: z.string().optional(),
   hostHeader: z.string().optional(),
+  hostHeaders: z.record(z.string(), z.string()).optional(),
   path: z.string().optional(),
   alpn: z.array(z.string()).nullish(),
   fingerprint: z.string().optional(),

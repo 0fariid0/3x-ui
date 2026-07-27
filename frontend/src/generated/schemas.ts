@@ -102,6 +102,18 @@ export const SCHEMAS: Record<string, unknown> = {
       "restartXrayOnClientDisable": {
         "type": "boolean"
       },
+      "scheduledRestartEnable": {
+        "type": "boolean"
+      },
+      "scheduledRestartInterval": {
+        "type": "integer"
+      },
+      "scheduledRestartPanel": {
+        "type": "boolean"
+      },
+      "scheduledRestartUnit": {
+        "type": "string"
+      },
       "sessionMaxAge": {
         "maximum": 525600,
         "minimum": 1,
@@ -338,6 +350,29 @@ export const SCHEMAS: Record<string, unknown> = {
         "maximum": 65535,
         "minimum": 1,
         "type": "integer"
+      },
+      "xrayHealthEnable": {
+        "type": "boolean"
+      },
+      "xrayHealthFailureThreshold": {
+        "maximum": 60,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "xrayHealthMaxRestarts": {
+        "maximum": 100,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "xrayHealthRestartCooldown": {
+        "maximum": 1440,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "xrayHealthWindowMinutes": {
+        "maximum": 1440,
+        "minimum": 1,
+        "type": "integer"
       }
     },
     "required": [
@@ -371,6 +406,10 @@ export const SCHEMAS: Record<string, unknown> = {
       "panelOutbound",
       "remarkTemplate",
       "restartXrayOnClientDisable",
+      "scheduledRestartEnable",
+      "scheduledRestartInterval",
+      "scheduledRestartPanel",
+      "scheduledRestartUnit",
       "sessionMaxAge",
       "smtpCpu",
       "smtpEnable",
@@ -442,7 +481,12 @@ export const SCHEMAS: Record<string, unknown> = {
       "webDomain",
       "webKeyFile",
       "webListen",
-      "webPort"
+      "webPort",
+      "xrayHealthEnable",
+      "xrayHealthFailureThreshold",
+      "xrayHealthMaxRestarts",
+      "xrayHealthRestartCooldown",
+      "xrayHealthWindowMinutes"
     ],
     "type": "object"
   },
@@ -569,6 +613,18 @@ export const SCHEMAS: Record<string, unknown> = {
       "restartXrayOnClientDisable": {
         "type": "boolean"
       },
+      "scheduledRestartEnable": {
+        "type": "boolean"
+      },
+      "scheduledRestartInterval": {
+        "type": "integer"
+      },
+      "scheduledRestartPanel": {
+        "type": "boolean"
+      },
+      "scheduledRestartUnit": {
+        "type": "string"
+      },
       "sessionMaxAge": {
         "maximum": 525600,
         "minimum": 1,
@@ -805,6 +861,29 @@ export const SCHEMAS: Record<string, unknown> = {
         "maximum": 65535,
         "minimum": 1,
         "type": "integer"
+      },
+      "xrayHealthEnable": {
+        "type": "boolean"
+      },
+      "xrayHealthFailureThreshold": {
+        "maximum": 60,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "xrayHealthMaxRestarts": {
+        "maximum": 100,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "xrayHealthRestartCooldown": {
+        "maximum": 1440,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "xrayHealthWindowMinutes": {
+        "maximum": 1440,
+        "minimum": 1,
+        "type": "integer"
       }
     },
     "required": [
@@ -845,6 +924,10 @@ export const SCHEMAS: Record<string, unknown> = {
       "panelOutbound",
       "remarkTemplate",
       "restartXrayOnClientDisable",
+      "scheduledRestartEnable",
+      "scheduledRestartInterval",
+      "scheduledRestartPanel",
+      "scheduledRestartUnit",
       "sessionMaxAge",
       "smtpCpu",
       "smtpEnable",
@@ -916,7 +999,12 @@ export const SCHEMAS: Record<string, unknown> = {
       "webDomain",
       "webKeyFile",
       "webListen",
-      "webPort"
+      "webPort",
+      "xrayHealthEnable",
+      "xrayHealthFailureThreshold",
+      "xrayHealthMaxRestarts",
+      "xrayHealthRestartCooldown",
+      "xrayHealthWindowMinutes"
     ],
     "type": "object"
   },
@@ -1573,6 +1661,12 @@ export const SCHEMAS: Record<string, unknown> = {
       "hostHeader": {
         "type": "string"
       },
+      "hostHeaders": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      },
       "hosts": {
         "items": {
           "type": "string"
@@ -1684,6 +1778,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "fingerprint",
       "groupId",
       "hostHeader",
+      "hostHeaders",
       "hosts",
       "inboundIds",
       "isDisabled",

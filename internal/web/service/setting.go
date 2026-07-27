@@ -126,6 +126,11 @@ var defaultValueMap = map[string]string{
 	"scheduledRestartInterval":    "24",
 	"scheduledRestartUnit":        "hours",
 	"scheduledRestartPanel":       "false",
+	"xrayHealthEnable":            "true",
+	"xrayHealthFailureThreshold":  "2",
+	"xrayHealthRestartCooldown":   "5",
+	"xrayHealthMaxRestarts":       "3",
+	"xrayHealthWindowMinutes":     "30",
 	"xrayOutboundTestUrl":         "https://www.google.com/generate_204",
 	"panelOutbound":               "",
 	"devChannelEnable":            "false",
@@ -951,6 +956,46 @@ func (s *SettingService) GetScheduledRestartPanel() (bool, error) {
 
 func (s *SettingService) SetScheduledRestartPanel(value bool) error {
 	return s.setBool("scheduledRestartPanel", value)
+}
+
+func (s *SettingService) GetXrayHealthEnable() (bool, error) {
+	return s.getBool("xrayHealthEnable")
+}
+
+func (s *SettingService) SetXrayHealthEnable(value bool) error {
+	return s.setBool("xrayHealthEnable", value)
+}
+
+func (s *SettingService) GetXrayHealthFailureThreshold() (int, error) {
+	return s.getInt("xrayHealthFailureThreshold")
+}
+
+func (s *SettingService) SetXrayHealthFailureThreshold(value int) error {
+	return s.setInt("xrayHealthFailureThreshold", value)
+}
+
+func (s *SettingService) GetXrayHealthRestartCooldown() (int, error) {
+	return s.getInt("xrayHealthRestartCooldown")
+}
+
+func (s *SettingService) SetXrayHealthRestartCooldown(value int) error {
+	return s.setInt("xrayHealthRestartCooldown", value)
+}
+
+func (s *SettingService) GetXrayHealthMaxRestarts() (int, error) {
+	return s.getInt("xrayHealthMaxRestarts")
+}
+
+func (s *SettingService) SetXrayHealthMaxRestarts(value int) error {
+	return s.setInt("xrayHealthMaxRestarts", value)
+}
+
+func (s *SettingService) GetXrayHealthWindowMinutes() (int, error) {
+	return s.getInt("xrayHealthWindowMinutes")
+}
+
+func (s *SettingService) SetXrayHealthWindowMinutes(value int) error {
+	return s.setInt("xrayHealthWindowMinutes", value)
 }
 
 // GetDevChannelEnable reports whether the panel self-update tracks the rolling

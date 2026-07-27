@@ -31,6 +31,9 @@ type SubService struct {
 	address        string
 	remarkTemplate string
 	datepicker     string
+	// nameMode is a request-level display-name override. "email" makes every
+	// generated config use the owning client's email as its final name.
+	nameMode string
 	// subscriptionBody is true only when rendering the actual subscription
 	// content a client app imports (raw /sub fetch, /json, /clash). The remark
 	// template's per-client info is emitted there (on the first link); every
@@ -81,6 +84,17 @@ func (s *SubService) ForRequest(host string) *SubService {
 	req := *s
 	req.PrepareForRequest(host)
 	return &req
+}
+
+// SetNameMode applies a safe request-level config naming mode. Unknown values
+// are ignored so adding query parameters never breaks existing subscriptions.
+func (s *SubService) SetNameMode(mode string) {
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	if mode == "email" {
+		s.nameMode = mode
+		return
+	}
+	s.nameMode = ""
 }
 
 // PrepareForRequest sets per-request state (host + nodes map) on this
@@ -322,7 +336,11 @@ func (s *SubService) getSubs(subId string) ([]string, []string, int64, xray.Clie
 			hasEnabledClient = true
 		}
 		for _, el := range expandEntry(ext) {
-			if link := applyRemarkToLink(el.Link, el.Name); link != "" {
+			name := el.Name
+			if s.nameMode == "email" {
+				name = ext.Email
+			}
+			if link := applyRemarkToLink(el.Link, name); link != "" {
 				result = append(result, link)
 				emails = append(emails, ext.Email)
 				seenEmails[ext.Email] = struct{}{}
@@ -2551,7 +2569,21 @@ func (s *SubService) BuildURLs(subPath, subJsonPath, subClashPath, subId string)
 	subJsonURL = s.buildSingleURL(configuredSubJsonURI, jsonClashBase, subJsonPath, subId)
 	subClashURL = s.buildSingleURL(configuredSubClashURI, jsonClashBase, subClashPath, subId)
 
-	return subURL, subJsonURL, subClashURL
+	return appendSubscriptionNameMode(subURL), appendSubscriptionNameMode(subJsonURL), appendSubscriptionNameMode(subClashURL)
+}
+
+func appendSubscriptionNameMode(rawURL string) string {
+	if rawURL == "" {
+		return ""
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+	q := u.Query()
+	q.Set("name", "email")
+	u.RawQuery = q.Encode()
+	return u.String()
 }
 
 // extractBaseFromURI extracts scheme://host from a configured URI.

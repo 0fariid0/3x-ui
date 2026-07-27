@@ -23,6 +23,7 @@ var (
 	p                 *xray.Process
 	lock              sync.Mutex
 	isNeedXrayRestart atomic.Bool // Indicates that restart was requested for Xray
+	isRestarting      atomic.Bool // Excludes intentional restart windows from crash detection
 	isManuallyStopped atomic.Bool // Indicates that Xray was stopped manually from the panel
 	result            string
 )
@@ -1014,6 +1015,8 @@ func (s *XrayService) TestRoute(req xray.RouteTestRequest) (*xray.RouteTestResul
 func (s *XrayService) RestartXray(isForce bool) error {
 	lock.Lock()
 	defer lock.Unlock()
+	isRestarting.Store(true)
+	defer isRestarting.Store(false)
 	logger.Debug("restart Xray, force:", isForce)
 	if !isForce && isManuallyStopped.Load() {
 		return nil
@@ -1230,7 +1233,7 @@ func (s *XrayService) ApplyPendingRestart() {
 
 // DidXrayCrash checks if Xray crashed by verifying it's not running and wasn't manually stopped.
 func (s *XrayService) DidXrayCrash() bool {
-	return !s.IsXrayRunning() && !isManuallyStopped.Load()
+	return !s.IsXrayRunning() && !isManuallyStopped.Load() && !isRestarting.Load()
 }
 
 // liftXhttpSessionIDKeys renames the legacy XHTTP session keys

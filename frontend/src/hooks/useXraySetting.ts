@@ -65,6 +65,16 @@ export interface UseXraySettingResult {
   setScheduledRestartUnit: (v: ScheduledRestartUnit) => void;
   scheduledRestartPanel: boolean;
   setScheduledRestartPanel: (v: boolean) => void;
+  xrayHealthEnable: boolean;
+  setXrayHealthEnable: (v: boolean) => void;
+  xrayHealthFailureThreshold: number;
+  setXrayHealthFailureThreshold: (v: number) => void;
+  xrayHealthRestartCooldown: number;
+  setXrayHealthRestartCooldown: (v: number) => void;
+  xrayHealthMaxRestarts: number;
+  setXrayHealthMaxRestarts: (v: number) => void;
+  xrayHealthWindowMinutes: number;
+  setXrayHealthWindowMinutes: (v: number) => void;
   inboundTags: string[];
   clientReverseTags: string[];
   subscriptionOutbounds: unknown[];
@@ -142,6 +152,11 @@ export function useXraySetting(): UseXraySettingResult {
   const [scheduledRestartInterval, setScheduledRestartInterval] = useState(24);
   const [scheduledRestartUnit, setScheduledRestartUnit] = useState<ScheduledRestartUnit>('hours');
   const [scheduledRestartPanel, setScheduledRestartPanel] = useState(false);
+  const [xrayHealthEnable, setXrayHealthEnable] = useState(true);
+  const [xrayHealthFailureThreshold, setXrayHealthFailureThreshold] = useState(2);
+  const [xrayHealthRestartCooldown, setXrayHealthRestartCooldown] = useState(5);
+  const [xrayHealthMaxRestarts, setXrayHealthMaxRestarts] = useState(3);
+  const [xrayHealthWindowMinutes, setXrayHealthWindowMinutes] = useState(30);
   const [inboundTags, setInboundTags] = useState<string[]>([]);
   const [clientReverseTags, setClientReverseTags] = useState<string[]>([]);
   const [subscriptionOutbounds, setSubscriptionOutbounds] = useState<unknown[]>([]);
@@ -169,6 +184,11 @@ export function useXraySetting(): UseXraySettingResult {
     interval: scheduledRestartInterval,
     unit: scheduledRestartUnit,
     panel: scheduledRestartPanel,
+    healthEnable: xrayHealthEnable,
+    healthFailureThreshold: xrayHealthFailureThreshold,
+    healthRestartCooldown: xrayHealthRestartCooldown,
+    healthMaxRestarts: xrayHealthMaxRestarts,
+    healthWindowMinutes: xrayHealthWindowMinutes,
   });
   templateSettingsRef.current = templateSettings;
   subscriptionOutboundsRef.current = subscriptionOutbounds;
@@ -195,15 +215,30 @@ export function useXraySetting(): UseXraySettingResult {
     const nextScheduledInterval = obj.scheduledRestartInterval || 24;
     const nextScheduledUnit = obj.scheduledRestartUnit || 'hours';
     const nextScheduledPanel = !!obj.scheduledRestartPanel;
+    const nextHealthEnable = obj.xrayHealthEnable ?? true;
+    const nextHealthFailureThreshold = obj.xrayHealthFailureThreshold || 2;
+    const nextHealthRestartCooldown = obj.xrayHealthRestartCooldown || 5;
+    const nextHealthMaxRestarts = obj.xrayHealthMaxRestarts || 3;
+    const nextHealthWindowMinutes = obj.xrayHealthWindowMinutes || 30;
     setScheduledRestartEnable(nextScheduledEnable);
     setScheduledRestartInterval(nextScheduledInterval);
     setScheduledRestartUnit(nextScheduledUnit);
     setScheduledRestartPanel(nextScheduledPanel);
+    setXrayHealthEnable(nextHealthEnable);
+    setXrayHealthFailureThreshold(nextHealthFailureThreshold);
+    setXrayHealthRestartCooldown(nextHealthRestartCooldown);
+    setXrayHealthMaxRestarts(nextHealthMaxRestarts);
+    setXrayHealthWindowMinutes(nextHealthWindowMinutes);
     oldScheduledRestartRef.current = JSON.stringify({
       enabled: nextScheduledEnable,
       interval: nextScheduledInterval,
       unit: nextScheduledUnit,
       panel: nextScheduledPanel,
+      healthEnable: nextHealthEnable,
+      healthFailureThreshold: nextHealthFailureThreshold,
+      healthRestartCooldown: nextHealthRestartCooldown,
+      healthMaxRestarts: nextHealthMaxRestarts,
+      healthWindowMinutes: nextHealthWindowMinutes,
     });
     setSaveDisabled(true);
   }, [configQuery.data]);
@@ -261,6 +296,11 @@ export function useXraySetting(): UseXraySettingResult {
         interval?: number;
         unit?: ScheduledRestartUnit;
         panel?: boolean;
+        healthEnable?: boolean;
+        healthFailureThreshold?: number;
+        healthRestartCooldown?: number;
+        healthMaxRestarts?: number;
+        healthWindowMinutes?: number;
       };
       const msg = await HttpUtil.post('/panel/api/xray/update', {
         xraySetting: sentXraySetting,
@@ -269,6 +309,11 @@ export function useXraySetting(): UseXraySettingResult {
         scheduledRestartInterval: sentScheduled.interval || 24,
         scheduledRestartUnit: sentScheduled.unit || 'hours',
         scheduledRestartPanel: !!sentScheduled.panel,
+        xrayHealthEnable: sentScheduled.healthEnable ?? true,
+        xrayHealthFailureThreshold: sentScheduled.healthFailureThreshold || 2,
+        xrayHealthRestartCooldown: sentScheduled.healthRestartCooldown || 5,
+        xrayHealthMaxRestarts: sentScheduled.healthMaxRestarts || 3,
+        xrayHealthWindowMinutes: sentScheduled.healthWindowMinutes || 30,
       });
       return { msg, sentXraySetting, sentTestUrl, sentScheduled };
     },
@@ -503,6 +548,16 @@ export function useXraySetting(): UseXraySettingResult {
       setScheduledRestartUnit,
       scheduledRestartPanel,
       setScheduledRestartPanel,
+      xrayHealthEnable,
+      setXrayHealthEnable,
+      xrayHealthFailureThreshold,
+      setXrayHealthFailureThreshold,
+      xrayHealthRestartCooldown,
+      setXrayHealthRestartCooldown,
+      xrayHealthMaxRestarts,
+      setXrayHealthMaxRestarts,
+      xrayHealthWindowMinutes,
+      setXrayHealthWindowMinutes,
       inboundTags,
       clientReverseTags,
       subscriptionOutbounds,
@@ -535,6 +590,11 @@ export function useXraySetting(): UseXraySettingResult {
       scheduledRestartInterval,
       scheduledRestartUnit,
       scheduledRestartPanel,
+      xrayHealthEnable,
+      xrayHealthFailureThreshold,
+      xrayHealthRestartCooldown,
+      xrayHealthMaxRestarts,
+      xrayHealthWindowMinutes,
       inboundTags,
       clientReverseTags,
       subscriptionOutbounds,

@@ -681,3 +681,15 @@ func TestEmailOnFirstLinkOnly(t *testing.T) {
 		t.Fatalf("second link should still carry the inbound name: %q", second)
 	}
 }
+
+func TestNameModeEmailOverridesGlobalAndHostTemplates(t *testing.T) {
+	client := model.Client{Email: "john@example.com"}
+	inbound := &model.Inbound{Remark: "Germany", StreamSettings: `{"security":"tls","network":"ws"}`}
+	s := &SubService{remarkTemplate: "{{INBOUND}}-{{EMAIL}}", subscriptionBody: true, nameMode: "email"}
+	if got := s.genTemplatedRemark(inbound, client, "", "ws"); got != client.Email {
+		t.Fatalf("global remark=%q", got)
+	}
+	if got := s.genHostRemark(inbound, client, "Custom host", "ws"); got != client.Email {
+		t.Fatalf("host remark=%q", got)
+	}
+}

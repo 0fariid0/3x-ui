@@ -38,3 +38,26 @@ func TestApplyPendingRestartReArmsFlagOnFailure(t *testing.T) {
 		t.Fatal("a failed restart must re-arm the need-restart flag so the pending config change is retried")
 	}
 }
+
+func TestDidXrayCrashIgnoresIntentionalRestartWindow(t *testing.T) {
+	oldProcess := p
+	oldManual := isManuallyStopped.Load()
+	oldRestarting := isRestarting.Load()
+	t.Cleanup(func() {
+		p = oldProcess
+		isManuallyStopped.Store(oldManual)
+		isRestarting.Store(oldRestarting)
+	})
+
+	p = nil
+	isManuallyStopped.Store(false)
+	isRestarting.Store(true)
+	if (&XrayService{}).DidXrayCrash() {
+		t.Fatal("an intentional restart window must not be classified as a crash")
+	}
+
+	isRestarting.Store(false)
+	if !(&XrayService{}).DidXrayCrash() {
+		t.Fatal("a stopped, non-manual, non-restarting core must be classified as crashed")
+	}
+}

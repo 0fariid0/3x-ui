@@ -106,15 +106,25 @@ func (a *XraySettingController) getXraySetting(c *gin.Context) {
 	scheduledRestartInterval, _ := a.SettingService.GetScheduledRestartInterval()
 	scheduledRestartUnit, _ := a.SettingService.GetScheduledRestartUnit()
 	scheduledRestartPanel, _ := a.SettingService.GetScheduledRestartPanel()
+	xrayHealthEnable, _ := a.SettingService.GetXrayHealthEnable()
+	xrayHealthFailureThreshold, _ := a.SettingService.GetXrayHealthFailureThreshold()
+	xrayHealthRestartCooldown, _ := a.SettingService.GetXrayHealthRestartCooldown()
+	xrayHealthMaxRestarts, _ := a.SettingService.GetXrayHealthMaxRestarts()
+	xrayHealthWindowMinutes, _ := a.SettingService.GetXrayHealthWindowMinutes()
 	xrayResponse := map[string]any{
-		"xraySetting":              json.RawMessage(xraySetting),
-		"inboundTags":              json.RawMessage(inboundTags),
-		"clientReverseTags":        json.RawMessage(clientReverseTags),
-		"outboundTestUrl":          outboundTestUrl,
-		"scheduledRestartEnable":   scheduledRestartEnable,
-		"scheduledRestartInterval": scheduledRestartInterval,
-		"scheduledRestartUnit":     scheduledRestartUnit,
-		"scheduledRestartPanel":    scheduledRestartPanel,
+		"xraySetting":                json.RawMessage(xraySetting),
+		"inboundTags":                json.RawMessage(inboundTags),
+		"clientReverseTags":          json.RawMessage(clientReverseTags),
+		"outboundTestUrl":            outboundTestUrl,
+		"scheduledRestartEnable":     scheduledRestartEnable,
+		"scheduledRestartInterval":   scheduledRestartInterval,
+		"scheduledRestartUnit":       scheduledRestartUnit,
+		"scheduledRestartPanel":      scheduledRestartPanel,
+		"xrayHealthEnable":           xrayHealthEnable,
+		"xrayHealthFailureThreshold": xrayHealthFailureThreshold,
+		"xrayHealthRestartCooldown":  xrayHealthRestartCooldown,
+		"xrayHealthMaxRestarts":      xrayHealthMaxRestarts,
+		"xrayHealthWindowMinutes":    xrayHealthWindowMinutes,
 	}
 
 	// Surface subscription outbounds (and their tags) so the frontend can:
@@ -189,6 +199,54 @@ func (a *XraySettingController) updateSetting(c *gin.Context) {
 		if err := a.SettingService.SetScheduledRestartEnable(enable); err != nil {
 			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
 			return
+		}
+	}
+
+	if rawEnable, present := c.GetPostForm("xrayHealthEnable"); present {
+		enable, parseErr := strconv.ParseBool(rawEnable)
+		if parseErr != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), parseErr)
+			return
+		}
+		parseBounded := func(key string, minValue, maxValue int) (int, error) {
+			value, err := strconv.Atoi(c.PostForm(key))
+			if err != nil || value < minValue || value > maxValue {
+				return 0, common.NewErrorf("%s must be between %d and %d", key, minValue, maxValue)
+			}
+			return value, nil
+		}
+		failureThreshold, parseErr := parseBounded("xrayHealthFailureThreshold", 1, 60)
+		if parseErr != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), parseErr)
+			return
+		}
+		cooldown, parseErr := parseBounded("xrayHealthRestartCooldown", 1, 1440)
+		if parseErr != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), parseErr)
+			return
+		}
+		maxRestarts, parseErr := parseBounded("xrayHealthMaxRestarts", 1, 100)
+		if parseErr != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), parseErr)
+			return
+		}
+		windowMinutes, parseErr := parseBounded("xrayHealthWindowMinutes", 1, 1440)
+		if parseErr != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), parseErr)
+			return
+		}
+		setters := []func() error{
+			func() error { return a.SettingService.SetXrayHealthFailureThreshold(failureThreshold) },
+			func() error { return a.SettingService.SetXrayHealthRestartCooldown(cooldown) },
+			func() error { return a.SettingService.SetXrayHealthMaxRestarts(maxRestarts) },
+			func() error { return a.SettingService.SetXrayHealthWindowMinutes(windowMinutes) },
+			func() error { return a.SettingService.SetXrayHealthEnable(enable) },
+		}
+		for _, set := range setters {
+			if err := set(); err != nil {
+				jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
+				return
+			}
 		}
 	}
 	// Only reconcile a running core; a manually stopped xray stays stopped.

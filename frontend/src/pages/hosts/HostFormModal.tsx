@@ -54,6 +54,7 @@ function defaultsFor(host: HostRecord | null): FormShape {
     security: (host?.security as BulkAddHostValues['security']) ?? 'same',
     sni: host?.sni ?? '',
     hostHeader: host?.hostHeader ?? '',
+    hostHeaders: host?.hostHeaders ?? {},
     path: host?.path ?? '',
     alpn: (host?.alpn as BulkAddHostValues['alpn']) ?? [],
     fingerprint: host?.fingerprint as BulkAddHostValues['fingerprint'],
@@ -83,6 +84,7 @@ export default function HostFormModal({ open, mode, host, inboundOptions, existi
   const [loading, setLoading] = useState(false);
 
   const security = (useWatch({ control: methods.control, name: 'security' }) ?? 'same') as string;
+  const selectedHosts = useWatch({ control: methods.control, name: 'hosts' }) ?? [];
   const showTls = security === 'tls' || security === 'reality';
   const showTlsExtras = security === 'tls';
 
@@ -131,9 +133,16 @@ export default function HostFormModal({ open, mode, host, inboundOptions, existi
     if (loading) return;
     const { enable, ...rest } = values;
     const isDisabled = !enable;
+    const cleanHosts = (rest.hosts || []).map((h) => h.trim()).filter(Boolean);
+    const hostHeaders = Object.fromEntries(
+      cleanHosts
+        .map((address) => [address, rest.hostHeaders?.[address] ?? ''] as const)
+        .filter(([, header]) => header.trim() !== ''),
+    );
     const payload: BulkAddHostValues = {
       ...rest,
-      hosts: (rest.hosts || []).filter((h) => h && h.trim() !== ''),
+      hosts: cleanHosts,
+      hostHeaders,
       isDisabled,
     };
     setLoading(true);
@@ -201,7 +210,7 @@ export default function HostFormModal({ open, mode, host, inboundOptions, existi
                         mode="tags"
                         options={hostOptions}
                         tokenSeparators={[',', ';', ' ']}
-                        placeholder="cdn.example.com, cdn2.example.com:443"
+                        placeholder="1.1.1.1, cdn.example.com"
                       />
                     </FormField>
                     <FormField name="port" label={t('pages.hosts.fields.port')} tooltip={t('pages.hosts.hints.port')}>
@@ -286,6 +295,33 @@ export default function HostFormModal({ open, mode, host, inboundOptions, existi
                             <FormField name="hostHeader" label={t('pages.hosts.fields.hostHeader')}>
                               <Input />
                             </FormField>
+                            {selectedHosts.length > 0 && (
+                              <Form.Item
+                                label={t('pages.hosts.fields.hostHeaders')}
+                                tooltip={t('pages.hosts.hints.hostHeaders')}
+                              >
+                                <Controller
+                                  control={methods.control}
+                                  name="hostHeaders"
+                                  render={({ field }) => (
+                                    <div style={{ display: 'grid', gap: 8 }}>
+                                      {selectedHosts.map((address) => (
+                                        <Input
+                                          key={address}
+                                          addonBefore={address}
+                                          value={field.value?.[address] ?? ''}
+                                          placeholder={methods.getValues('hostHeader') || 'cdn.example.com'}
+                                          onChange={(event) => field.onChange({
+                                            ...(field.value ?? {}),
+                                            [address]: event.target.value,
+                                          })}
+                                        />
+                                      ))}
+                                    </div>
+                                  )}
+                                />
+                              </Form.Item>
+                            )}
                             <FormField name="path" label={t('pages.hosts.fields.path')}>
                               <Input />
                             </FormField>

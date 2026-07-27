@@ -335,6 +335,7 @@ func (a *SUBController) buildSubPageData(c *gin.Context) (PageData, bool) {
 	subId := c.Param("subid")
 	_, host, _, hostHeader := a.subService.ResolveRequest(c)
 	subReq := a.subService.ForRequest(host)
+	subReq.SetNameMode(c.Query("name"))
 	subReq.subscriptionBody = false
 	subs, emails, lastOnline, traffic, err := subReq.getSubs(subId)
 	if err != nil || len(subs) == 0 {
@@ -396,6 +397,7 @@ func (a *SUBController) subs(c *gin.Context) {
 	subId := c.Param("subid")
 	scheme, host, hostWithPort, _ := a.subService.ResolveRequest(c)
 	subReq := a.subService.ForRequest(host)
+	subReq.SetNameMode(c.Query("name"))
 	subReq.subscriptionBody = true
 	subs, _, _, traffic, err := subReq.getSubs(subId)
 	if err != nil || len(subs) == 0 {
@@ -667,7 +669,7 @@ func (a *SUBController) serveJson(c *gin.Context, alwaysReturnArray bool, conten
 func (a *SUBController) serveJsonBody(c *gin.Context, alwaysReturnArray bool, contentType string, rawDownload bool) bool {
 	subId := c.Param("subid")
 	scheme, host, hostWithPort, _ := a.subService.ResolveRequest(c)
-	jsonSub, header, err := a.subJsonService.GetJson(subId, host, alwaysReturnArray)
+	jsonSub, header, err := a.subJsonService.GetJsonNamed(subId, host, alwaysReturnArray, c.Query("name"))
 	if err != nil {
 		writeSubError(c, err)
 		return true
@@ -706,7 +708,7 @@ func (a *SUBController) subClashs(c *gin.Context) {
 func (a *SUBController) serveClashBody(c *gin.Context, rawDownload bool) bool {
 	subId := c.Param("subid")
 	scheme, host, hostWithPort, _ := a.subService.ResolveRequest(c)
-	clashSub, header, err := a.subClashService.GetClash(subId, host)
+	clashSub, header, err := a.subClashService.GetClashNamed(subId, host, c.Query("name"))
 	if err != nil {
 		writeSubError(c, err)
 		return true

@@ -94,6 +94,11 @@ type AllSetting struct {
 	ScheduledRestartInterval    int    `json:"scheduledRestartInterval" form:"scheduledRestartInterval"`
 	ScheduledRestartUnit        string `json:"scheduledRestartUnit" form:"scheduledRestartUnit"`
 	ScheduledRestartPanel       bool   `json:"scheduledRestartPanel" form:"scheduledRestartPanel"`
+	XrayHealthEnable            bool   `json:"xrayHealthEnable" form:"xrayHealthEnable"`
+	XrayHealthFailureThreshold  int    `json:"xrayHealthFailureThreshold" form:"xrayHealthFailureThreshold" validate:"gte=1,lte=60"`
+	XrayHealthRestartCooldown   int    `json:"xrayHealthRestartCooldown" form:"xrayHealthRestartCooldown" validate:"gte=1,lte=1440"`
+	XrayHealthMaxRestarts       int    `json:"xrayHealthMaxRestarts" form:"xrayHealthMaxRestarts" validate:"gte=1,lte=100"`
+	XrayHealthWindowMinutes     int    `json:"xrayHealthWindowMinutes" form:"xrayHealthWindowMinutes" validate:"gte=1,lte=1440"`
 	SubEncrypt                  bool   `json:"subEncrypt" form:"subEncrypt"`
 	SubURI                      string `json:"subURI" form:"subURI"`
 	SubJsonPath                 string `json:"subJsonPath" form:"subJsonPath"`
@@ -186,6 +191,18 @@ func (s *AllSetting) CheckValid() error {
 	}
 	if _, err := ScheduledRestartDuration(s.ScheduledRestartInterval, s.ScheduledRestartUnit); err != nil {
 		return common.NewError("scheduled restart setting is invalid:", err)
+	}
+	if s.XrayHealthFailureThreshold == 0 {
+		s.XrayHealthFailureThreshold = 2
+	}
+	if s.XrayHealthRestartCooldown == 0 {
+		s.XrayHealthRestartCooldown = 5
+	}
+	if s.XrayHealthMaxRestarts == 0 {
+		s.XrayHealthMaxRestarts = 3
+	}
+	if s.XrayHealthWindowMinutes == 0 {
+		s.XrayHealthWindowMinutes = 30
 	}
 
 	if (s.SubPort == s.WebPort) && listenAddressesConflict(s.WebListen, s.SubListen) {
@@ -300,32 +317,33 @@ type HostGroup struct {
 	InboundIds []int    `json:"inboundIds" validate:"required,min=1"`
 	Hosts      []string `json:"hosts" validate:"omitempty"`
 
-	SortOrder              int      `json:"sortOrder"`
-	Remark                 string   `json:"remark" validate:"omitempty,max=256"`
-	ServerDescription      string   `json:"serverDescription" validate:"omitempty,max=64"`
-	IsDisabled             bool     `json:"isDisabled"`
-	IsHidden               bool     `json:"isHidden"`
-	Tags                   []string `json:"tags"`
-	Port                   int      `json:"port" validate:"gte=0,lte=65535"`
-	Security               string   `json:"security" validate:"omitempty,oneof=same tls none reality"`
-	Sni                    string   `json:"sni"`
-	HostHeader             string   `json:"hostHeader"`
-	Path                   string   `json:"path"`
-	Alpn                   []string `json:"alpn"`
-	Fingerprint            string   `json:"fingerprint"`
-	OverrideSniFromAddress bool     `json:"overrideSniFromAddress"`
-	KeepSniBlank           bool     `json:"keepSniBlank"`
-	PinnedPeerCertSha256   []string `json:"pinnedPeerCertSha256"`
-	VerifyPeerCertByName   string   `json:"verifyPeerCertByName"`
-	AllowInsecure          bool     `json:"allowInsecure"`
-	EchConfigList          string   `json:"echConfigList"`
-	MuxParams              string   `json:"muxParams"`
-	SockoptParams          string   `json:"sockoptParams"`
-	FinalMask              string   `json:"finalMask"`
-	VlessRoute             string   `json:"vlessRoute"`
-	ExcludeFromSubTypes    []string `json:"excludeFromSubTypes"`
-	NodeGuids              []string `json:"nodeGuids"`
-	MihomoIpVersion        string   `json:"mihomoIpVersion" validate:"omitempty,oneof=dual ipv4 ipv6 ipv4-prefer ipv6-prefer"`
-	MihomoX25519           bool     `json:"mihomoX25519"`
-	ShuffleHost            bool     `json:"shuffleHost"`
+	SortOrder              int               `json:"sortOrder"`
+	Remark                 string            `json:"remark" validate:"omitempty,max=256"`
+	ServerDescription      string            `json:"serverDescription" validate:"omitempty,max=64"`
+	IsDisabled             bool              `json:"isDisabled"`
+	IsHidden               bool              `json:"isHidden"`
+	Tags                   []string          `json:"tags"`
+	Port                   int               `json:"port" validate:"gte=0,lte=65535"`
+	Security               string            `json:"security" validate:"omitempty,oneof=same tls none reality"`
+	Sni                    string            `json:"sni"`
+	HostHeader             string            `json:"hostHeader"`
+	HostHeaders            map[string]string `json:"hostHeaders"`
+	Path                   string            `json:"path"`
+	Alpn                   []string          `json:"alpn"`
+	Fingerprint            string            `json:"fingerprint"`
+	OverrideSniFromAddress bool              `json:"overrideSniFromAddress"`
+	KeepSniBlank           bool              `json:"keepSniBlank"`
+	PinnedPeerCertSha256   []string          `json:"pinnedPeerCertSha256"`
+	VerifyPeerCertByName   string            `json:"verifyPeerCertByName"`
+	AllowInsecure          bool              `json:"allowInsecure"`
+	EchConfigList          string            `json:"echConfigList"`
+	MuxParams              string            `json:"muxParams"`
+	SockoptParams          string            `json:"sockoptParams"`
+	FinalMask              string            `json:"finalMask"`
+	VlessRoute             string            `json:"vlessRoute"`
+	ExcludeFromSubTypes    []string          `json:"excludeFromSubTypes"`
+	NodeGuids              []string          `json:"nodeGuids"`
+	MihomoIpVersion        string            `json:"mihomoIpVersion" validate:"omitempty,oneof=dual ipv4 ipv6 ipv4-prefer ipv6-prefer"`
+	MihomoX25519           bool              `json:"mihomoX25519"`
+	ShuffleHost            bool              `json:"shuffleHost"`
 }

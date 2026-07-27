@@ -59,7 +59,12 @@ func NewSubJsonService(mux string, rules string, finalMask string, subService *S
 
 // GetJson generates a JSON subscription configuration for the given subscription ID and host.
 func (s *SubJsonService) GetJson(subId string, host string, alwaysReturnArray bool) (string, string, error) {
+	return s.GetJsonNamed(subId, host, alwaysReturnArray, "")
+}
+
+func (s *SubJsonService) GetJsonNamed(subId string, host string, alwaysReturnArray bool, nameMode string) (string, string, error) {
 	subReq := s.SubService.ForRequest(host)
+	subReq.SetNameMode(nameMode)
 	subReq.subscriptionBody = true
 	inbounds, err := subReq.getInboundsBySubId(subId)
 	if err != nil {
@@ -101,7 +106,7 @@ func (s *SubJsonService) GetJson(subId string, host string, alwaysReturnArray bo
 			}
 			seenEmails[ext.Email] = struct{}{}
 			remark := el.Name
-			if remark == "" {
+			if subReq.nameMode == "email" || remark == "" {
 				remark = ext.Email
 			}
 			newOutbounds := []json_util.RawMessage{outbound}

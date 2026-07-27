@@ -311,7 +311,7 @@ func (s *Server) startTask(restartXray bool) {
 		}
 	}
 	// Check whether xray is running every second
-	_, _ = s.cron.AddJob(cadenceXrayRunning, job.NewCheckXrayRunningJob())
+	_, _ = s.cron.AddJob(cadenceXrayRunning, job.NewCheckXrayRunningJob(&s.xrayService, &s.settingService))
 
 	// Check if xray needs to be restarted every 30 seconds
 	_, _ = s.cron.AddFunc(cadenceXrayRestart, func() {

@@ -1896,16 +1896,27 @@
       "defaultOutbound": "خروجی پیش‌فرض",
       "defaultOutboundDesc": "ترافیکی که با هیچ قانون مسیریابی جور نشود از این خروجی استفاده می‌کند (اولین خروجی در فهرست).",
       "scheduledRestart": "راه‌اندازی مجدد زمان‌بندی‌شده",
-      "scheduledRestartDesc": "هسته Xray را به‌صورت خودکار و در بازه دلخواه راه‌اندازی مجدد می‌کند.",
+      "scheduledRestartDesc": "Xray را به‌صورت خودکار روی زمان‌های رُند ساعت راه‌اندازی مجدد می‌کند.",
       "scheduledRestartInterval": "تکرار راه‌اندازی مجدد",
-      "scheduledRestartIntervalDesc": "شمارش زمان پس از ذخیره تنظیمات یا اجرای پنل شروع می‌شود.",
+      "scheduledRestartIntervalDesc": "زمان‌بندی بر اساس ساعت واقعی است؛ ۱۵ دقیقه در :۰۰، :۱۵، :۳۰ و :۴۵، نیم‌ساعت در :۰۰ و :۳۰ و ساعت‌ها دقیقاً سر ساعت اجرا می‌شوند.",
       "scheduledRestartPanel": "راه‌اندازی مجدد کامل سرویس x-ui",
       "scheduledRestartPanelDesc": "خاموش: فقط Xray ری‌استارت می‌شود. روشن: کل سرویس پنل مشابه دستور x-ui restart ری‌استارت می‌شود.",
       "scheduledRestartXrayHint": "فقط هسته Xray راه‌اندازی مجدد می‌شود و پنل در دسترس باقی می‌ماند.",
       "scheduledRestartPanelHint": "کل سرویس x-ui راه‌اندازی مجدد می‌شود و ممکن است پنل چند ثانیه در دسترس نباشد.",
       "restartUnitMinutes": "دقیقه",
       "restartUnitHours": "ساعت",
-      "restartUnitDays": "روز"
+      "restartUnitDays": "روز",
+      "xrayHealthMonitor": "مانیتور سلامت Xray",
+      "xrayHealthMonitorDesc": "خرابی قطعی Xray را تشخیص می‌دهد و فقط هنگام خرابی واقعی هسته را خودکار ری‌استارت می‌کند. توقف دستی نادیده گرفته می‌شود.",
+      "xrayHealthFailureThreshold": "تعداد بررسی ناموفق پیش از ری‌استارت",
+      "xrayHealthFailureThresholdDesc": "تعداد خطاهای متوالی لازم برای تأیید خرابی و اجرای ری‌استارت خودکار.",
+      "xrayHealthRestartCooldown": "فاصله امن بین ری‌استارت‌ها",
+      "xrayHealthRestartCooldownDesc": "حداقل زمان برحسب دقیقه میان دو تلاش ری‌استارت خودکار.",
+      "xrayHealthMaxRestarts": "حداکثر تلاش ری‌استارت",
+      "xrayHealthMaxRestartsDesc": "حداکثر تعداد ری‌استارت خودکار در بازه محافظتی.",
+      "xrayHealthWindowMinutes": "بازه محافظتی",
+      "xrayHealthWindowMinutesDesc": "بازه زمانی برحسب دقیقه برای تشخیص حلقه ری‌استارت.",
+      "xrayHealthLoopProtectionHint": "اگر Xray پشت‌سرهم خراب شود، مدار محافظ تلاش‌های خودکار را تا پایان بازه محافظتی متوقف می‌کند."
     },
     "hosts": {
       "addHost": "افزودن میزبان",
@@ -1962,7 +1973,8 @@
         "tags": "برچسب‌ها",
         "nodeGuids": "نودها",
         "excludeFromSubTypes": "حذف از فرمت‌ها",
-        "inheritAddress": "ارث‌بری آدرس"
+        "inheritAddress": "ارث‌بری آدرس",
+        "hostHeaders": "هدر جدا برای هر آدرس"
       },
       "hints": {
         "address": "برای ارث‌بری آدرس خودِ اینباند خالی بگذارید.",
@@ -1972,7 +1984,8 @@
         "serverDescription": "یادداشت اختیاری که زیر نام نمایش داده می‌شود.",
         "allowInsecure": "رد کردن بررسی گواهی TLS (allowInsecure / skip-cert-verify).",
         "vlessRoute": "یک مقدار مسیر VLESS (0 تا 65535) که در UUID جاسازی می‌شود، مثلاً 443. برای هیچ‌کدام خالی بگذارید.",
-        "remark": "نام یا قالب کامل کانفیگ این Host. اگر مقدار وارد شود فقط همین مقدار استفاده می‌شود و نام دیگری به آن اضافه نمی‌شود. برای استفاده از نام پیش‌فرض سراسری/اینباند، خالی بگذارید."
+        "remark": "نام یا قالب کامل کانفیگ این Host. اگر مقدار وارد شود فقط همین مقدار استفاده می‌شود و نام دیگری به آن اضافه نمی‌شود. برای استفاده از نام پیش‌فرض سراسری/اینباند، خالی بگذارید.",
+        "hostHeaders": "برای هر IP یا دامنه می‌توان هدر Host جدا تعیین کرد. موارد خالی از هدر پیش‌فرض بالا استفاده می‌کنند."
       },
       "remarkVars": {
         "title": "متغیرهای قالب",

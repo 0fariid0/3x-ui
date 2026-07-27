@@ -44,6 +44,11 @@ export const XrayConfigPayloadSchema = z.object({
   scheduledRestartInterval: z.number().int().min(1).optional(),
   scheduledRestartUnit: z.enum(['minutes', 'hours', 'days']).optional(),
   scheduledRestartPanel: z.boolean().optional(),
+  xrayHealthEnable: z.boolean().optional(),
+  xrayHealthFailureThreshold: z.number().int().min(1).max(60).optional(),
+  xrayHealthRestartCooldown: z.number().int().min(1).max(1440).optional(),
+  xrayHealthMaxRestarts: z.number().int().min(1).max(100).optional(),
+  xrayHealthWindowMinutes: z.number().int().min(1).max(1440).optional(),
   // Subscription outbounds are injected at runtime (not persisted in xraySetting).
   // They are provided here so the UI can display them and use their tags in
   // balancers / routing rules.

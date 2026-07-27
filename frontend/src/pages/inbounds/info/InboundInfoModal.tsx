@@ -15,6 +15,7 @@ import {
   preferPublicHost,
 } from '@/lib/xray/inbound-link';
 import { inboundFromDb } from '@/lib/xray/inbound-from-db';
+import { withEmailConfigNames } from '@/lib/subscription-url';
 
 import {
   buildInboundInfo,
@@ -148,9 +149,9 @@ export default function InboundInfoModal({
     }
 
     if (clientSet?.subId) {
-      setSubLink((subSettings?.subURI || '') + clientSet.subId);
+      setSubLink(withEmailConfigNames((subSettings?.subURI || '') + clientSet.subId));
       setSubJsonLink(
-        subSettings?.subJsonEnable ? (subSettings?.subJsonURI || '') + clientSet.subId : '',
+        subSettings?.subJsonEnable ? withEmailConfigNames((subSettings?.subJsonURI || '') + clientSet.subId) : '',
       );
     } else {
       setSubLink('');

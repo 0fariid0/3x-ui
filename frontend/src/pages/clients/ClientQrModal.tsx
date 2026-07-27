@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Collapse, Modal, Spin, Tag } from 'antd';
 import { HttpUtil } from '@/utils';
 import { isPostQuantumLink } from '@/lib/xray/inbound-link';
+import { withEmailConfigNames } from '@/lib/subscription-url';
 import { LinkTags, linkMetaText, parseLinkParts } from '@/lib/xray/link-label';
 import { QrPanel } from '@/pages/inbounds/qr';
 import type { ClientRecord, InboundOption } from '@/hooks/useClients';
@@ -44,13 +45,13 @@ export default function ClientQrModal({
 
   const subLink = useMemo(() => {
     if (!client?.subId || !subSettings?.enable || !subSettings?.subURI) return '';
-    return subSettings.subURI + client.subId;
+    return withEmailConfigNames(subSettings.subURI + client.subId);
   }, [client?.subId, subSettings?.enable, subSettings?.subURI]);
 
   const subJsonLink = useMemo(() => {
     if (!client?.subId || !subSettings?.enable) return '';
     if (!subSettings?.subJsonEnable || !subSettings?.subJsonURI) return '';
-    return subSettings.subJsonURI + client.subId;
+    return withEmailConfigNames(subSettings.subJsonURI + client.subId);
   }, [client?.subId, subSettings?.enable, subSettings?.subJsonEnable, subSettings?.subJsonURI]);
 
   const wgInbound = useMemo(() => findWireguardInbound(client, inboundsById), [client, inboundsById]);

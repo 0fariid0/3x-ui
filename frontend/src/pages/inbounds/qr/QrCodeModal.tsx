@@ -12,6 +12,7 @@ import {
   preferPublicHost,
 } from '@/lib/xray/inbound-link';
 import { inboundFromDb, type DbInboundLike } from '@/lib/xray/inbound-from-db';
+import { withEmailConfigNames } from '@/lib/subscription-url';
 import QrPanel from './QrPanel';
 import type { SubSettings } from '../useInbounds';
 
@@ -97,8 +98,8 @@ export default function QrCodeModal({
     let nextSub = '';
     let nextSubJson = '';
     if (subSettings?.enable && subId) {
-      nextSub = (subSettings.subURI || '') + subId;
-      nextSubJson = subSettings.subJsonEnable ? (subSettings.subJsonURI || '') + subId : '';
+      nextSub = withEmailConfigNames((subSettings.subURI || '') + subId);
+      nextSubJson = subSettings.subJsonEnable ? withEmailConfigNames((subSettings.subJsonURI || '') + subId) : '';
     }
     setSubLink(nextSub);
     setSubJsonLink(nextSubJson);
