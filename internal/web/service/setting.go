@@ -135,6 +135,7 @@ var defaultValueMap = map[string]string{
 	"scheduledRestartLastTarget":    "",
 	"scheduledRestartLastSuccess":   "false",
 	"scheduledRestartLastMessage":   "",
+	"scheduledRestartFollowUpXray":  "false",
 	"xrayHealthEnable":              "true",
 	"xrayHealthFailureThreshold":    "2",
 	"xrayHealthRestartCooldown":     "5",
@@ -1062,6 +1063,14 @@ func (s *SettingService) GetScheduledRestartLastSuccess() (bool, error) {
 
 func (s *SettingService) GetScheduledRestartLastMessage() (string, error) {
 	return s.getString("scheduledRestartLastMessage")
+}
+
+func (s *SettingService) GetScheduledRestartFollowUpXray() (bool, error) {
+	return s.getBool("scheduledRestartFollowUpXray")
+}
+
+func (s *SettingService) SetScheduledRestartFollowUpXray(value bool) error {
+	return s.setBool("scheduledRestartFollowUpXray", value)
 }
 
 func (s *SettingService) SetScheduledRestartReport(at int64, target string, success bool, message string) error {

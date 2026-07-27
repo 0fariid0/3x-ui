@@ -1908,9 +1908,9 @@
       "scheduledRestartInterval": "تکرار راه‌اندازی مجدد",
       "scheduledRestartIntervalDesc": "زمان‌بندی بر اساس ساعت واقعی است؛ ۱۵ دقیقه در :۰۰، :۱۵، :۳۰ و :۴۵، نیم‌ساعت در :۰۰ و :۳۰ و ساعت‌ها دقیقاً سر ساعت اجرا می‌شوند.",
       "scheduledRestartPanel": "راه‌اندازی مجدد کامل سرویس x-ui",
-      "scheduledRestartPanelDesc": "خاموش: فقط Xray ری‌استارت می‌شود. روشن: کل سرویس پنل مشابه دستور x-ui restart ری‌استارت می‌شود.",
+      "scheduledRestartPanelDesc": "خاموش: فقط Xray ری‌استارت می‌شود. روشن: ابتدا معادل دستور `x-ui restart` اجرا می‌شود و ۸ ثانیه بعد از بالا آمدن پردازش جدید پنل، هسته Xray دوباره جداگانه ری‌استارت می‌شود.",
       "scheduledRestartXrayHint": "فقط هسته Xray راه‌اندازی مجدد می‌شود و پنل در دسترس باقی می‌ماند.",
-      "scheduledRestartPanelHint": "کل سرویس x-ui راه‌اندازی مجدد می‌شود و ممکن است پنل چند ثانیه در دسترس نباشد.",
+      "scheduledRestartPanelHint": "ابتدا کل سرویس x-ui مانند دستور `x-ui restart` ری‌استارت می‌شود؛ پس از بالا آمدن پنل و ۸ ثانیه فاصله، Xray یک‌بار دیگر جداگانه ری‌استارت خواهد شد.",
       "restartUnitMinutes": "دقیقه",
       "restartUnitHours": "ساعت",
       "restartUnitDays": "روز",
@@ -1935,7 +1935,8 @@
       "restartTargetXray": "فقط هسته Xray",
       "restartResultSuccess": "موفق",
       "restartResultFailed": "ناموفق",
-      "noScheduledRestartYet": "هنوز ری‌استارت زمان‌بندی‌شده‌ای اجرا نشده است."
+      "noScheduledRestartYet": "هنوز ری‌استارت زمان‌بندی‌شده‌ای اجرا نشده است.",
+      "restartTargetPanelAndXray": "ابتدا x-ui، سپس Xray"
     },
     "hosts": {
       "addHost": "افزودن میزبان",

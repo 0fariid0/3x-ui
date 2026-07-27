@@ -2039,9 +2039,9 @@
       "scheduledRestartInterval": "Restart every",
       "scheduledRestartIntervalDesc": "Runs on real clock boundaries: 15 minutes at :00/:15/:30/:45, 30 minutes at :00/:30, and hourly schedules at full hours.",
       "scheduledRestartPanel": "Restart the complete x-ui service",
-      "scheduledRestartPanelDesc": "Off: restart only Xray Core. On: restart the complete panel service, equivalent to x-ui restart.",
+      "scheduledRestartPanelDesc": "Off: restart only Xray Core. On: run the equivalent of `x-ui restart`, wait 8 seconds after the new panel process starts, then restart Xray Core again.",
       "scheduledRestartXrayHint": "Only Xray Core will restart. The panel remains online.",
-      "scheduledRestartPanelHint": "The complete x-ui panel service will restart and the web panel may be unavailable briefly.",
+      "scheduledRestartPanelHint": "First, the complete x-ui service is restarted. After the replacement panel process is up for 8 seconds, Xray Core is restarted once more.",
       "restartUnitMinutes": "Minutes",
       "restartUnitHours": "Hours",
       "restartUnitDays": "Days",
@@ -2066,7 +2066,8 @@
       "restartTargetXray": "Xray Core only",
       "restartResultSuccess": "Successful",
       "restartResultFailed": "Failed",
-      "noScheduledRestartYet": "No scheduled restart has run yet."
+      "noScheduledRestartYet": "No scheduled restart has run yet.",
+      "restartTargetPanelAndXray": "Complete x-ui, then Xray Core"
     }
   },
   "tgbot": {

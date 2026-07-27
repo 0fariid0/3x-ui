@@ -103,6 +103,59 @@ const (
 	updateHardCeiling = 2 * time.Hour
 )
 
+// RestartPanelService performs the same full service restart as the
+// `x-ui restart` CLI command. It is intentionally separate from RestartPanel,
+// which only performs an in-process web/subscription-server reload. Scheduled
+// full restarts need the real service restart so the entire x-ui process and
+// its managed Xray process are recreated.
+func (s *PanelService) RestartPanelService() error {
+	if runtime.GOOS == "windows" {
+		return s.RestartPanel(time.Second)
+	}
+
+	xuiPath, err := exec.LookPath("x-ui")
+	if err != nil {
+		const fallback = "/usr/bin/x-ui"
+		if _, statErr := os.Stat(fallback); statErr != nil {
+			return fmt.Errorf("x-ui command not found: %w", err)
+		}
+		xuiPath = fallback
+	}
+
+	// systemd-run places the restart command in a transient unit outside the
+	// current x-ui service cgroup. That makes the request survive while
+	// systemctl stops the current process.
+	if systemdRun, lookupErr := exec.LookPath("systemd-run"); lookupErr == nil {
+		unit := fmt.Sprintf("x-ui-scheduled-restart-%d", time.Now().UnixNano())
+		cmd := exec.Command(
+			systemdRun,
+			"--unit="+unit,
+			"--collect",
+			"--no-block",
+			"--property=Type=oneshot",
+			"--description=Scheduled x-ui restart",
+			xuiPath,
+			"restart",
+		)
+		if output, runErr := cmd.CombinedOutput(); runErr != nil {
+			return fmt.Errorf("schedule x-ui restart: %w: %s", runErr, strings.TrimSpace(string(output)))
+		}
+		return nil
+	}
+
+	// OpenRC and other non-systemd systems do not have transient units. Start a
+	// detached command; once it submits the service restart request, the new
+	// process will consume the persistent Xray follow-up flag.
+	cmd := exec.Command(xuiPath, "restart")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("start x-ui restart command: %w", err)
+	}
+	return nil
+}
+
 func (s *PanelService) RestartPanel(delay time.Duration) error {
 	go func() {
 		time.Sleep(delay)

@@ -300,7 +300,54 @@ const (
 	// stacks overlapping samplers; subscribers rate-limit alerts to 1/min anyway.
 	cadenceCPUAlarm    = "@every 1m"
 	cadenceMemoryAlarm = "@every 1m"
+
+	// A complete x-ui restart already recreates Xray as part of panel startup.
+	// The optional follow-up below deliberately restarts Xray once more after
+	// the new panel process has been stable for a few seconds.
+	scheduledPanelFollowUpXrayDelay = 8 * time.Second
 )
+
+// completeScheduledPanelRestart runs only in the replacement x-ui process.
+// It turns a scheduled full-service restart into the requested two-step
+// sequence: restart x-ui first, wait for the new process to stabilize, then
+// explicitly restart Xray Core once more. The durable flag prevents ordinary
+// panel starts from performing the extra restart.
+func (s *Server) completeScheduledPanelRestart() {
+	pending, err := s.settingService.GetScheduledRestartFollowUpXray()
+	if err != nil {
+		logger.Warning("scheduled panel restart: unable to read Xray follow-up flag:", err)
+		return
+	}
+	if !pending {
+		return
+	}
+
+	time.Sleep(scheduledPanelFollowUpXrayDelay)
+
+	// Clear before restarting Xray. If the panel unexpectedly exits while the
+	// core is being restarted, the next process must not repeat this forever.
+	if err := s.settingService.SetScheduledRestartFollowUpXray(false); err != nil {
+		_ = s.settingService.SetScheduledRestartReport(time.Now().Unix(), "panel+xray", false, err.Error())
+		logger.Warning("scheduled panel restart: unable to clear Xray follow-up flag:", err)
+		return
+	}
+
+	logger.Info("scheduled panel restart: panel is back; restarting Xray core after delay")
+	if err := s.xrayService.RestartXray(true); err != nil {
+		message := fmt.Sprintf("x-ui restarted, but follow-up Xray restart failed: %v", err)
+		_ = s.settingService.SetScheduledRestartReport(time.Now().Unix(), "panel+xray", false, message)
+		logger.Warning("scheduled panel restart follow-up failed:", err)
+		return
+	}
+
+	_ = s.settingService.SetScheduledRestartReport(
+		time.Now().Unix(),
+		"panel+xray",
+		true,
+		"x-ui restarted successfully; Xray restarted again after an 8-second delay",
+	)
+	logger.Info("scheduled panel restart: x-ui and delayed Xray restart completed")
+}
 
 // startTask schedules background jobs (Xray checks, traffic jobs, cron
 // jobs) which the panel relies on for periodic maintenance and monitoring.
@@ -311,6 +358,11 @@ func (s *Server) startTask(restartXray bool) {
 			logger.Warning("start xray failed:", err)
 		}
 	}
+	// A full scheduled panel restart stores a durable follow-up flag before the
+	// old process exits. The replacement process consumes that flag and performs
+	// a second, explicit Xray restart after the panel has had time to settle.
+	go s.completeScheduledPanelRestart()
+
 	// Check whether xray is running every second
 	_, _ = s.cron.AddJob(cadenceXrayRunning, job.NewCheckXrayRunningJob(&s.xrayService, &s.settingService))
 
@@ -377,10 +429,21 @@ func (s *Server) startTask(restartXray bool) {
 			return
 		}
 		if settings.ScheduledRestartPanel {
-			logger.Info("scheduled restart: restarting x-ui panel service")
-			_ = s.settingService.SetScheduledRestartReport(time.Now().Unix(), "panel", true, "scheduled panel restart requested")
-			if err := (&panel.PanelService{}).RestartPanel(time.Second); err != nil {
-				_ = s.settingService.SetScheduledRestartReport(time.Now().Unix(), "panel", false, err.Error())
+			logger.Info("scheduled restart: restarting x-ui panel service, then Xray core")
+			if err := s.settingService.SetScheduledRestartFollowUpXray(true); err != nil {
+				_ = s.settingService.SetScheduledRestartReport(time.Now().Unix(), "panel+xray", false, err.Error())
+				logger.Warning("scheduled panel restart: unable to persist Xray follow-up:", err)
+				return
+			}
+			_ = s.settingService.SetScheduledRestartReport(
+				time.Now().Unix(),
+				"panel+xray",
+				true,
+				"scheduled x-ui restart requested; follow-up Xray restart is pending",
+			)
+			if err := (&panel.PanelService{}).RestartPanelService(); err != nil {
+				_ = s.settingService.SetScheduledRestartFollowUpXray(false)
+				_ = s.settingService.SetScheduledRestartReport(time.Now().Unix(), "panel+xray", false, err.Error())
 				logger.Warning("scheduled panel restart failed:", err)
 			}
 			return

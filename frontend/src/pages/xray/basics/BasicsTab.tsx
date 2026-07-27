@@ -401,9 +401,11 @@ export default function BasicsTab({
                 <>
                   <strong>{serverClock.lastRestartText}</strong>
                   <small>
-                    {serverClock.data.lastTarget === 'panel'
-                      ? t('pages.xray.restartTargetPanel')
-                      : t('pages.xray.restartTargetXray')}
+                    {serverClock.data.lastTarget === 'panel+xray'
+                      ? t('pages.xray.restartTargetPanelAndXray')
+                      : serverClock.data.lastTarget === 'panel'
+                        ? t('pages.xray.restartTargetPanel')
+                        : t('pages.xray.restartTargetXray')}
                     {' · '}
                     {serverClock.data.lastSuccess
                       ? t('pages.xray.restartResultSuccess')
