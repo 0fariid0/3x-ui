@@ -87,6 +87,7 @@ interface SubscriptionLinkOption {
   source: 'host' | 'inbound';
   formats: string[];
   enabled: boolean;
+  globallyEnabled: boolean;
 }
 
 interface SaveCreatePayload {
@@ -1007,6 +1008,9 @@ export default function ClientFormModal({
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                     <Typography.Text strong>{row.name}</Typography.Text>
                                     <Tag>{row.protocol.toUpperCase()}</Tag>
+                                    {row.source === 'host' && !row.globallyEnabled && (
+                                      <Tag color="orange">{t('pages.clients.hostDisabledGlobally')}</Tag>
+                                    )}
                                     {row.formats.map((format) => (
                                       <Tag key={format} color={format === 'clash' ? 'gold' : format === 'json' ? 'purple' : 'blue'}>
                                         {format.toUpperCase()}

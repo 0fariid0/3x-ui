@@ -509,6 +509,43 @@ func TestSub_PerClientHostVisibility(t *testing.T) {
 	}
 }
 
+func TestSub_GloballyDisabledHostCanBeEnabledForOneClient(t *testing.T) {
+	seedSubDB(t)
+	ib := seedSubInbound(t, "s1", "private-visibility", 53162, 1, wsTLSStream)
+	host := seedHost(t, &model.Host{
+		GroupId: "private-pool", InboundId: ib.Id, SortOrder: 1, Remark: "PRIVATE-{{EMAIL}}",
+		Address: "private.visible.test", Port: 8443, Security: "tls", IsDisabled: true,
+	})
+
+	var client model.ClientRecord
+	if err := database.GetDB().Where("sub_id = ?", "s1").First(&client).Error; err != nil {
+		t.Fatalf("load client: %v", err)
+	}
+
+	links, _, _, _, err := NewSubService("").GetSubs("s1", "req.example.com")
+	if err != nil {
+		t.Fatalf("GetSubs before inclusion: %v", err)
+	}
+	if len(links) != 0 {
+		t.Fatalf("globally disabled host should be hidden by default: %v", links)
+	}
+
+	if err := database.GetDB().Create(&model.ClientSubscriptionLinkInclusion{
+		ClientId: client.Id,
+		LinkKey:  host.SubscriptionLinkKey(),
+	}).Error; err != nil {
+		t.Fatalf("create inclusion: %v", err)
+	}
+	links, _, _, _, err = NewSubService("").GetSubs("s1", "req.example.com")
+	if err != nil {
+		t.Fatalf("GetSubs after inclusion: %v", err)
+	}
+	joined := strings.Join(links, "\n")
+	if !strings.Contains(joined, "private.visible.test") || !strings.Contains(joined, "PRIVATE-") {
+		t.Fatalf("client inclusion did not expose disabled host: %s", joined)
+	}
+}
+
 func TestSub_PerClientDefaultInboundVisibility(t *testing.T) {
 	seedSubDB(t)
 	ib := seedSubInbound(t, "s1", "default-visibility", 53161, 1, `{"network":"tcp","security":"tls"}`)

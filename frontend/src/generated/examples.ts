@@ -387,6 +387,9 @@ export const EXAMPLES: Record<string, unknown> = {
       ""
     ],
     "echConfigList": "",
+    "enabledClientEmails": [
+      ""
+    ],
     "excludeFromSubTypes": [
       ""
     ],

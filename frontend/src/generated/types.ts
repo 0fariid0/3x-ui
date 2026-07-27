@@ -391,6 +391,7 @@ export interface HostGroup {
   allowInsecure: boolean;
   alpn: string[];
   echConfigList: string;
+  enabledClientEmails?: string[];
   excludeFromSubTypes: string[];
   finalMask: string;
   fingerprint: string;

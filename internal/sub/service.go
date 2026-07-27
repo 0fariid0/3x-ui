@@ -31,8 +31,9 @@ type SubService struct {
 	address        string
 	remarkTemplate string
 	datepicker     string
-	// nameMode is a request-level display-name override. "email" makes every
-	// generated config use the owning client's email as its final name.
+	// nameMode is retained for compatibility with subscription URLs such as
+	// ?name=email. It names the imported subscription/profile in supporting
+	// clients and must never overwrite individual Host/config remarks.
 	nameMode string
 	// subscriptionBody is true only when rendering the actual subscription
 	// content a client app imports (raw /sub fetch, /json, /clash). The remark
@@ -73,9 +74,10 @@ type SubService struct {
 	// inbounds the client is attached to.
 	displayHostEnabled bool
 	displayHostRemark  string
-	// disabledLinkKeysByClient caches per-client subscription link exclusions
-	// (managed Host rows and default inbound links) for this request.
+	// Per-client link visibility caches. Exclusions opt a client out of globally
+	// enabled links; inclusions opt a client into globally disabled Hosts.
 	disabledLinkKeysByClient map[int]map[string]struct{}
+	enabledLinkKeysByClient  map[int]map[string]struct{}
 }
 
 // NewSubService creates a new subscription service with the given configuration.
@@ -94,11 +96,9 @@ func (s *SubService) ForRequest(host string) *SubService {
 	return &req
 }
 
-// SetNameMode applies a safe request-level config-name override. The legacy
-// value "email" still means "use the owning client's email". Any other safe,
-// non-empty value is treated as the exact display name requested in the URL,
-// e.g. ?name=client-123. This lets the panel expose the real client email in
-// the visible subscription URL while keeping older ?name=email links working.
+// SetNameMode validates and retains the optional subscription profile name.
+// Supporting clients may use ?name=... to name the imported profile, but it
+// must not overwrite the individual configuration remarks generated below.
 func (s *SubService) SetNameMode(mode string) {
 	mode = strings.TrimSpace(mode)
 	if mode == "" || len(mode) > 256 || strings.ContainsAny(mode, "\r\n\x00") {
@@ -110,16 +110,6 @@ func (s *SubService) SetNameMode(mode string) {
 		return
 	}
 	s.nameMode = mode
-}
-
-func (s *SubService) requestedConfigName(clientEmail string) string {
-	if s.nameMode == "" {
-		return ""
-	}
-	if strings.EqualFold(s.nameMode, "email") {
-		return clientEmail
-	}
-	return s.nameMode
 }
 
 // PrepareForRequest sets per-request state (host + nodes map) on this
@@ -140,6 +130,7 @@ func (s *SubService) PrepareForRequest(host string) {
 	s.fullyPrimedInbounds = map[int]bool{}
 	s.settingsByInbound = map[int]map[string]any{}
 	s.disabledLinkKeysByClient = map[int]map[string]struct{}{}
+	s.enabledLinkKeysByClient = map[int]map[string]struct{}{}
 	s.loadNodes()
 	s.loadRemarkSettings()
 }
@@ -171,6 +162,41 @@ func (s *SubService) subscriptionLinkDisabled(clientID int, key string) bool {
 	}
 	_, disabled := s.disabledSubscriptionLinkKeys(clientID)[key]
 	return disabled
+}
+
+func (s *SubService) enabledSubscriptionLinkKeys(clientID int) map[string]struct{} {
+	if clientID <= 0 {
+		return nil
+	}
+	if cached, ok := s.enabledLinkKeysByClient[clientID]; ok {
+		return cached
+	}
+	var rows []model.ClientSubscriptionLinkInclusion
+	if err := database.GetDB().Where("client_id = ?", clientID).Find(&rows).Error; err != nil {
+		logger.Warning("SubService - enabledSubscriptionLinkKeys:", err)
+		s.enabledLinkKeysByClient[clientID] = map[string]struct{}{}
+		return s.enabledLinkKeysByClient[clientID]
+	}
+	keys := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		keys[row.LinkKey] = struct{}{}
+	}
+	s.enabledLinkKeysByClient[clientID] = keys
+	return keys
+}
+
+// subscriptionLinkEnabled resolves the effective per-client state. Globally
+// enabled links are on unless explicitly excluded; globally disabled Hosts are
+// off unless explicitly included for this client.
+func (s *SubService) subscriptionLinkEnabled(clientID int, key string, globallyEnabled bool) bool {
+	if key == "" || clientID <= 0 {
+		return globallyEnabled
+	}
+	if globallyEnabled {
+		return !s.subscriptionLinkDisabled(clientID, key)
+	}
+	_, enabled := s.enabledSubscriptionLinkKeys(clientID)[key]
+	return enabled
 }
 
 // primeLinkClients caches clients (first occurrence per email, matching the
@@ -413,9 +439,6 @@ func (s *SubService) getSubs(subId string) ([]string, []string, int64, xray.Clie
 		}
 		for _, el := range expandEntry(ext) {
 			name := el.Name
-			if forced := s.requestedConfigName(ext.Email); forced != "" {
-				name = forced
-			}
 			if link := applyRemarkToLink(el.Link, name); link != "" {
 				result = append(result, link)
 				emails = append(emails, ext.Email)

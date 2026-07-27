@@ -949,9 +949,10 @@
       "noSubscriptionApps": "No subscription update has been recorded yet.",
       "lastSubscriptionUpdate": "Last update",
       "managedSubscriptionLinks": "Client subscription links",
-      "managedSubscriptionLinksHint": "Disable any managed Host or default inbound link for this client. The choice applies to raw, JSON and Clash subscriptions.",
+      "managedSubscriptionLinksHint": "All globally enabled links are on by default. You can hide them for this client, or enable a globally disabled Host only for this client. Disabled inbounds are not shown.",
       "saveBeforeManagingLinks": "Save the client first, then edit it to manage its subscription links.",
-      "noManagedSubscriptionLinks": "No managed subscription links are available for the selected inbounds."
+      "noManagedSubscriptionLinks": "No managed subscription links are available for the selected inbounds.",
+      "hostDisabledGlobally": "Globally disabled"
     },
     "groups": {
       "title": "Groups",
@@ -1051,7 +1052,8 @@
         "nodeGuids": "Nodes",
         "excludeFromSubTypes": "Exclude from formats",
         "inheritAddress": "Inherits",
-        "hostHeaders": "Header per address"
+        "hostHeaders": "Header per address",
+        "clientAvailability": "Client availability"
       },
       "hints": {
         "address": "Leave blank to inherit the inbound's own address.",
@@ -1120,7 +1122,10 @@
         "placeholder": "e.g. 📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D",
         "fixedEndpoint": "Fixed informational endpoint; not intended to connect",
         "saved": "Subscription display entry saved."
-      }
+      },
+      "activeForAllClients": "This Host is enabled globally and is active for all attached clients.",
+      "enabledClientsWhenDisabled": "This Host is disabled globally. It is currently enabled only for these clients:",
+      "noClientOverrides": "Not enabled for any client."
     },
     "nodes": {
       "title": "Nodes",

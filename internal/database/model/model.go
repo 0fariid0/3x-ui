@@ -957,6 +957,19 @@ func (ClientSubscriptionLinkExclusion) TableName() string {
 	return "client_subscription_link_exclusions"
 }
 
+// ClientSubscriptionLinkInclusion stores per-client opt-ins for Hosts that are
+// disabled globally. Globally enabled Hosts need no row: they are visible by
+// default and use ClientSubscriptionLinkExclusion only for per-client opt-out.
+type ClientSubscriptionLinkInclusion struct {
+	ClientId  int    `json:"clientId" gorm:"primaryKey;column:client_id;index"`
+	LinkKey   string `json:"linkKey" gorm:"primaryKey;column:link_key;size:512"`
+	CreatedAt int64  `json:"createdAt" gorm:"autoCreateTime:milli"`
+}
+
+func (ClientSubscriptionLinkInclusion) TableName() string {
+	return "client_subscription_link_inclusions"
+}
+
 // External link kinds.
 const (
 	ExternalLinkKindLink         = "link"

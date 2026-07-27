@@ -77,9 +77,7 @@ func (s *SubClashService) GetClashNamed(subId string, host string, nameMode stri
 	for _, ext := range externalLinks {
 		for _, el := range expandEntry(ext) {
 			name := el.Name
-			if forced := subReq.requestedConfigName(ext.Email); forced != "" {
-				name = forced
-			} else if name == "" {
+			if name == "" {
 				name = ext.Email
 			}
 			if proxy := s.clashProxyFromExternal(el.Link, name); proxy != nil {

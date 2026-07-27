@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Form, Input, InputNumber, Modal, Select, Switch, Tabs, message } from 'antd';
+import { Alert, Form, Input, InputNumber, Modal, Select, Switch, Tabs, Tag, Typography, message } from 'antd';
 import {
   ProfileOutlined,
   SafetyCertificateOutlined,
@@ -84,6 +84,7 @@ export default function HostFormModal({ open, mode, host, inboundOptions, existi
   const [loading, setLoading] = useState(false);
 
   const security = (useWatch({ control: methods.control, name: 'security' }) ?? 'same') as string;
+  const enable = useWatch({ control: methods.control, name: 'enable' }) ?? true;
   const selectedHosts = useWatch({ control: methods.control, name: 'hosts' }) ?? [];
   const showTls = security === 'tls' || security === 'reality';
   const showTlsExtras = security === 'tls';
@@ -225,6 +226,26 @@ export default function HostFormModal({ open, mode, host, inboundOptions, existi
                     <FormField name="enable" label={t('pages.hosts.fields.enable')} valueProp="checked">
                       <Switch />
                     </FormField>
+                    {mode === 'edit' && (
+                      <Form.Item label={t('pages.hosts.fields.clientAvailability')}>
+                        {enable ? (
+                          <Alert type="success" showIcon message={t('pages.hosts.activeForAllClients')} />
+                        ) : (
+                          <div style={{ width: '100%' }}>
+                            <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
+                              {t('pages.hosts.enabledClientsWhenDisabled')}
+                            </Typography.Paragraph>
+                            {(host?.enabledClientEmails?.length ?? 0) > 0 ? (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                {host?.enabledClientEmails?.map((email) => <Tag key={email}>{email}</Tag>)}
+                              </div>
+                            ) : (
+                              <Typography.Text type="secondary">{t('pages.hosts.noClientOverrides')}</Typography.Text>
+                            )}
+                          </div>
+                        )}
+                      </Form.Item>
+                    )}
                   </>
                 ),
               },

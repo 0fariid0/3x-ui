@@ -101,6 +101,106 @@ func groupHosts(hosts []*model.Host) []*entity.HostGroup {
 	return res
 }
 
+// populateHostClientOverrides attaches the emails explicitly opted into each
+// globally disabled Host group. Globally enabled groups are active for every
+// client by default and intentionally return an empty list.
+func populateHostClientOverrides(groups []*entity.HostGroup, hosts []*model.Host) error {
+	if len(groups) == 0 || len(hosts) == 0 {
+		return nil
+	}
+	keyToGroup := make(map[string]string)
+	keyToInbound := make(map[string]int)
+	keys := make([]string, 0)
+	inboundIDs := make([]int, 0)
+	for _, host := range hosts {
+		if host == nil || !host.IsDisabled {
+			continue
+		}
+		key := host.SubscriptionLinkKey()
+		groupID := host.GroupId
+		if groupID == "" {
+			groupID = "fallback_" + strconv.Itoa(host.Id)
+		}
+		keyToGroup[key] = groupID
+		keyToInbound[key] = host.InboundId
+		keys = append(keys, key)
+		inboundIDs = append(inboundIDs, host.InboundId)
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	var inclusions []model.ClientSubscriptionLinkInclusion
+	if err := database.GetDB().Where("link_key IN ?", keys).Find(&inclusions).Error; err != nil {
+		return err
+	}
+	if len(inclusions) == 0 {
+		return nil
+	}
+	clientIDs := make([]int, 0, len(inclusions))
+	for _, row := range inclusions {
+		clientIDs = append(clientIDs, row.ClientId)
+	}
+	var clients []model.ClientRecord
+	if err := database.GetDB().Where("id IN ?", clientIDs).Find(&clients).Error; err != nil {
+		return err
+	}
+	emailByID := make(map[int]string, len(clients))
+	for _, client := range clients {
+		emailByID[client.Id] = client.Email
+	}
+
+	var activeInboundIDs []int
+	if err := database.GetDB().Model(&model.Inbound{}).Where("id IN ? AND enable = ?", inboundIDs, true).Pluck("id", &activeInboundIDs).Error; err != nil {
+		return err
+	}
+	activeInbound := make(map[int]struct{}, len(activeInboundIDs))
+	for _, inboundID := range activeInboundIDs {
+		activeInbound[inboundID] = struct{}{}
+	}
+	var attachments []model.ClientInbound
+	if len(activeInboundIDs) > 0 {
+		if err := database.GetDB().Where("client_id IN ? AND inbound_id IN ?", clientIDs, activeInboundIDs).Find(&attachments).Error; err != nil {
+			return err
+		}
+	}
+	attached := make(map[[2]int]struct{}, len(attachments))
+	for _, row := range attachments {
+		attached[[2]int{row.ClientId, row.InboundId}] = struct{}{}
+	}
+
+	emailsByGroup := make(map[string]map[string]struct{})
+	for _, row := range inclusions {
+		inboundID := keyToInbound[row.LinkKey]
+		if _, ok := activeInbound[inboundID]; !ok {
+			continue
+		}
+		if _, ok := attached[[2]int{row.ClientId, inboundID}]; !ok {
+			continue
+		}
+		groupID := keyToGroup[row.LinkKey]
+		email := strings.TrimSpace(emailByID[row.ClientId])
+		if groupID == "" || email == "" {
+			continue
+		}
+		if emailsByGroup[groupID] == nil {
+			emailsByGroup[groupID] = make(map[string]struct{})
+		}
+		emailsByGroup[groupID][email] = struct{}{}
+	}
+	for _, group := range groups {
+		if group == nil || !group.IsDisabled {
+			continue
+		}
+		set := emailsByGroup[group.GroupId]
+		group.EnabledClientEmails = make([]string, 0, len(set))
+		for email := range set {
+			group.EnabledClientEmails = append(group.EnabledClientEmails, email)
+		}
+		sort.Strings(group.EnabledClientEmails)
+	}
+	return nil
+}
+
 func buildHostRows(groupId string, req *entity.HostGroup) []*model.Host {
 	hostsToProcess := req.Hosts
 	if len(hostsToProcess) == 0 {
@@ -193,7 +293,11 @@ func (s *HostService) GetHosts() ([]*entity.HostGroup, error) {
 	if err != nil {
 		return nil, err
 	}
-	return groupHosts(hosts), nil
+	groups := groupHosts(hosts)
+	if err := populateHostClientOverrides(groups, hosts); err != nil {
+		return nil, err
+	}
+	return groups, nil
 }
 
 func (s *HostService) GetHostsByInbound(inboundId int) ([]*entity.HostGroup, error) {
@@ -208,7 +312,11 @@ func (s *HostService) GetHostsByInbound(inboundId int) ([]*entity.HostGroup, err
 	if err := database.GetDB().Where("group_id IN ?", groupIds).Order("sort_order asc, id asc").Find(&hosts).Error; err != nil {
 		return nil, err
 	}
-	return groupHosts(hosts), nil
+	groups := groupHosts(hosts)
+	if err := populateHostClientOverrides(groups, hosts); err != nil {
+		return nil, err
+	}
+	return groups, nil
 }
 
 func (s *HostService) GetHostGroup(groupId string) (*entity.HostGroup, error) {
@@ -223,6 +331,9 @@ func (s *HostService) GetHostGroup(groupId string) (*entity.HostGroup, error) {
 	grouped := groupHosts(hosts)
 	if len(grouped) == 0 {
 		return nil, common.NewError("host not found")
+	}
+	if err := populateHostClientOverrides(grouped, hosts); err != nil {
+		return nil, err
 	}
 	return grouped[0], nil
 }

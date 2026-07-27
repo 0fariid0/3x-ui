@@ -579,9 +579,6 @@ func inboundSecurity(inbound *model.Inbound) string {
 // the host endpoint's remark (empty for a plain inbound); it backs the {{HOST}}
 // token only and never substitutes the inbound remark as the config name.
 func (s *SubService) genTemplatedRemark(inbound *model.Inbound, client model.Client, hostRemark string, transport string) string {
-	if name := s.requestedConfigName(client.Email); name != "" {
-		return name
-	}
 	ctx := remarkContext{
 		client:     client,
 		stats:      s.statsForClient(inbound, client),
@@ -610,9 +607,6 @@ func (s *SubService) genTemplatedRemark(inbound *model.Inbound, client model.Cli
 // independently for every generated config. An empty Host remark falls back to
 // the standard global/inbound naming path.
 func (s *SubService) genHostRemark(inbound *model.Inbound, client model.Client, hostTemplate string, transport string) string {
-	if name := s.requestedConfigName(client.Email); name != "" {
-		return name
-	}
 	hostTemplate = strings.TrimSpace(hostTemplate)
 	if hostTemplate == "" {
 		if s.remarkTemplate != "" {

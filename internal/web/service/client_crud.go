@@ -583,6 +583,9 @@ func (s *ClientService) Delete(inboundSvc *InboundService, id int, keepTraffic b
 		if err := tx.Where("client_id = ?", id).Delete(&model.ClientSubscriptionLinkExclusion{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("client_id = ?", id).Delete(&model.ClientSubscriptionLinkInclusion{}).Error; err != nil {
+			return err
+		}
 		if !keepTraffic && existing.Email != "" {
 			if err := tx.Where("email = ?", existing.Email).Delete(&xray.ClientTraffic{}).Error; err != nil {
 				return err

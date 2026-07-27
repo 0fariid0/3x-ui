@@ -5,6 +5,15 @@ This repository is an independently maintained modified version of 3x-ui.
 Base version: v3.5.0
 Repository: https://github.com/0fariid0/3x-ui
 
+## v3.5.8
+
+- Fixed the v3.5.6 regression where `?name=<client>` replaced every individual Host/config remark with the client email.
+- Globally enabled Hosts and default inbound links are enabled for every client unless that client explicitly disables them.
+- Newly added enabled Hosts automatically appear for all attached clients.
+- Globally disabled Hosts remain hidden by default but can be enabled for selected clients from the client Links tab.
+- Disabled inbounds are omitted from per-client link controls and subscription output.
+- Host editing now shows “active for all clients” for enabled Hosts, or lists the clients explicitly opted into a disabled Host.
+
 ## v3.5.7
 
 - Added one optional permanent informational subscription entry.

@@ -1643,6 +1643,12 @@ export const SCHEMAS: Record<string, unknown> = {
       "echConfigList": {
         "type": "string"
       },
+      "enabledClientEmails": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
       "excludeFromSubTypes": {
         "items": {
           "type": "string"

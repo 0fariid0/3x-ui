@@ -103,6 +103,7 @@ export const HostRecordSchema = z.object({
   mihomoIpVersion: z.string().optional(),
   mihomoX25519: z.boolean().optional(),
   shuffleHost: z.boolean().optional(),
+  enabledClientEmails: z.array(z.string()).optional(),
 }).loose();
 export type HostRecord = z.infer<typeof HostRecordSchema>;
 

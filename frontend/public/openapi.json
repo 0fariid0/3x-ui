@@ -1669,6 +1669,12 @@
           "echConfigList": {
             "type": "string"
           },
+          "enabledClientEmails": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "excludeFromSubTypes": {
             "items": {
               "type": "string"
@@ -8849,6 +8855,9 @@
                         ""
                       ],
                       "echConfigList": "",
+                      "enabledClientEmails": [
+                        ""
+                      ],
                       "excludeFromSubTypes": [
                         ""
                       ],
@@ -8944,6 +8953,9 @@
                       ""
                     ],
                     "echConfigList": "",
+                    "enabledClientEmails": [
+                      ""
+                    ],
                     "excludeFromSubTypes": [
                       ""
                     ],
@@ -9042,6 +9054,9 @@
                         ""
                       ],
                       "echConfigList": "",
+                      "enabledClientEmails": [
+                        ""
+                      ],
                       "excludeFromSubTypes": [
                         ""
                       ],

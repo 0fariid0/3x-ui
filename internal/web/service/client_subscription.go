@@ -18,16 +18,17 @@ const maxRecentSubscriptionApps = 3
 // ClientSubscriptionLinkOption describes one managed subscription output that
 // can be enabled or hidden for a specific client.
 type ClientSubscriptionLinkOption struct {
-	Key         string   `json:"key"`
-	Name        string   `json:"name"`
-	Address     string   `json:"address"`
-	Port        int      `json:"port"`
-	InboundID   int      `json:"inboundId"`
-	InboundName string   `json:"inboundName"`
-	Protocol    string   `json:"protocol"`
-	Source      string   `json:"source"` // host|inbound
-	Formats     []string `json:"formats"`
-	Enabled     bool     `json:"enabled"`
+	Key             string   `json:"key"`
+	Name            string   `json:"name"`
+	Address         string   `json:"address"`
+	Port            int      `json:"port"`
+	InboundID       int      `json:"inboundId"`
+	InboundName     string   `json:"inboundName"`
+	Protocol        string   `json:"protocol"`
+	Source          string   `json:"source"` // host|inbound
+	Formats         []string `json:"formats"`
+	Enabled         bool     `json:"enabled"`
+	GloballyEnabled bool     `json:"globallyEnabled"`
 }
 
 type subscriptionAppIdentity struct {
@@ -274,13 +275,25 @@ func (s *ClientService) GetSubscriptionLinkOptionsByEmail(email string, inboundI
 		return []ClientSubscriptionLinkOption{}, nil
 	}
 
+	// Disabled inbounds never produce subscription entries and therefore are
+	// intentionally absent from the per-client link editor.
 	var inbounds []*model.Inbound
 	if err := database.GetDB().Where("id IN ? AND enable = ?", inboundIDs, true).
 		Order("sub_sort_index ASC, id ASC").Find(&inbounds).Error; err != nil {
 		return nil, err
 	}
+	if len(inbounds) == 0 {
+		return []ClientSubscriptionLinkOption{}, nil
+	}
+	enabledInboundIDs := make([]int, 0, len(inbounds))
+	for _, inbound := range inbounds {
+		enabledInboundIDs = append(enabledInboundIDs, inbound.Id)
+	}
+
+	// Load both globally enabled and disabled Hosts. Disabled Hosts are shown as
+	// off by default but can be enabled for this client via an inclusion row.
 	var hosts []*model.Host
-	if err := database.GetDB().Where("inbound_id IN ? AND is_disabled = ?", inboundIDs, false).
+	if err := database.GetDB().Where("inbound_id IN ?", enabledInboundIDs).
 		Order("sort_order ASC, id ASC").Find(&hosts).Error; err != nil {
 		return nil, err
 	}
@@ -288,6 +301,7 @@ func (s *ClientService) GetSubscriptionLinkOptionsByEmail(email string, inboundI
 	for _, host := range hosts {
 		hostsByInbound[host.InboundId] = append(hostsByInbound[host.InboundId], host)
 	}
+
 	var exclusions []model.ClientSubscriptionLinkExclusion
 	if err := database.GetDB().Where("client_id = ?", rec.Id).Find(&exclusions).Error; err != nil {
 		return nil, err
@@ -295,6 +309,14 @@ func (s *ClientService) GetSubscriptionLinkOptionsByEmail(email string, inboundI
 	disabled := make(map[string]struct{}, len(exclusions))
 	for _, exclusion := range exclusions {
 		disabled[exclusion.LinkKey] = struct{}{}
+	}
+	var inclusions []model.ClientSubscriptionLinkInclusion
+	if err := database.GetDB().Where("client_id = ?", rec.Id).Find(&inclusions).Error; err != nil {
+		return nil, err
+	}
+	enabledOverrides := make(map[string]struct{}, len(inclusions))
+	for _, inclusion := range inclusions {
+		enabledOverrides[inclusion.LinkKey] = struct{}{}
 	}
 
 	options := make([]ClientSubscriptionLinkOption, 0)
@@ -308,6 +330,7 @@ func (s *ClientService) GetSubscriptionLinkOptionsByEmail(email string, inboundI
 				Key: key, Name: inboundName, Address: inboundDisplayAddress(inbound), Port: inbound.Port,
 				InboundID: inbound.Id, InboundName: inboundName, Protocol: string(inbound.Protocol),
 				Source: "inbound", Formats: []string{"raw", "json", "clash"}, Enabled: !isDisabled,
+				GloballyEnabled: true,
 			})
 			continue
 		}
@@ -317,7 +340,15 @@ func (s *ClientService) GetSubscriptionLinkOptionsByEmail(email string, inboundI
 				continue
 			}
 			key := host.SubscriptionLinkKey()
-			_, isDisabled := disabled[key]
+			globallyEnabled := !host.IsDisabled
+			effectiveEnabled := globallyEnabled
+			if globallyEnabled {
+				_, excluded := disabled[key]
+				effectiveEnabled = !excluded
+			} else {
+				_, included := enabledOverrides[key]
+				effectiveEnabled = included
+			}
 			name := strings.TrimSpace(host.Remark)
 			if name == "" {
 				name = inboundName
@@ -333,7 +364,8 @@ func (s *ClientService) GetSubscriptionLinkOptionsByEmail(email string, inboundI
 			options = append(options, ClientSubscriptionLinkOption{
 				Key: key, Name: name, Address: address, Port: port,
 				InboundID: inbound.Id, InboundName: inboundName, Protocol: string(inbound.Protocol),
-				Source: "host", Formats: formats, Enabled: !isDisabled,
+				Source: "host", Formats: formats, Enabled: effectiveEnabled,
+				GloballyEnabled: globallyEnabled,
 			})
 		}
 	}
@@ -349,11 +381,11 @@ func (s *ClientService) SetSubscriptionLinkExclusionsByEmail(email string, disab
 	if err != nil {
 		return err
 	}
-	allowed := make(map[string]struct{}, len(options))
+	allowed := make(map[string]ClientSubscriptionLinkOption, len(options))
 	for _, option := range options {
-		allowed[option.Key] = struct{}{}
+		allowed[option.Key] = option
 	}
-	unique := make(map[string]struct{}, len(disabledKeys))
+	desiredDisabled := make(map[string]struct{}, len(disabledKeys))
 	for _, key := range disabledKeys {
 		key = strings.TrimSpace(key)
 		if key == "" {
@@ -362,19 +394,43 @@ func (s *ClientService) SetSubscriptionLinkExclusionsByEmail(email string, disab
 		if _, ok := allowed[key]; !ok {
 			return fmt.Errorf("subscription link is not available for this client: %s", key)
 		}
-		unique[key] = struct{}{}
+		desiredDisabled[key] = struct{}{}
 	}
+
 	return database.GetDB().Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("client_id = ?", rec.Id).Delete(&model.ClientSubscriptionLinkExclusion{}).Error; err != nil {
 			return err
 		}
-		if len(unique) == 0 {
-			return nil
+		if err := tx.Where("client_id = ?", rec.Id).Delete(&model.ClientSubscriptionLinkInclusion{}).Error; err != nil {
+			return err
 		}
-		rows := make([]model.ClientSubscriptionLinkExclusion, 0, len(unique))
-		for key := range unique {
-			rows = append(rows, model.ClientSubscriptionLinkExclusion{ClientId: rec.Id, LinkKey: key})
+
+		exclusions := make([]model.ClientSubscriptionLinkExclusion, 0)
+		inclusions := make([]model.ClientSubscriptionLinkInclusion, 0)
+		for _, option := range options {
+			_, shouldBeDisabled := desiredDisabled[option.Key]
+			if option.GloballyEnabled {
+				if shouldBeDisabled {
+					exclusions = append(exclusions, model.ClientSubscriptionLinkExclusion{ClientId: rec.Id, LinkKey: option.Key})
+				}
+				continue
+			}
+			// A globally disabled Host is enabled for this client only when the
+			// UI switch is on, represented by absence from disabledKeys.
+			if !shouldBeDisabled {
+				inclusions = append(inclusions, model.ClientSubscriptionLinkInclusion{ClientId: rec.Id, LinkKey: option.Key})
+			}
 		}
-		return tx.Create(&rows).Error
+		if len(exclusions) > 0 {
+			if err := tx.Create(&exclusions).Error; err != nil {
+				return err
+			}
+		}
+		if len(inclusions) > 0 {
+			if err := tx.Create(&inclusions).Error; err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }

@@ -120,9 +120,7 @@ func (s *SubJsonService) GetJsonNamed(subId string, host string, alwaysReturnArr
 			}
 			seenEmails[ext.Email] = struct{}{}
 			remark := el.Name
-			if forced := subReq.requestedConfigName(ext.Email); forced != "" {
-				remark = forced
-			} else if remark == "" {
+			if remark == "" {
 				remark = ext.Email
 			}
 			newOutbounds := []json_util.RawMessage{outbound}

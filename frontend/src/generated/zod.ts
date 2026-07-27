@@ -415,6 +415,7 @@ export const HostGroupSchema = z.object({
   allowInsecure: z.boolean(),
   alpn: z.array(z.string()),
   echConfigList: z.string(),
+  enabledClientEmails: z.array(z.string()).optional(),
   excludeFromSubTypes: z.array(z.string()),
   finalMask: z.string(),
   fingerprint: z.string(),

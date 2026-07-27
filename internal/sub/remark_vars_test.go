@@ -682,28 +682,19 @@ func TestEmailOnFirstLinkOnly(t *testing.T) {
 	}
 }
 
-func TestNameModeEmailOverridesGlobalAndHostTemplates(t *testing.T) {
+func TestNameModeDoesNotOverrideConfigTemplates(t *testing.T) {
 	client := model.Client{Email: "john@example.com"}
 	inbound := &model.Inbound{Remark: "Germany", StreamSettings: `{"security":"tls","network":"ws"}`}
-	s := &SubService{remarkTemplate: "{{INBOUND}}-{{EMAIL}}", subscriptionBody: true, nameMode: "email"}
-	if got := s.genTemplatedRemark(inbound, client, "", "ws"); got != client.Email {
-		t.Fatalf("global remark=%q", got)
-	}
-	if got := s.genHostRemark(inbound, client, "Custom host", "ws"); got != client.Email {
-		t.Fatalf("host remark=%q", got)
-	}
-}
 
-func TestNameModeLiteralOverridesGlobalAndHostTemplates(t *testing.T) {
-	client := model.Client{Email: "john@example.com"}
-	inbound := &model.Inbound{Remark: "Germany", StreamSettings: `{"security":"tls","network":"ws"}`}
-	s := &SubService{remarkTemplate: "{{INBOUND}}-{{EMAIL}}", subscriptionBody: true}
-	s.SetNameMode("visible-client-name")
-	if got := s.genTemplatedRemark(inbound, client, "", "ws"); got != "visible-client-name" {
-		t.Fatalf("global remark=%q", got)
-	}
-	if got := s.genHostRemark(inbound, client, "Custom host", "ws"); got != "visible-client-name" {
-		t.Fatalf("host remark=%q", got)
+	for _, mode := range []string{"email", "visible-client-name"} {
+		s := &SubService{remarkTemplate: "{{INBOUND}}-{{EMAIL}}", subscriptionBody: true}
+		s.SetNameMode(mode)
+		if got := s.genTemplatedRemark(inbound, client, "", "ws"); got != "Germany-john@example.com" {
+			t.Fatalf("mode %q global remark=%q", mode, got)
+		}
+		if got := s.genHostRemark(inbound, client, "Custom-{{EMAIL}}", "ws"); got != "Custom-john@example.com" {
+			t.Fatalf("mode %q host remark=%q", mode, got)
+		}
 	}
 }
 

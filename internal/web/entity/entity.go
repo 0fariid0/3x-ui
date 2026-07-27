@@ -351,4 +351,5 @@ type HostGroup struct {
 	MihomoIpVersion        string            `json:"mihomoIpVersion" validate:"omitempty,oneof=dual ipv4 ipv6 ipv4-prefer ipv6-prefer"`
 	MihomoX25519           bool              `json:"mihomoX25519"`
 	ShuffleHost            bool              `json:"shuffleHost"`
+	EnabledClientEmails    []string          `json:"enabledClientEmails,omitempty"`
 }

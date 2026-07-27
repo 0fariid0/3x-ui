@@ -126,6 +126,7 @@ func TestSubscriptionLinkOptionsAndExclusions(t *testing.T) {
 	hosts := []*model.Host{
 		{GroupId: "vip-pool", InboundId: inbound.Id, SortOrder: 1, Remark: "Germany 1", Address: "1.1.1.1", Port: 0},
 		{GroupId: "vip-pool", InboundId: inbound.Id, SortOrder: 2, Remark: "Germany 2", Address: "2.2.2.2", Port: 8443},
+		{GroupId: "private-pool", InboundId: inbound.Id, SortOrder: 3, Remark: "Private", Address: "3.3.3.3", Port: 0, IsDisabled: true},
 	}
 	for _, host := range hosts {
 		if err := db.Create(host).Error; err != nil {
@@ -138,14 +139,17 @@ func TestSubscriptionLinkOptionsAndExclusions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(options) != 2 {
-		t.Fatalf("options=%d, want 2: %#v", len(options), options)
+	if len(options) != 3 {
+		t.Fatalf("options=%d, want 3: %#v", len(options), options)
 	}
 	if options[0].Name != "Germany 1" || options[0].Address != "1.1.1.1" || options[0].Port != 443 {
 		t.Fatalf("first option=%+v", options[0])
 	}
 	if options[1].Name != "Germany 2" || options[1].Address != "2.2.2.2" || options[1].Port != 8443 {
 		t.Fatalf("second option=%+v", options[1])
+	}
+	if options[2].GloballyEnabled || options[2].Enabled {
+		t.Fatalf("globally disabled host must default off: %+v", options[2])
 	}
 
 	disabledKey := options[0].Key
@@ -159,11 +163,33 @@ func TestSubscriptionLinkOptionsAndExclusions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if options[0].Enabled || !options[1].Enabled {
+	if options[0].Enabled || !options[1].Enabled || options[2].Enabled {
 		t.Fatalf("unexpected visibility: %#v", options)
 	}
 
+	// The UI submits every switch that is off. Keep the first host on, and turn
+	// the globally disabled third host on by omitting its key from disabledKeys.
 	if err := svc.SetSubscriptionLinkExclusionsByEmail(rec.Email, nil); err != nil {
+		t.Fatal(err)
+	}
+	options, err = svc.GetSubscriptionLinkOptionsByEmail(rec.Email, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !options[0].Enabled || !options[1].Enabled || !options[2].Enabled {
+		t.Fatalf("all switches should now be enabled: %#v", options)
+	}
+	var inclusionCount int64
+	if err := db.Model(&model.ClientSubscriptionLinkInclusion{}).Where("client_id = ?", rec.Id).Count(&inclusionCount).Error; err != nil {
+		t.Fatal(err)
+	}
+	if inclusionCount != 1 {
+		t.Fatalf("inclusion count=%d, want 1", inclusionCount)
+	}
+
+	// Turning the private host off again writes no inclusion and keeps globally
+	// enabled hosts on by default.
+	if err := svc.SetSubscriptionLinkExclusionsByEmail(rec.Email, []string{options[2].Key}); err != nil {
 		t.Fatal(err)
 	}
 	var count int64

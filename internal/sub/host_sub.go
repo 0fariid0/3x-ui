@@ -32,7 +32,7 @@ func (s *SubService) hostEndpoints(inbound *model.Inbound, format string) []map[
 func (s *SubService) hostEndpointsForClient(inbound *model.Inbound, format string, clientID int) hostEndpointSelection {
 	var hosts []*model.Host
 	if err := database.GetDB().
-		Where("inbound_id = ? AND is_disabled = ?", inbound.Id, false).
+		Where("inbound_id = ?", inbound.Id).
 		Order("sort_order asc, id asc").
 		Find(&hosts).Error; err != nil {
 		logger.Warning("SubService - hostEndpoints:", err)
@@ -49,7 +49,7 @@ func (s *SubService) hostEndpointsForClient(inbound *model.Inbound, format strin
 			continue
 		}
 		hasApplicableHost = true
-		if s.subscriptionLinkDisabled(clientID, h.SubscriptionLinkKey()) {
+		if !s.subscriptionLinkEnabled(clientID, h.SubscriptionLinkKey(), !h.IsDisabled) {
 			continue
 		}
 		eps = append(eps, hostToExternalProxyMap(h, defaultDest, inbound.Port))

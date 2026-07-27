@@ -114,6 +114,51 @@ func TestSetHostEnableAndBulk(t *testing.T) {
 	}
 }
 
+func TestDisabledHostReportsEnabledClientEmails(t *testing.T) {
+	setupBulkDB(t)
+	db := database.GetDB()
+	svc := &HostService{}
+	ib := mkInbound(t, 443, model.VLESS, `{"clients":[]}`)
+	created, err := svc.AddHostGroup(&entity.HostGroup{
+		InboundIds: []int{ib.Id}, Remark: "private", Hosts: []string{"private.example.com"}, IsDisabled: true,
+	})
+	if err != nil {
+		t.Fatalf("AddHostGroup: %v", err)
+	}
+	client := &model.ClientRecord{Email: "private-user@example.com", SubID: "private-sub", UUID: "11111111-2222-4333-8444-555555555555", Enable: true}
+	if err := db.Create(client).Error; err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	if err := db.Create(&model.ClientInbound{ClientId: client.Id, InboundId: ib.Id}).Error; err != nil {
+		t.Fatalf("attach client: %v", err)
+	}
+	if err := db.Create(&model.ClientSubscriptionLinkInclusion{
+		ClientId: client.Id,
+		LinkKey:  created[0].SubscriptionLinkKey(),
+	}).Error; err != nil {
+		t.Fatalf("create inclusion: %v", err)
+	}
+
+	group, err := svc.GetHostGroup(created[0].GroupId)
+	if err != nil {
+		t.Fatalf("GetHostGroup: %v", err)
+	}
+	if !group.IsDisabled || len(group.EnabledClientEmails) != 1 || group.EnabledClientEmails[0] != client.Email {
+		t.Fatalf("enabled client emails=%v", group.EnabledClientEmails)
+	}
+
+	if err := svc.SetHostGroupEnable(group.GroupId, true); err != nil {
+		t.Fatalf("enable host: %v", err)
+	}
+	group, err = svc.GetHostGroup(group.GroupId)
+	if err != nil {
+		t.Fatalf("GetHostGroup after enable: %v", err)
+	}
+	if group.IsDisabled || len(group.EnabledClientEmails) != 0 {
+		t.Fatalf("globally enabled host should report active-for-all without overrides: %+v", group)
+	}
+}
+
 func TestDeleteHosts(t *testing.T) {
 	setupBulkDB(t)
 	svc := &HostService{}
