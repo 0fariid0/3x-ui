@@ -45,6 +45,12 @@ func (s *SubClashService) GetClashNamed(subId string, host string, nameMode stri
 	var proxies []map[string]any
 
 	seenEmails := make(map[string]struct{})
+	if displayClient, displayInbound, ok := subReq.subscriptionDisplayContext(subId, inbounds); ok {
+		if displayProxy := s.subscriptionDisplayProxy(subReq, displayInbound, displayClient); displayProxy != nil {
+			proxies = append(proxies, displayProxy)
+			seenEmails[displayClient.Email] = struct{}{}
+		}
+	}
 	for _, inbound := range inbounds {
 		clients := subReq.matchingClients(inbound, subId)
 		if len(clients) == 0 {

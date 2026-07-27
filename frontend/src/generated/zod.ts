@@ -691,6 +691,12 @@ export const SettingSchema = z.object({
 });
 export type Setting = z.infer<typeof SettingSchema>;
 
+export const SubscriptionDisplayHostSchema = z.object({
+  enable: z.boolean(),
+  remark: z.string().max(256),
+});
+export type SubscriptionDisplayHost = z.infer<typeof SubscriptionDisplayHostSchema>;
+
 export const UserSchema = z.object({
   id: z.number().int(),
   password: z.string(),

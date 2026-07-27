@@ -68,6 +68,11 @@ type SubService struct {
 	// with the clients array left out; generators read only inbound-level
 	// fields (encryption, method, version, …) from it.
 	settingsByInbound map[int]map[string]any
+	// displayHostEnabled/displayHostRemark configure one synthetic informational
+	// entry that is prepended once to every subscription, regardless of how many
+	// inbounds the client is attached to.
+	displayHostEnabled bool
+	displayHostRemark  string
 	// disabledLinkKeysByClient caches per-client subscription link exclusions
 	// (managed Host rows and default inbound links) for this request.
 	disabledLinkKeysByClient map[int]map[string]struct{}
@@ -261,6 +266,14 @@ func (s *SubService) loadRemarkSettings() {
 	if err != nil {
 		s.datepicker = "gregorian"
 	}
+	s.displayHostEnabled, err = s.settingService.GetSubscriptionDisplayHostEnable()
+	if err != nil {
+		s.displayHostEnabled = false
+	}
+	s.displayHostRemark, err = s.settingService.GetSubscriptionDisplayHostRemark()
+	if err != nil {
+		s.displayHostRemark = ""
+	}
 }
 
 func (s *SubService) configuredPublicHost() string {
@@ -357,6 +370,13 @@ func (s *SubService) getSubs(subId string) ([]string, []string, int64, xray.Clie
 	}
 
 	seenEmails := make(map[string]struct{})
+	if displayClient, displayInbound, ok := s.subscriptionDisplayContext(subId, inbounds); ok {
+		if displayLink := s.subscriptionDisplayRawLink(displayInbound, displayClient); displayLink != "" {
+			result = append(result, displayLink)
+			emails = append(emails, displayClient.Email)
+			seenEmails[displayClient.Email] = struct{}{}
+		}
+	}
 	for _, inbound := range inbounds {
 		clients := s.matchingClients(inbound, subId)
 		if len(clients) == 0 {

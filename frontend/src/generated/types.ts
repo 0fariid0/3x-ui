@@ -653,6 +653,11 @@ export interface Setting {
   value: string;
 }
 
+export interface SubscriptionDisplayHost {
+  enable: boolean;
+  remark: string;
+}
+
 export interface User {
   id: number;
   password: string;

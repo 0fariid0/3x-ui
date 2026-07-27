@@ -2878,6 +2878,22 @@ export const SCHEMAS: Record<string, unknown> = {
     ],
     "type": "object"
   },
+  "SubscriptionDisplayHost": {
+    "properties": {
+      "enable": {
+        "type": "boolean"
+      },
+      "remark": {
+        "maxLength": 256,
+        "type": "string"
+      }
+    },
+    "required": [
+      "enable",
+      "remark"
+    ],
+    "type": "object"
+  },
   "User": {
     "description": "User represents a user account in the 3x-ui panel.",
     "properties": {

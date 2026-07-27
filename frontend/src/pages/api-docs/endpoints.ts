@@ -1060,6 +1060,19 @@ export const sections: readonly Section[] = [
         response: '{\n  "success": true,\n  "obj": ["CDN", "EU", "FAST"]\n}',
       },
       {
+        method: 'GET',
+        path: '/panel/api/hosts/displayHost',
+        summary: 'Get the one optional informational subscription entry that is prepended once to every client subscription.',
+        responseSchema: 'SubscriptionDisplayHost',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/hosts/displayHost',
+        summary: 'Enable, disable, or update the template of the permanent informational subscription entry.',
+        body: '{\n  "enable": true,\n  "remark": "📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D"\n}',
+        response: '{\n  "success": true\n}',
+      },
+      {
         method: 'POST',
         path: '/panel/api/hosts/add',
         summary: 'Create a host group on inbounds.',

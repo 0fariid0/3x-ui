@@ -1113,6 +1113,13 @@
         "delete": "Host deleted successfully",
         "badTag": "Invalid tag",
         "badVlessRoute": "Enter a single number between 0 and 65535"
+      },
+      "displayHost": {
+        "title": "Permanent subscription display entry",
+        "hint": "Adds one synthetic informational config at the very top of every subscription. It is emitted only once even when the client belongs to multiple inbounds. Use static text and the same variables as normal Hosts; this entry is not intended to connect.",
+        "placeholder": "e.g. 📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D",
+        "fixedEndpoint": "Fixed informational endpoint; not intended to connect",
+        "saved": "Subscription display entry saved."
       }
     },
     "nodes": {

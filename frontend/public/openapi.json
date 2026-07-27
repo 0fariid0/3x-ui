@@ -2904,6 +2904,22 @@
         ],
         "type": "object"
       },
+      "SubscriptionDisplayHost": {
+        "properties": {
+          "enable": {
+            "type": "boolean"
+          },
+          "remark": {
+            "maxLength": 256,
+            "type": "string"
+          }
+        },
+        "required": [
+          "enable",
+          "remark"
+        ],
+        "type": "object"
+      },
       "User": {
         "description": "User represents a user account in the 3x-ui panel.",
         "properties": {
@@ -9107,6 +9123,90 @@
                     "EU",
                     "FAST"
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/hosts/displayHost": {
+      "get": {
+        "tags": [
+          "Hosts"
+        ],
+        "summary": "Get the one optional informational subscription entry that is prepended once to every client subscription.",
+        "operationId": "get_panel_api_hosts_displayHost",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/SubscriptionDisplayHost"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "enable": false,
+                    "remark": ""
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Hosts"
+        ],
+        "summary": "Enable, disable, or update the template of the permanent informational subscription entry.",
+        "operationId": "post_panel_api_hosts_displayHost",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "enable": true,
+                "remark": "📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                },
+                "example": {
+                  "success": true
                 }
               }
             }

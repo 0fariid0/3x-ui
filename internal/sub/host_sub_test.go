@@ -9,6 +9,8 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/entity"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 )
 
 func seedSubDB(t *testing.T) {
@@ -526,5 +528,79 @@ func TestSub_PerClientDefaultInboundVisibility(t *testing.T) {
 	}
 	if len(links) != 0 {
 		t.Fatalf("disabled default inbound link leaked: %v", links)
+	}
+}
+
+func TestSub_PermanentDisplayHost_FirstAndOnceAcrossInbounds(t *testing.T) {
+	seedSubDB(t)
+	db := database.GetDB()
+	first := seedSubInbound(t, "display-sub", "first-display", 4601, 1, `{"network":"tcp","security":"none"}`)
+
+	var rec model.ClientRecord
+	if err := db.Where("sub_id = ?", "display-sub").First(&rec).Error; err != nil {
+		t.Fatalf("load client: %v", err)
+	}
+	second := &model.Inbound{
+		UserId: 1, Tag: "second-display", Enable: true, Listen: "203.0.113.6", Port: 4602,
+		Protocol: model.VLESS, Remark: "second-display",
+		Settings:       fmt.Sprintf(`{"clients":[{"id":%q,"email":%q,"subId":%q,"enable":true}],"decryption":"none"}`, rec.UUID, rec.Email, rec.SubID),
+		StreamSettings: `{"network":"tcp","security":"none"}`, SubSortIndex: 2,
+	}
+	if err := db.Create(second).Error; err != nil {
+		t.Fatalf("seed second inbound: %v", err)
+	}
+	if err := db.Create(&model.ClientInbound{ClientId: rec.Id, InboundId: second.Id}).Error; err != nil {
+		t.Fatalf("attach second inbound: %v", err)
+	}
+
+	settingService := service.SettingService{}
+	if err := settingService.UpdateSubscriptionDisplayHost(&entity.SubscriptionDisplayHost{
+		Enable: true,
+		Remark: "NOTICE-{{EMAIL}}-{{INBOUND}}",
+	}); err != nil {
+		t.Fatalf("enable display host: %v", err)
+	}
+
+	links, _, _, _, err := NewSubService("").GetSubs("display-sub", "req.example.com")
+	if err != nil {
+		t.Fatalf("GetSubs: %v", err)
+	}
+	flat := splitLinkLines(strings.Join(links, "\n"))
+	if len(flat) != 3 {
+		t.Fatalf("links = %d, want display + two inbound links: %v", len(flat), flat)
+	}
+	if !strings.Contains(flat[0], "1.1.1.1:1") || !strings.Contains(flat[0], "NOTICE-") {
+		t.Fatalf("first link must be the permanent display host: %s", flat[0])
+	}
+	if strings.Count(strings.Join(flat, "\n"), "1.1.1.1:1") != 1 {
+		t.Fatalf("display host must be emitted exactly once: %v", flat)
+	}
+	if !strings.Contains(strings.Join(flat[1:], "\n"), first.Listen+":"+fmt.Sprint(first.Port)) ||
+		!strings.Contains(strings.Join(flat[1:], "\n"), second.Listen+":"+fmt.Sprint(second.Port)) {
+		t.Fatalf("real inbound links must follow the display entry: %v", flat)
+	}
+
+	clash := NewSubClashService(false, "", NewSubService(""))
+	yaml, _, err := clash.GetClash("display-sub", "req.example.com")
+	if err != nil {
+		t.Fatalf("GetClash: %v", err)
+	}
+	if strings.Count(yaml, "server: 1.1.1.1") != 1 {
+		t.Fatalf("clash display proxy must appear exactly once:\n%s", yaml)
+	}
+	if displayAt, realAt := strings.Index(yaml, "server: 1.1.1.1"), strings.Index(yaml, "server: 203.0.113.5"); displayAt < 0 || realAt < 0 || displayAt > realAt {
+		t.Fatalf("clash display proxy must be first:\n%s", yaml)
+	}
+
+	jsonSvc := NewSubJsonService("", "", "", NewSubService(""))
+	jsonOut, _, err := jsonSvc.GetJson("display-sub", "req.example.com", true)
+	if err != nil {
+		t.Fatalf("GetJson: %v", err)
+	}
+	if strings.Count(jsonOut, `"address": "1.1.1.1"`) != 1 {
+		t.Fatalf("json display config must appear exactly once:\n%s", jsonOut)
+	}
+	if displayAt, realAt := strings.Index(jsonOut, `"address": "1.1.1.1"`), strings.Index(jsonOut, `"address": "203.0.113.5"`); displayAt < 0 || realAt < 0 || displayAt > realAt {
+		t.Fatalf("json display config must be first:\n%s", jsonOut)
 	}
 }

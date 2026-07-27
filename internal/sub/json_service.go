@@ -82,6 +82,12 @@ func (s *SubJsonService) GetJsonNamed(subId string, host string, alwaysReturnArr
 	var configArray []json_util.RawMessage
 
 	seenEmails := make(map[string]struct{})
+	if displayClient, displayInbound, ok := subReq.subscriptionDisplayContext(subId, inbounds); ok {
+		if displayConfig := s.subscriptionDisplayConfig(subReq, displayInbound, displayClient); len(displayConfig) > 0 {
+			configArray = append(configArray, displayConfig)
+			seenEmails[displayClient.Email] = struct{}{}
+		}
+	}
 	// Prepare Inbounds
 	for _, inbound := range inbounds {
 		clients := subReq.matchingClients(inbound, subId)

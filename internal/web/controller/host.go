@@ -25,6 +25,7 @@ func (a *HostController) initRouter(g *gin.RouterGroup) {
 	g.GET("/get/:groupId", a.get)
 	g.GET("/byInbound/:inboundId", a.byInbound)
 	g.GET("/tags", a.tags)
+	g.GET("/displayHost", a.getDisplayHost)
 
 	g.POST("/add", a.add)
 	g.POST("/update/:groupId", a.update)
@@ -34,6 +35,7 @@ func (a *HostController) initRouter(g *gin.RouterGroup) {
 	g.POST("/bulk/add", a.add)
 	g.POST("/bulk/setEnable", a.bulkSetEnable)
 	g.POST("/bulk/del", a.bulkDel)
+	g.POST("/displayHost", a.updateDisplayHost)
 }
 
 func (a *HostController) list(c *gin.Context) {
@@ -174,4 +176,25 @@ func (a *HostController) bulkDel(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.hosts.toasts.delete"), nil)
+}
+
+func (a *HostController) getDisplayHost(c *gin.Context) {
+	config, err := a.hostService.GetSubscriptionDisplayHost()
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.hosts.toasts.obtain"), err)
+		return
+	}
+	jsonObj(c, config, nil)
+}
+
+func (a *HostController) updateDisplayHost(c *gin.Context) {
+	req, ok := middleware.BindJSONAndValidate[entity.SubscriptionDisplayHost](c)
+	if !ok {
+		return
+	}
+	if err := a.hostService.UpdateSubscriptionDisplayHost(req); err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.hosts.toasts.update"), err)
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.hosts.toasts.update"), nil)
 }

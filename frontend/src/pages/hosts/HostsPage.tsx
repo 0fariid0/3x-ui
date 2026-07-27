@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, Col, ConfigProvider, Layout, Modal, Result, Row, Spin, Statistic, message } from 'antd';
+import { Button, Card, Col, ConfigProvider, Layout, Modal, Result, Row, Space, Spin, Statistic, Switch, Tag, Typography, message } from 'antd';
 import { CheckCircleOutlined, GlobalOutlined, StopOutlined } from '@ant-design/icons';
 
 import { useTheme } from '@/hooks/useTheme';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useHostsQuery, type HostRecord } from '@/api/queries/useHostsQuery';
+import { useHostsQuery, useSubscriptionDisplayHostQuery, type HostRecord } from '@/api/queries/useHostsQuery';
 import { useHostMutations } from '@/api/queries/useHostMutations';
 import { useInboundOptions } from '@/api/queries/useInboundOptions';
 import AppSidebar from '@/layouts/AppSidebar';
 import { setMessageInstance } from '@/utils/messageBus';
 import type { BulkAddHostValues } from '@/schemas/api/host';
+import RemarkTemplateField from '@/components/form/RemarkTemplateField';
 import HostList, { sortHosts } from './HostList';
 import HostFormModal from './HostFormModal';
 
@@ -23,13 +24,33 @@ export default function HostsPage() {
   useEffect(() => { setMessageInstance(messageApi); }, [messageApi]);
 
   const { hosts, loading, fetched, fetchError, refetch } = useHostsQuery();
-  const { bulkCreate, update, remove, setEnable, reorder, bulkSetEnable, bulkDel } = useHostMutations();
+  const { displayHost } = useSubscriptionDisplayHostQuery();
+  const { bulkCreate, update, remove, setEnable, reorder, bulkSetEnable, bulkDel, updateDisplayHost } = useHostMutations();
   const { data: inboundOptions = [] } = useInboundOptions();
 
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
   const [formHost, setFormHost] = useState<HostRecord | null>(null);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  const [displayHostEnable, setDisplayHostEnable] = useState(false);
+  const [displayHostRemark, setDisplayHostRemark] = useState('📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D');
+  const [displayHostSaving, setDisplayHostSaving] = useState(false);
+
+  useEffect(() => {
+    if (!displayHost) return;
+    setDisplayHostEnable(displayHost.enable);
+    setDisplayHostRemark(displayHost.remark);
+  }, [displayHost]);
+
+  const saveDisplayHost = useCallback(async () => {
+    setDisplayHostSaving(true);
+    try {
+      const msg = await updateDisplayHost({ enable: displayHostEnable, remark: displayHostRemark });
+      if (msg?.success) messageApi.success(t('pages.hosts.displayHost.saved'));
+    } finally {
+      setDisplayHostSaving(false);
+    }
+  }, [displayHostEnable, displayHostRemark, updateDisplayHost, messageApi, t]);
 
   const onAdd = useCallback(() => {
     setFormMode('add');
@@ -158,6 +179,40 @@ export default function HostsPage() {
                           />
                         </Col>
                       </Row>
+                    </Card>
+                  </Col>
+
+                  <Col span={24}>
+                    <Card
+                      size="small"
+                      hoverable
+                      title={t('pages.hosts.displayHost.title')}
+                      extra={
+                        <Space>
+                          <Typography.Text type="secondary">{t('pages.hosts.fields.enable')}</Typography.Text>
+                          <Switch checked={displayHostEnable} onChange={setDisplayHostEnable} />
+                        </Space>
+                      }
+                    >
+                      <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
+                        {t('pages.hosts.displayHost.hint')}
+                      </Typography.Paragraph>
+                      <RemarkTemplateField
+                        value={displayHostRemark}
+                        onChange={setDisplayHostRemark}
+                        maxLength={256}
+                        placeholder={t('pages.hosts.displayHost.placeholder')}
+                      />
+                      <Space wrap style={{ marginTop: 12, width: '100%', justifyContent: 'space-between' }}>
+                        <Space wrap>
+                          <Tag color="blue">VLESS</Tag>
+                          <Typography.Text code>1.1.1.1:1</Typography.Text>
+                          <Typography.Text type="secondary">{t('pages.hosts.displayHost.fixedEndpoint')}</Typography.Text>
+                        </Space>
+                        <Button type="primary" loading={displayHostSaving} onClick={saveDisplayHost}>
+                          {t('save')}
+                        </Button>
+                      </Space>
                     </Card>
                   </Col>
 

@@ -12,6 +12,7 @@ export const keys = {
     list: () => ['hosts', 'list'] as const,
     byInbound: (inboundId: number) => ['hosts', 'byInbound', inboundId] as const,
     tags: () => ['hosts', 'tags'] as const,
+    displayHost: () => ['hosts', 'displayHost'] as const,
   },
   settings: {
     root: () => ['settings'] as const,

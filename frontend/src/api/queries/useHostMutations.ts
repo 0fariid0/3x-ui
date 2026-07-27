@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { HttpUtil } from '@/utils';
 import { keys } from '@/api/queryKeys';
-import type { BulkAddHostValues } from '@/schemas/api/host';
+import type { BulkAddHostValues, SubscriptionDisplayHost } from '@/schemas/api/host';
 
 const JSON_HEADERS = { headers: { 'Content-Type': 'application/json' } };
 
@@ -48,6 +48,12 @@ export function useHostMutations() {
     onSuccess: (msg) => { if (msg?.success) invalidate(); },
   });
 
+  const updateDisplayHostMut = useMutation({
+    mutationFn: (payload: SubscriptionDisplayHost) =>
+      HttpUtil.post('/panel/api/hosts/displayHost', payload, JSON_HEADERS),
+    onSuccess: (msg) => { if (msg?.success) invalidate(); },
+  });
+
   return {
     bulkCreate: (payload: BulkAddHostValues) => bulkCreateMut.mutateAsync(payload),
     update: (groupId: string, payload: BulkAddHostValues) => updateMut.mutateAsync({ groupId, payload }),
@@ -56,5 +62,6 @@ export function useHostMutations() {
     reorder: (groupIds: string[]) => reorderMut.mutateAsync(groupIds),
     bulkSetEnable: (groupIds: string[], enable: boolean) => bulkEnableMut.mutateAsync({ groupIds, enable }),
     bulkDel: (groupIds: string[]) => bulkDelMut.mutateAsync(groupIds),
+    updateDisplayHost: (payload: SubscriptionDisplayHost) => updateDisplayHostMut.mutateAsync(payload),
   };
 }

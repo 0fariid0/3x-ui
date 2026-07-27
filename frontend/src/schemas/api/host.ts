@@ -113,3 +113,9 @@ export const BulkAddHostSchema = HostFormSchema.omit({ inboundId: true, address:
   hosts: z.array(z.string()).default([]),
 });
 export type BulkAddHostValues = z.infer<typeof BulkAddHostSchema>;
+
+export const SubscriptionDisplayHostSchema = z.object({
+  enable: z.boolean().default(false),
+  remark: z.string().max(256).default(''),
+});
+export type SubscriptionDisplayHost = z.infer<typeof SubscriptionDisplayHostSchema>;

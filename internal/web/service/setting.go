@@ -54,86 +54,88 @@ var defaultValueMap = map[string]string{
 	// cert are minted lazily on first use, and the node-side trust CA is pasted
 	// in by the operator. Kept out of entity.AllSetting so private keys never
 	// reach the settings UI/export.
-	"nodeMtlsCaCertPem":           "",
-	"nodeMtlsCaKeyPem":            "",
-	"nodeMtlsClientCertPem":       "",
-	"nodeMtlsClientKeyPem":        "",
-	"nodeMtlsClientCAPem":         "",
-	"webBasePath":                 normalizeBasePath(getEnv("XUI_INIT_WEB_BASE_PATH", "/")),
-	"sessionMaxAge":               "360",
-	"trustedProxyCIDRs":           "127.0.0.1/32,::1/128",
-	"pageSize":                    "25",
-	"expireDiff":                  "0",
-	"trafficDiff":                 "0",
-	"remarkTemplate":              DefaultRemarkTemplate,
-	"timeLocation":                "Local",
-	"tgBotEnable":                 "false",
-	"tgBotToken":                  "",
-	"tgBotProxy":                  "",
-	"tgBotAPIServer":              "",
-	"tgBotChatId":                 "",
-	"tgRunTime":                   "@daily",
-	"tgBotBackup":                 "false",
-	"tgCpu":                       "80",
-	"tgMemory":                    "80",
-	"tgLang":                      "en-US",
-	"twoFactorEnable":             "false",
-	"twoFactorToken":              "",
-	"subEnable":                   "true",
-	"subJsonEnable":               "false",
-	"subJsonAutoDetect":           "false",
-	"subJsonAlwaysArray":          "false",
-	"subJsonUserAgentRegex":       "",
-	"subClashAutoDetect":          "false",
-	"subClashUserAgentRegex":      "",
-	"subTitle":                    "",
-	"subSupportUrl":               "",
-	"subProfileUrl":               "",
-	"subAnnounce":                 "",
-	"subEnableRouting":            "false",
-	"subRoutingRules":             "",
-	"subHideSettings":             "false",
-	"subIncyEnableRouting":        "false",
-	"subIncyRoutingRules":         "",
-	"subListen":                   "",
-	"subPort":                     "2096",
-	"subPath":                     "/sub/",
-	"subDomain":                   "",
-	"subCertFile":                 "",
-	"subKeyFile":                  "",
-	"subUpdates":                  "12",
-	"subEncrypt":                  "true",
-	"subURI":                      "",
-	"subJsonPath":                 "/json/",
-	"subJsonURI":                  "",
-	"subClashEnable":              "false",
-	"subClashPath":                "/clash/",
-	"subClashURI":                 "",
-	"subClashEnableRouting":       "false",
-	"subClashRules":               "",
-	"subJsonMux":                  "",
-	"subJsonRules":                "",
-	"subJsonFinalMask":            "",
-	"subThemeDir":                 "",
-	"datepicker":                  "gregorian",
-	"warp":                        "",
-	"warpUpdateInterval":          "0",
-	"nord":                        "",
-	"externalTrafficInformEnable": "false",
-	"externalTrafficInformURI":    "",
-	"restartXrayOnClientDisable":  "true",
-	"scheduledRestartEnable":      "false",
-	"scheduledRestartInterval":    "24",
-	"scheduledRestartUnit":        "hours",
-	"scheduledRestartPanel":       "false",
-	"xrayHealthEnable":            "true",
-	"xrayHealthFailureThreshold":  "2",
-	"xrayHealthRestartCooldown":   "5",
-	"xrayHealthMaxRestarts":       "3",
-	"xrayHealthWindowMinutes":     "30",
-	"xrayOutboundTestUrl":         "https://www.google.com/generate_204",
-	"panelOutbound":               "",
-	"devChannelEnable":            "false",
+	"nodeMtlsCaCertPem":             "",
+	"nodeMtlsCaKeyPem":              "",
+	"nodeMtlsClientCertPem":         "",
+	"nodeMtlsClientKeyPem":          "",
+	"nodeMtlsClientCAPem":           "",
+	"webBasePath":                   normalizeBasePath(getEnv("XUI_INIT_WEB_BASE_PATH", "/")),
+	"sessionMaxAge":                 "360",
+	"trustedProxyCIDRs":             "127.0.0.1/32,::1/128",
+	"pageSize":                      "25",
+	"expireDiff":                    "0",
+	"trafficDiff":                   "0",
+	"remarkTemplate":                DefaultRemarkTemplate,
+	"subscriptionDisplayHostEnable": "false",
+	"subscriptionDisplayHostRemark": "📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D",
+	"timeLocation":                  "Local",
+	"tgBotEnable":                   "false",
+	"tgBotToken":                    "",
+	"tgBotProxy":                    "",
+	"tgBotAPIServer":                "",
+	"tgBotChatId":                   "",
+	"tgRunTime":                     "@daily",
+	"tgBotBackup":                   "false",
+	"tgCpu":                         "80",
+	"tgMemory":                      "80",
+	"tgLang":                        "en-US",
+	"twoFactorEnable":               "false",
+	"twoFactorToken":                "",
+	"subEnable":                     "true",
+	"subJsonEnable":                 "false",
+	"subJsonAutoDetect":             "false",
+	"subJsonAlwaysArray":            "false",
+	"subJsonUserAgentRegex":         "",
+	"subClashAutoDetect":            "false",
+	"subClashUserAgentRegex":        "",
+	"subTitle":                      "",
+	"subSupportUrl":                 "",
+	"subProfileUrl":                 "",
+	"subAnnounce":                   "",
+	"subEnableRouting":              "false",
+	"subRoutingRules":               "",
+	"subHideSettings":               "false",
+	"subIncyEnableRouting":          "false",
+	"subIncyRoutingRules":           "",
+	"subListen":                     "",
+	"subPort":                       "2096",
+	"subPath":                       "/sub/",
+	"subDomain":                     "",
+	"subCertFile":                   "",
+	"subKeyFile":                    "",
+	"subUpdates":                    "12",
+	"subEncrypt":                    "true",
+	"subURI":                        "",
+	"subJsonPath":                   "/json/",
+	"subJsonURI":                    "",
+	"subClashEnable":                "false",
+	"subClashPath":                  "/clash/",
+	"subClashURI":                   "",
+	"subClashEnableRouting":         "false",
+	"subClashRules":                 "",
+	"subJsonMux":                    "",
+	"subJsonRules":                  "",
+	"subJsonFinalMask":              "",
+	"subThemeDir":                   "",
+	"datepicker":                    "gregorian",
+	"warp":                          "",
+	"warpUpdateInterval":            "0",
+	"nord":                          "",
+	"externalTrafficInformEnable":   "false",
+	"externalTrafficInformURI":      "",
+	"restartXrayOnClientDisable":    "true",
+	"scheduledRestartEnable":        "false",
+	"scheduledRestartInterval":      "24",
+	"scheduledRestartUnit":          "hours",
+	"scheduledRestartPanel":         "false",
+	"xrayHealthEnable":              "true",
+	"xrayHealthFailureThreshold":    "2",
+	"xrayHealthRestartCooldown":     "5",
+	"xrayHealthMaxRestarts":         "3",
+	"xrayHealthWindowMinutes":       "30",
+	"xrayOutboundTestUrl":           "https://www.google.com/generate_204",
+	"panelOutbound":                 "",
+	"devChannelEnable":              "false",
 
 	// LDAP defaults
 	"ldapEnable":             "false",
@@ -652,6 +654,51 @@ func (s *SettingService) GetSessionMaxAge() (int, error) {
 
 func (s *SettingService) GetTrustedProxyCIDRs() (string, error) {
 	return s.getString("trustedProxyCIDRs")
+}
+
+func (s *SettingService) GetSubscriptionDisplayHostEnable() (bool, error) {
+	return s.getBool("subscriptionDisplayHostEnable")
+}
+
+func (s *SettingService) GetSubscriptionDisplayHostRemark() (string, error) {
+	return s.getString("subscriptionDisplayHostRemark")
+}
+
+func (s *SettingService) UpdateSubscriptionDisplayHost(config *entity.SubscriptionDisplayHost) error {
+	if config == nil {
+		return errors.New("display host config is required")
+	}
+	if len(config.Remark) > 256 {
+		return errors.New("display host remark is too long")
+	}
+	remark := strings.TrimSpace(config.Remark)
+	if config.Enable && remark == "" {
+		remark = defaultValueMap["subscriptionDisplayHostRemark"]
+	}
+	db := database.GetDB()
+	return db.Transaction(func(tx *gorm.DB) error {
+		values := map[string]string{
+			"subscriptionDisplayHostEnable": strconv.FormatBool(config.Enable),
+			"subscriptionDisplayHostRemark": remark,
+		}
+		for key, value := range values {
+			var setting model.Setting
+			err := tx.Where("key = ?", key).First(&setting).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				if err := tx.Create(&model.Setting{Key: key, Value: value}).Error; err != nil {
+					return err
+				}
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			if err := tx.Model(&setting).Update("value", value).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (s *SettingService) GetRemarkTemplate() (string, error) {

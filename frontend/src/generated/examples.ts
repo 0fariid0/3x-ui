@@ -670,6 +670,10 @@ export const EXAMPLES: Record<string, unknown> = {
     "key": "",
     "value": ""
   },
+  "SubscriptionDisplayHost": {
+    "enable": false,
+    "remark": ""
+  },
   "User": {
     "id": 0,
     "password": "",

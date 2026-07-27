@@ -5,6 +5,14 @@ This repository is an independently maintained modified version of 3x-ui.
 Base version: v3.5.0
 Repository: https://github.com/0fariid0/3x-ui
 
+## v3.5.7
+
+- Added one optional permanent informational subscription entry.
+- The informational entry is always first in RAW, JSON, and Clash outputs.
+- It is emitted once per subscription even when a client belongs to several inbounds.
+- Added a Hosts-page editor with the existing remark variables and quick templates.
+- Uses a fixed display-only target: VLESS at 1.1.1.1:1.
+
 ## v3.5.6
 
 - Added subscription refresh activity tracking with the last update time, app name, app version, output format, user agent, and request count.

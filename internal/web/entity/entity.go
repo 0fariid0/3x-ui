@@ -312,6 +312,11 @@ func isWildcardListen(listen string) bool {
 	return false
 }
 
+type SubscriptionDisplayHost struct {
+	Enable bool   `json:"enable" form:"enable"`
+	Remark string `json:"remark" form:"remark" validate:"omitempty,max=256"`
+}
+
 type HostGroup struct {
 	GroupId    string   `json:"groupId"`
 	InboundIds []int    `json:"inboundIds" validate:"required,min=1"`

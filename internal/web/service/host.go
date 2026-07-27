@@ -354,3 +354,21 @@ func normalizeHostAddress(hostStr string) string {
 	}
 	return strings.Trim(hostStr, "[]")
 }
+
+func (s *HostService) GetSubscriptionDisplayHost() (*entity.SubscriptionDisplayHost, error) {
+	settingService := SettingService{}
+	enabled, err := settingService.GetSubscriptionDisplayHostEnable()
+	if err != nil {
+		return nil, err
+	}
+	remark, err := settingService.GetSubscriptionDisplayHostRemark()
+	if err != nil {
+		return nil, err
+	}
+	return &entity.SubscriptionDisplayHost{Enable: enabled, Remark: remark}, nil
+}
+
+func (s *HostService) UpdateSubscriptionDisplayHost(config *entity.SubscriptionDisplayHost) error {
+	settingService := SettingService{}
+	return settingService.UpdateSubscriptionDisplayHost(config)
+}
