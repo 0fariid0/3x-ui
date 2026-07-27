@@ -44,6 +44,7 @@ export const XrayConfigPayloadSchema = z.object({
   scheduledRestartInterval: z.number().int().min(1).optional(),
   scheduledRestartUnit: z.enum(['minutes', 'hours', 'days']).optional(),
   scheduledRestartPanel: z.boolean().optional(),
+  scheduledRestartTimezone: z.enum(['local', 'tehran']).optional(),
   xrayHealthEnable: z.boolean().optional(),
   xrayHealthFailureThreshold: z.number().int().min(1).max(60).optional(),
   xrayHealthRestartCooldown: z.number().int().min(1).max(1440).optional(),

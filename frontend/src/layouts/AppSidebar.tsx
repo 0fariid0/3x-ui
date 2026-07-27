@@ -8,6 +8,7 @@ import {
   ApiOutlined,
   CloseOutlined,
   CloudServerOutlined,
+  ClockCircleOutlined,
   ClusterOutlined,
   CodeOutlined,
   DashboardOutlined,
@@ -35,6 +36,7 @@ import { HttpUtil } from '@/utils';
 import { formatPanelVersion } from '@/lib/panel-version';
 import { pauseAnimationsUntilLeave, useTheme } from '@/hooks/useTheme';
 import { useAllSettings } from '@/api/queries/useAllSettings';
+import { useServerClock } from '@/hooks/useServerClock';
 import './AppSidebar.css';
 
 const SIDEBAR_COLLAPSED_KEY = 'isSidebarCollapsed';
@@ -112,6 +114,7 @@ export default function AppSidebar() {
   const navigate = useNavigate();
   const { pathname, hash } = useLocation();
   const { allSetting } = useAllSettings();
+  const serverClock = useServerClock();
   const showSubFormats = !!(allSetting.subJsonEnable || allSetting.subClashEnable);
 
   const [collapsed, setCollapsed] = useState<boolean>(() => readCollapsed());
@@ -237,6 +240,13 @@ export default function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="brand-actions">
+              <div
+                className="sidebar-server-clock"
+                title={`${serverClock.dateTimeText} ${serverClock.data?.timezoneLabel || ''}`.trim()}
+              >
+                <ClockCircleOutlined />
+                <span>{serverClock.clockText}</span>
+              </div>
               <ThemeCycleButton
                 id="theme-cycle"
                 isDark={isDark}
@@ -288,6 +298,13 @@ export default function AppSidebar() {
             <span className="drawer-brand">3X-UI</span>
           </div>
           <div className="drawer-header-actions">
+            <div
+              className="sidebar-server-clock drawer-server-clock"
+              title={`${serverClock.dateTimeText} ${serverClock.data?.timezoneLabel || ''}`.trim()}
+            >
+              <ClockCircleOutlined />
+              <span>{serverClock.clockText}</span>
+            </div>
             <ThemeCycleButton
               id="theme-cycle-drawer"
               isDark={isDark}

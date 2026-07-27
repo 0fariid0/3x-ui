@@ -31,6 +31,7 @@ export function isUdpOutbound(outbound: unknown): boolean {
 
 export type OutboundTestMode = 'tcp' | 'http' | 'real';
 export type ScheduledRestartUnit = 'minutes' | 'hours' | 'days';
+export type ScheduledRestartTimezone = 'local' | 'tehran';
 
 export type { OutboundTrafficRow, OutboundTestResult };
 
@@ -65,6 +66,8 @@ export interface UseXraySettingResult {
   setScheduledRestartUnit: (v: ScheduledRestartUnit) => void;
   scheduledRestartPanel: boolean;
   setScheduledRestartPanel: (v: boolean) => void;
+  scheduledRestartTimezone: ScheduledRestartTimezone;
+  setScheduledRestartTimezone: (v: ScheduledRestartTimezone) => void;
   xrayHealthEnable: boolean;
   setXrayHealthEnable: (v: boolean) => void;
   xrayHealthFailureThreshold: number;
@@ -152,6 +155,7 @@ export function useXraySetting(): UseXraySettingResult {
   const [scheduledRestartInterval, setScheduledRestartInterval] = useState(24);
   const [scheduledRestartUnit, setScheduledRestartUnit] = useState<ScheduledRestartUnit>('hours');
   const [scheduledRestartPanel, setScheduledRestartPanel] = useState(false);
+  const [scheduledRestartTimezone, setScheduledRestartTimezone] = useState<ScheduledRestartTimezone>('local');
   const [xrayHealthEnable, setXrayHealthEnable] = useState(true);
   const [xrayHealthFailureThreshold, setXrayHealthFailureThreshold] = useState(2);
   const [xrayHealthRestartCooldown, setXrayHealthRestartCooldown] = useState(5);
@@ -184,6 +188,7 @@ export function useXraySetting(): UseXraySettingResult {
     interval: scheduledRestartInterval,
     unit: scheduledRestartUnit,
     panel: scheduledRestartPanel,
+    timezone: scheduledRestartTimezone,
     healthEnable: xrayHealthEnable,
     healthFailureThreshold: xrayHealthFailureThreshold,
     healthRestartCooldown: xrayHealthRestartCooldown,
@@ -215,6 +220,7 @@ export function useXraySetting(): UseXraySettingResult {
     const nextScheduledInterval = obj.scheduledRestartInterval || 24;
     const nextScheduledUnit = obj.scheduledRestartUnit || 'hours';
     const nextScheduledPanel = !!obj.scheduledRestartPanel;
+    const nextScheduledTimezone = obj.scheduledRestartTimezone || 'local';
     const nextHealthEnable = obj.xrayHealthEnable ?? true;
     const nextHealthFailureThreshold = obj.xrayHealthFailureThreshold || 2;
     const nextHealthRestartCooldown = obj.xrayHealthRestartCooldown || 5;
@@ -224,6 +230,7 @@ export function useXraySetting(): UseXraySettingResult {
     setScheduledRestartInterval(nextScheduledInterval);
     setScheduledRestartUnit(nextScheduledUnit);
     setScheduledRestartPanel(nextScheduledPanel);
+    setScheduledRestartTimezone(nextScheduledTimezone);
     setXrayHealthEnable(nextHealthEnable);
     setXrayHealthFailureThreshold(nextHealthFailureThreshold);
     setXrayHealthRestartCooldown(nextHealthRestartCooldown);
@@ -234,6 +241,7 @@ export function useXraySetting(): UseXraySettingResult {
       interval: nextScheduledInterval,
       unit: nextScheduledUnit,
       panel: nextScheduledPanel,
+      timezone: nextScheduledTimezone,
       healthEnable: nextHealthEnable,
       healthFailureThreshold: nextHealthFailureThreshold,
       healthRestartCooldown: nextHealthRestartCooldown,
@@ -296,6 +304,7 @@ export function useXraySetting(): UseXraySettingResult {
         interval?: number;
         unit?: ScheduledRestartUnit;
         panel?: boolean;
+        timezone?: ScheduledRestartTimezone;
         healthEnable?: boolean;
         healthFailureThreshold?: number;
         healthRestartCooldown?: number;
@@ -309,6 +318,7 @@ export function useXraySetting(): UseXraySettingResult {
         scheduledRestartInterval: sentScheduled.interval || 24,
         scheduledRestartUnit: sentScheduled.unit || 'hours',
         scheduledRestartPanel: !!sentScheduled.panel,
+        scheduledRestartTimezone: sentScheduled.timezone || 'local',
         xrayHealthEnable: sentScheduled.healthEnable ?? true,
         xrayHealthFailureThreshold: sentScheduled.healthFailureThreshold || 2,
         xrayHealthRestartCooldown: sentScheduled.healthRestartCooldown || 5,
@@ -324,6 +334,7 @@ export function useXraySetting(): UseXraySettingResult {
       oldScheduledRestartRef.current = JSON.stringify(sentScheduled);
       setSaveDisabled(true);
       queryClient.invalidateQueries({ queryKey: keys.xray.config() });
+      queryClient.invalidateQueries({ queryKey: ['xray', 'scheduled-restart-status'] });
     },
   });
 
@@ -548,6 +559,8 @@ export function useXraySetting(): UseXraySettingResult {
       setScheduledRestartUnit,
       scheduledRestartPanel,
       setScheduledRestartPanel,
+      scheduledRestartTimezone,
+      setScheduledRestartTimezone,
       xrayHealthEnable,
       setXrayHealthEnable,
       xrayHealthFailureThreshold,
@@ -590,6 +603,7 @@ export function useXraySetting(): UseXraySettingResult {
       scheduledRestartInterval,
       scheduledRestartUnit,
       scheduledRestartPanel,
+      scheduledRestartTimezone,
       xrayHealthEnable,
       xrayHealthFailureThreshold,
       xrayHealthRestartCooldown,

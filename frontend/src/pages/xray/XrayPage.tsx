@@ -65,6 +65,8 @@ export default function XrayPage() {
     setScheduledRestartUnit,
     scheduledRestartPanel,
     setScheduledRestartPanel,
+    scheduledRestartTimezone,
+    setScheduledRestartTimezone,
     xrayHealthEnable,
     setXrayHealthEnable,
     xrayHealthFailureThreshold,
@@ -324,6 +326,8 @@ export default function XrayPage() {
             onChangeScheduledRestartUnit={setScheduledRestartUnit}
             scheduledRestartPanel={scheduledRestartPanel}
             onChangeScheduledRestartPanel={setScheduledRestartPanel}
+            scheduledRestartTimezone={scheduledRestartTimezone}
+            onChangeScheduledRestartTimezone={setScheduledRestartTimezone}
             xrayHealthEnable={xrayHealthEnable}
             onChangeXrayHealthEnable={setXrayHealthEnable}
             xrayHealthFailureThreshold={xrayHealthFailureThreshold}

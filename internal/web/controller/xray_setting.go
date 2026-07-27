@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -42,6 +43,7 @@ func (a *XraySettingController) initRouter(g *gin.RouterGroup) {
 	g.GET("/getDefaultJsonConfig", a.getDefaultXrayConfig)
 	g.GET("/getOutboundsTraffic", a.getOutboundsTraffic)
 	g.GET("/getXrayResult", a.getXrayResult)
+	g.GET("/restart-status", a.getScheduledRestartStatus)
 
 	g.POST("/", a.getXraySetting)
 	g.POST("/warp/:action", a.warp)
@@ -106,6 +108,7 @@ func (a *XraySettingController) getXraySetting(c *gin.Context) {
 	scheduledRestartInterval, _ := a.SettingService.GetScheduledRestartInterval()
 	scheduledRestartUnit, _ := a.SettingService.GetScheduledRestartUnit()
 	scheduledRestartPanel, _ := a.SettingService.GetScheduledRestartPanel()
+	scheduledRestartTimezone, _ := a.SettingService.GetScheduledRestartTimezone()
 	xrayHealthEnable, _ := a.SettingService.GetXrayHealthEnable()
 	xrayHealthFailureThreshold, _ := a.SettingService.GetXrayHealthFailureThreshold()
 	xrayHealthRestartCooldown, _ := a.SettingService.GetXrayHealthRestartCooldown()
@@ -120,6 +123,7 @@ func (a *XraySettingController) getXraySetting(c *gin.Context) {
 		"scheduledRestartInterval":   scheduledRestartInterval,
 		"scheduledRestartUnit":       scheduledRestartUnit,
 		"scheduledRestartPanel":      scheduledRestartPanel,
+		"scheduledRestartTimezone":   scheduledRestartTimezone,
 		"xrayHealthEnable":           xrayHealthEnable,
 		"xrayHealthFailureThreshold": xrayHealthFailureThreshold,
 		"xrayHealthRestartCooldown":  xrayHealthRestartCooldown,
@@ -149,6 +153,7 @@ func (a *XraySettingController) getXraySetting(c *gin.Context) {
 // the running core right away — through the gRPC API when only inbounds,
 // outbounds or routing rules changed, with a process restart otherwise.
 func (a *XraySettingController) updateSetting(c *gin.Context) {
+	previousXraySetting, _ := a.SettingService.GetXrayConfigTemplate()
 	xraySetting := c.PostForm("xraySetting")
 	if err := a.XraySettingService.SaveXraySetting(xraySetting); err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
@@ -193,6 +198,17 @@ func (a *XraySettingController) updateSetting(c *gin.Context) {
 			return
 		}
 		if err := a.SettingService.SetScheduledRestartPanel(panelRestart); err != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
+			return
+		}
+		timezone := c.PostForm("scheduledRestartTimezone")
+		if timezone == "" {
+			timezone = entity.ScheduledRestartTimezoneLocal
+		}
+		if _, normalizedTimezone, timezoneErr := entity.ScheduledRestartLocation(timezone); timezoneErr != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), timezoneErr)
+			return
+		} else if err := a.SettingService.SetScheduledRestartTimezone(normalizedTimezone); err != nil {
 			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
 			return
 		}
@@ -249,14 +265,64 @@ func (a *XraySettingController) updateSetting(c *gin.Context) {
 			}
 		}
 	}
-	// Only reconcile a running core; a manually stopped xray stays stopped.
-	if a.XrayService.IsXrayRunning() {
+	storedXraySetting, _ := a.SettingService.GetXrayConfigTemplate()
+	xrayConfigChanged := !jsonEquivalent(previousXraySetting, storedXraySetting)
+	// Scheduling, health-monitor and test-URL changes must not cause an
+	// immediate restart. Only a real Xray template change reconciles the running
+	// core; a manually stopped Xray also stays stopped.
+	if xrayConfigChanged && a.XrayService.IsXrayRunning() {
 		if err := a.XrayService.RestartXray(false); err != nil {
 			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
 			return
 		}
 	}
 	jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), nil)
+}
+
+func jsonEquivalent(left, right string) bool {
+	var leftValue any
+	var rightValue any
+	if err := json.Unmarshal([]byte(left), &leftValue); err != nil {
+		return strings.TrimSpace(left) == strings.TrimSpace(right)
+	}
+	if err := json.Unmarshal([]byte(right), &rightValue); err != nil {
+		return strings.TrimSpace(left) == strings.TrimSpace(right)
+	}
+	return reflect.DeepEqual(leftValue, rightValue)
+}
+
+// getScheduledRestartStatus returns the selected server clock and the most
+// recent scheduled restart report. The frontend polls this lightweight endpoint
+// to keep the small sidebar clock synchronized with the server rather than the
+// administrator's browser clock.
+func (a *XraySettingController) getScheduledRestartStatus(c *gin.Context) {
+	timezone, err := a.SettingService.GetScheduledRestartTimezone()
+	if err != nil {
+		jsonObj(c, nil, err)
+		return
+	}
+	loc, normalizedTimezone, err := entity.ScheduledRestartLocation(timezone)
+	if err != nil {
+		jsonObj(c, nil, err)
+		return
+	}
+	now := time.Now().In(loc)
+	zoneName, offsetSeconds := now.Zone()
+	lastAt, _ := a.SettingService.GetScheduledRestartLastAt()
+	lastTarget, _ := a.SettingService.GetScheduledRestartLastTarget()
+	lastSuccess, _ := a.SettingService.GetScheduledRestartLastSuccess()
+	lastMessage, _ := a.SettingService.GetScheduledRestartLastMessage()
+
+	jsonObj(c, map[string]any{
+		"serverUnix":    time.Now().Unix(),
+		"timezone":      normalizedTimezone,
+		"timezoneLabel": zoneName,
+		"offsetSeconds": offsetSeconds,
+		"lastRestartAt": lastAt,
+		"lastTarget":    lastTarget,
+		"lastSuccess":   lastSuccess,
+		"lastMessage":   lastMessage,
+	}, nil)
 }
 
 // getDefaultXrayConfig retrieves the default Xray configuration.

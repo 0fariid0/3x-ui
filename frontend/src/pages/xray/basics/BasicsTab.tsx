@@ -13,8 +13,14 @@ import { OutboundDomainStrategies } from '@/schemas/primitives';
 import { HappyEyeballsSchema } from '@/schemas/protocols/stream/sockopt';
 import { SettingListItem } from '@/components/ui';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useServerClock } from '@/hooks/useServerClock';
 import { catTabLabel } from '@/pages/settings/catTabLabel';
-import type { XraySettingsValue, SetTemplate, ScheduledRestartUnit } from '@/hooks/useXraySetting';
+import type {
+  XraySettingsValue,
+  SetTemplate,
+  ScheduledRestartUnit,
+  ScheduledRestartTimezone,
+} from '@/hooks/useXraySetting';
 import './BasicsTab.css';
 
 import {
@@ -38,6 +44,8 @@ interface BasicsTabProps {
   onChangeScheduledRestartUnit: (v: ScheduledRestartUnit) => void;
   scheduledRestartPanel: boolean;
   onChangeScheduledRestartPanel: (v: boolean) => void;
+  scheduledRestartTimezone: ScheduledRestartTimezone;
+  onChangeScheduledRestartTimezone: (v: ScheduledRestartTimezone) => void;
   xrayHealthEnable: boolean;
   onChangeXrayHealthEnable: (v: boolean) => void;
   xrayHealthFailureThreshold: number;
@@ -64,6 +72,8 @@ export default function BasicsTab({
   onChangeScheduledRestartUnit,
   scheduledRestartPanel,
   onChangeScheduledRestartPanel,
+  scheduledRestartTimezone,
+  onChangeScheduledRestartTimezone,
   xrayHealthEnable,
   onChangeXrayHealthEnable,
   xrayHealthFailureThreshold,
@@ -78,6 +88,7 @@ export default function BasicsTab({
 }: BasicsTabProps) {
   const { t } = useTranslation();
   const { isMobile } = useMediaQuery();
+  const serverClock = useServerClock();
   const [modal, modalContextHolder] = Modal.useModal();
 
   const mutate = useCallback(
@@ -312,6 +323,22 @@ export default function BasicsTab({
               />
             }
           />
+          <SettingListItem
+            title={t('pages.xray.scheduledRestartTimezone')}
+            description={t('pages.xray.scheduledRestartTimezoneDesc')}
+            paddings="small"
+            control={
+              <Select
+                value={scheduledRestartTimezone}
+                style={{ minWidth: 180 }}
+                options={[
+                  { value: 'local', label: t('pages.xray.scheduledRestartTimezoneLocal') },
+                  { value: 'tehran', label: t('pages.xray.scheduledRestartTimezoneTehran') },
+                ]}
+                onChange={(value) => onChangeScheduledRestartTimezone(value as ScheduledRestartTimezone)}
+              />
+            }
+          />
           {scheduledRestartEnable && (
             <>
               <SettingListItem
@@ -360,6 +387,34 @@ export default function BasicsTab({
               />
             </>
           )}
+          <div className="restart-status-card">
+            <div className="restart-status-row">
+              <ClockCircleOutlined />
+              <span>{t('pages.xray.serverClock')}:</span>
+              <strong>{serverClock.clockText}</strong>
+              <small>{serverClock.data?.timezoneLabel || ''}</small>
+            </div>
+            <div className="restart-status-row">
+              <ReloadOutlined />
+              <span>{t('pages.xray.lastScheduledRestart')}:</span>
+              {serverClock.data?.lastRestartAt ? (
+                <>
+                  <strong>{serverClock.lastRestartText}</strong>
+                  <small>
+                    {serverClock.data.lastTarget === 'panel'
+                      ? t('pages.xray.restartTargetPanel')
+                      : t('pages.xray.restartTargetXray')}
+                    {' · '}
+                    {serverClock.data.lastSuccess
+                      ? t('pages.xray.restartResultSuccess')
+                      : t('pages.xray.restartResultFailed')}
+                  </small>
+                </>
+              ) : (
+                <small>{t('pages.xray.noScheduledRestartYet')}</small>
+              )}
+            </div>
+          </div>
           <SettingListItem
             title={t('pages.xray.xrayHealthMonitor')}
             description={t('pages.xray.xrayHealthMonitorDesc')}

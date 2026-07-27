@@ -128,6 +128,13 @@ var defaultValueMap = map[string]string{
 	"scheduledRestartInterval":      "24",
 	"scheduledRestartUnit":          "hours",
 	"scheduledRestartPanel":         "false",
+	"scheduledRestartTimezone":      "local",
+	"scheduledRestartLastSlot":      "-1",
+	"scheduledRestartFingerprint":   "",
+	"scheduledRestartLastAt":        "0",
+	"scheduledRestartLastTarget":    "",
+	"scheduledRestartLastSuccess":   "false",
+	"scheduledRestartLastMessage":   "",
 	"xrayHealthEnable":              "true",
 	"xrayHealthFailureThreshold":    "2",
 	"xrayHealthRestartCooldown":     "5",
@@ -1003,6 +1010,73 @@ func (s *SettingService) GetScheduledRestartPanel() (bool, error) {
 
 func (s *SettingService) SetScheduledRestartPanel(value bool) error {
 	return s.setBool("scheduledRestartPanel", value)
+}
+
+func (s *SettingService) GetScheduledRestartTimezone() (string, error) {
+	return s.getString("scheduledRestartTimezone")
+}
+
+func (s *SettingService) SetScheduledRestartTimezone(value string) error {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if value != "local" && value != "tehran" {
+		return common.NewErrorf("invalid scheduled restart timezone: %s", value)
+	}
+	return s.setString("scheduledRestartTimezone", value)
+}
+
+func (s *SettingService) GetScheduledRestartLastSlot() (int64, error) {
+	value, err := s.getString("scheduledRestartLastSlot")
+	if err != nil {
+		return -1, err
+	}
+	return strconv.ParseInt(effectiveSettingValue("scheduledRestartLastSlot", value), 10, 64)
+}
+
+func (s *SettingService) SetScheduledRestartLastSlot(value int64) error {
+	return s.setString("scheduledRestartLastSlot", strconv.FormatInt(value, 10))
+}
+
+func (s *SettingService) GetScheduledRestartFingerprint() (string, error) {
+	return s.getString("scheduledRestartFingerprint")
+}
+
+func (s *SettingService) SetScheduledRestartFingerprint(value string) error {
+	return s.setString("scheduledRestartFingerprint", value)
+}
+
+func (s *SettingService) GetScheduledRestartLastAt() (int64, error) {
+	value, err := s.getString("scheduledRestartLastAt")
+	if err != nil {
+		return 0, err
+	}
+	return strconv.ParseInt(effectiveSettingValue("scheduledRestartLastAt", value), 10, 64)
+}
+
+func (s *SettingService) GetScheduledRestartLastTarget() (string, error) {
+	return s.getString("scheduledRestartLastTarget")
+}
+
+func (s *SettingService) GetScheduledRestartLastSuccess() (bool, error) {
+	return s.getBool("scheduledRestartLastSuccess")
+}
+
+func (s *SettingService) GetScheduledRestartLastMessage() (string, error) {
+	return s.getString("scheduledRestartLastMessage")
+}
+
+func (s *SettingService) SetScheduledRestartReport(at int64, target string, success bool, message string) error {
+	setters := []func() error{
+		func() error { return s.setString("scheduledRestartLastAt", strconv.FormatInt(at, 10)) },
+		func() error { return s.setString("scheduledRestartLastTarget", strings.TrimSpace(target)) },
+		func() error { return s.setBool("scheduledRestartLastSuccess", success) },
+		func() error { return s.setString("scheduledRestartLastMessage", strings.TrimSpace(message)) },
+	}
+	for _, setter := range setters {
+		if err := setter(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *SettingService) GetXrayHealthEnable() (bool, error) {

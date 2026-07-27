@@ -23,6 +23,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/sys"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/controller"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/entity"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/job"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/locale"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/middleware"
@@ -325,31 +326,72 @@ func (s *Server) startTask(restartXray bool) {
 			logger.Warning("scheduled restart: unable to read settings:", err)
 			return
 		}
-		due, err := scheduledRestart.shouldRun(
-			time.Now(),
+		timezone, err := s.settingService.GetScheduledRestartTimezone()
+		if err != nil {
+			logger.Warning("scheduled restart: unable to read timezone:", err)
+			return
+		}
+		loc, normalizedTimezone, err := entity.ScheduledRestartLocation(timezone)
+		if err != nil {
+			logger.Warning("scheduled restart: invalid timezone:", err)
+			return
+		}
+		persistedFingerprint, err := s.settingService.GetScheduledRestartFingerprint()
+		if err != nil {
+			logger.Warning("scheduled restart: unable to read fingerprint:", err)
+			return
+		}
+		persistedSlot, err := s.settingService.GetScheduledRestartLastSlot()
+		if err != nil {
+			logger.Warning("scheduled restart: unable to read last slot:", err)
+			return
+		}
+		now := time.Now().In(loc)
+		due, fingerprint, currentSlot, persist, err := scheduledRestart.shouldRun(
+			now,
 			settings.ScheduledRestartEnable,
 			settings.ScheduledRestartInterval,
 			settings.ScheduledRestartUnit,
 			settings.ScheduledRestartPanel,
+			normalizedTimezone,
+			persistedFingerprint,
+			persistedSlot,
 		)
 		if err != nil {
 			logger.Warning("scheduled restart: invalid settings:", err)
 			return
+		}
+		if persist {
+			// Persist before executing. A full panel restart exits this process,
+			// and the replacement process must know this clock slot already ran.
+			if err := s.settingService.SetScheduledRestartFingerprint(fingerprint); err != nil {
+				logger.Warning("scheduled restart: unable to persist fingerprint:", err)
+				return
+			}
+			if err := s.settingService.SetScheduledRestartLastSlot(currentSlot); err != nil {
+				logger.Warning("scheduled restart: unable to persist slot:", err)
+				return
+			}
 		}
 		if !due {
 			return
 		}
 		if settings.ScheduledRestartPanel {
 			logger.Info("scheduled restart: restarting x-ui panel service")
+			_ = s.settingService.SetScheduledRestartReport(time.Now().Unix(), "panel", true, "scheduled panel restart requested")
 			if err := (&panel.PanelService{}).RestartPanel(time.Second); err != nil {
+				_ = s.settingService.SetScheduledRestartReport(time.Now().Unix(), "panel", false, err.Error())
 				logger.Warning("scheduled panel restart failed:", err)
 			}
 			return
 		}
 		logger.Info("scheduled restart: restarting Xray core")
 		if err := s.xrayService.RestartXray(true); err != nil {
+			_ = s.settingService.SetScheduledRestartReport(time.Now().Unix(), "xray", false, err.Error())
 			logger.Warning("scheduled Xray restart failed:", err)
+			return
 		}
+		_ = s.settingService.SetScheduledRestartReport(time.Now().Unix(), "xray", true, "scheduled Xray restart completed")
 	})
 
 	go func() {

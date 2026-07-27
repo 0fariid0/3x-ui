@@ -2055,7 +2055,18 @@
       "xrayHealthMaxRestartsDesc": "Maximum automatic restart attempts allowed inside the protection window.",
       "xrayHealthWindowMinutes": "Protection window",
       "xrayHealthWindowMinutesDesc": "Rolling time window used to detect a restart loop.",
-      "xrayHealthLoopProtectionHint": "If Xray repeatedly crashes, the circuit breaker stops automatic retries until the protection window expires."
+      "xrayHealthLoopProtectionHint": "If Xray repeatedly crashes, the circuit breaker stops automatic retries until the protection window expires.",
+      "scheduledRestartTimezone": "Schedule clock",
+      "scheduledRestartTimezoneDesc": "Choose whether aligned restart boundaries use the server local clock or Tehran time.",
+      "scheduledRestartTimezoneLocal": "Server local time",
+      "scheduledRestartTimezoneTehran": "Tehran (UTC+03:30)",
+      "serverClock": "Server clock",
+      "lastScheduledRestart": "Last scheduled restart",
+      "restartTargetPanel": "Complete x-ui panel",
+      "restartTargetXray": "Xray Core only",
+      "restartResultSuccess": "Successful",
+      "restartResultFailed": "Failed",
+      "noScheduledRestartYet": "No scheduled restart has run yet."
     }
   },
   "tgbot": {

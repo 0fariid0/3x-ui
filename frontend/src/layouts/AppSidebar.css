@@ -48,6 +48,25 @@
   flex-shrink: 0;
 }
 
+.sidebar-server-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ant-color-text-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  direction: ltr;
+}
+
+.sidebar-server-clock .anticon {
+  font-size: 12px;
+}
+
+.drawer-server-clock {
+  margin-inline-end: 4px;
+}
+
 .sidebar-theme-cycle {
   background: transparent;
   border: none;

@@ -2,6 +2,7 @@ package entity
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -9,7 +10,27 @@ const (
 	ScheduledRestartUnitMinutes = "minutes"
 	ScheduledRestartUnitHours   = "hours"
 	ScheduledRestartUnitDays    = "days"
+
+	ScheduledRestartTimezoneLocal  = "local"
+	ScheduledRestartTimezoneTehran = "tehran"
 )
+
+// ScheduledRestartLocation resolves the configured wall clock. Tehran falls
+// back to a fixed UTC+03:30 zone when the host image has no tzdata package.
+func ScheduledRestartLocation(value string) (*time.Location, string, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", ScheduledRestartTimezoneLocal:
+		return time.Local, ScheduledRestartTimezoneLocal, nil
+	case ScheduledRestartTimezoneTehran:
+		loc, err := time.LoadLocation("Asia/Tehran")
+		if err != nil {
+			loc = time.FixedZone("Asia/Tehran", 3*60*60+30*60)
+		}
+		return loc, ScheduledRestartTimezoneTehran, nil
+	default:
+		return nil, "", fmt.Errorf("invalid scheduled restart timezone: %s", value)
+	}
+}
 
 // ScheduledRestartDuration validates the configured cadence and converts it to
 // a duration. Limits keep accidental values bounded to at most ten years.

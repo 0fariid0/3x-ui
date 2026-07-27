@@ -1,3 +1,42 @@
 .hint-alert {
   text-align: center;
 }
+
+.restart-status-card {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-fill-quaternary);
+  display: grid;
+  gap: 8px;
+}
+
+.restart-status-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--ant-color-text-secondary);
+}
+
+.restart-status-row strong {
+  color: var(--ant-color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.restart-status-row small {
+  margin-inline-start: auto;
+  color: var(--ant-color-text-tertiary);
+}
+
+@media (max-width: 640px) {
+  .restart-status-row {
+    flex-wrap: wrap;
+  }
+
+  .restart-status-row small {
+    width: 100%;
+    margin-inline-start: 24px;
+  }
+}
