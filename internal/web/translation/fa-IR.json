@@ -944,7 +944,14 @@
         "delOrphans": "{count} کلاینت بدون اینباند حذف شد",
         "imported": "{count} کلاینت وارد شد",
         "importedMixed": "{ok} وارد شد، {failed} رد شد"
-      }
+      },
+      "subscriptionApps": "برنامه‌های اخیر سابسکریپشن",
+      "noSubscriptionApps": "هنوز به‌روزرسانی سابسکریپشن برای این کلاینت ثبت نشده است.",
+      "lastSubscriptionUpdate": "آخرین به‌روزرسانی",
+      "managedSubscriptionLinks": "لینک‌های سابسکریپشن کلاینت",
+      "managedSubscriptionLinksHint": "هر Host یا لینک پیش‌فرض اینباند را می‌توانید فقط برای این کلاینت غیرفعال کنید. این انتخاب روی ساب خام، JSON و Clash اعمال می‌شود.",
+      "saveBeforeManagingLinks": "ابتدا کلاینت را ذخیره کنید؛ سپس در حالت ویرایش لینک‌های سابسکریپشن او را مدیریت کنید.",
+      "noManagedSubscriptionLinks": "برای اینباندهای انتخاب‌شده لینک مدیریت‌شده‌ای وجود ندارد."
     },
     "groups": {
       "title": "گروه‌ها",

@@ -16,27 +16,48 @@ import (
 // nil when the inbound has no applicable host — the caller then uses the legacy
 // inbound/externalProxy path, preserving byte-identical output for zero-host
 // inbounds.
+type hostEndpointSelection struct {
+	managed   bool
+	endpoints []map[string]any
+}
+
 func (s *SubService) hostEndpoints(inbound *model.Inbound, format string) []map[string]any {
+	return s.hostEndpointsForClient(inbound, format, 0).endpoints
+}
+
+// hostEndpointsForClient returns the managed endpoints visible to one client.
+// managed remains true when hosts exist but all were disabled for the client;
+// callers use that distinction to avoid falling back to the inbound's default
+// link and accidentally re-exposing a deliberately hidden subscription entry.
+func (s *SubService) hostEndpointsForClient(inbound *model.Inbound, format string, clientID int) hostEndpointSelection {
 	var hosts []*model.Host
 	if err := database.GetDB().
 		Where("inbound_id = ? AND is_disabled = ?", inbound.Id, false).
 		Order("sort_order asc, id asc").
 		Find(&hosts).Error; err != nil {
 		logger.Warning("SubService - hostEndpoints:", err)
-		return nil
+		return hostEndpointSelection{}
 	}
 	if len(hosts) == 0 {
-		return nil
+		return hostEndpointSelection{}
 	}
 	defaultDest := s.resolveInboundAddress(inbound)
 	eps := make([]map[string]any, 0, len(hosts))
+	hasApplicableHost := false
 	for _, h := range hosts {
 		if slices.Contains(h.ExcludeFromSubTypes, format) {
 			continue
 		}
+		hasApplicableHost = true
+		if s.subscriptionLinkDisabled(clientID, h.SubscriptionLinkKey()) {
+			continue
+		}
 		eps = append(eps, hostToExternalProxyMap(h, defaultDest, inbound.Port))
 	}
-	return eps
+	// When every Host excludes this format, preserve the legacy fallback to the
+	// inbound itself. managed=true is reserved for the important case where
+	// applicable Hosts exist but this client disabled all of them.
+	return hostEndpointSelection{managed: hasApplicableHost, endpoints: eps}
 }
 
 // hostToExternalProxyMap projects a Host onto the externalProxy entry shape the

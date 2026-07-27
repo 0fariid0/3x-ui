@@ -51,12 +51,21 @@ func (s *SubClashService) GetClashNamed(subId string, host string, nameMode stri
 			continue
 		}
 		subReq.projectThroughFallbackMaster(inbound)
-		if hostEps := subReq.hostEndpoints(inbound, "clash"); len(hostEps) > 0 {
-			injectExternalProxy(inbound, hostEps)
-		}
 		for _, client := range clients {
+			selectedInbound := inbound
+			hostSelection := subReq.hostEndpointsForClient(inbound, "clash", client.RecordID)
+			if hostSelection.managed {
+				if len(hostSelection.endpoints) == 0 {
+					continue
+				}
+				clone := *inbound
+				injectExternalProxy(&clone, hostSelection.endpoints)
+				selectedInbound = &clone
+			} else if subReq.subscriptionLinkDisabled(client.RecordID, model.InboundSubscriptionLinkKey(inbound.Id)) {
+				continue
+			}
 			seenEmails[client.Email] = struct{}{}
-			proxies = append(proxies, s.getProxies(subReq, inbound, client, host)...)
+			proxies = append(proxies, s.getProxies(subReq, selectedInbound, client, host)...)
 		}
 	}
 	for _, ext := range externalLinks {

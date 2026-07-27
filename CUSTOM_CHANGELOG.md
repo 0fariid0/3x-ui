@@ -5,6 +5,16 @@ This repository is an independently maintained modified version of 3x-ui.
 Base version: v3.5.0
 Repository: https://github.com/0fariid0/3x-ui
 
+## v3.5.6
+
+- Added subscription refresh activity tracking with the last update time, app name, app version, output format, user agent, and request count.
+- Keeps and displays at most the three most recently used distinct subscription apps for each client.
+- Browser visits to the subscription information page are ignored so they do not consume an app slot.
+- Added a per-client managed-link list in the Links tab, showing each config name and its address/port.
+- Each managed Host or default inbound output can be hidden for one client without affecting other clients.
+- Per-client visibility is enforced consistently in raw, JSON, Clash, client QR/link views, and direct client-link output.
+- Added SQLite/PostgreSQL-safe atomic app-activity upserts, migration coverage, cleanup on client deletion, and regression tests.
+
 ## v3.5.5
 
 - Subscription links shown in the panel now contain the actual URL-encoded client email in `?name=...` instead of the literal word `email`.

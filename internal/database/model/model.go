@@ -4,6 +4,7 @@ package model
 import (
 	"bytes"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -796,6 +797,7 @@ type ClientReverse struct {
 
 // Client represents a client configuration for Xray inbounds with traffic limits and settings.
 type Client struct {
+	RecordID     int            `json:"-"`                  // Normalized clients table identifier (panel-internal)
 	ID           string         `json:"id,omitempty"`       // Unique client identifier
 	Security     string         `json:"security"`           // Security method (e.g., "auto", "aes-128-gcm")
 	Password     string         `json:"password,omitempty"` // Client password
@@ -924,6 +926,37 @@ type ClientExternalLink struct {
 
 func (ClientExternalLink) TableName() string { return "client_external_links" }
 
+// ClientSubscriptionAgent stores the most recently seen subscription clients
+// (apps) for a panel client. One row is kept per normalized app key and client;
+// the service layer trims the history to the three most recently used apps.
+type ClientSubscriptionAgent struct {
+	Id           int    `json:"id" gorm:"primaryKey;autoIncrement"`
+	ClientId     int    `json:"clientId" gorm:"uniqueIndex:idx_client_sub_agent,priority:1;index;column:client_id;not null"`
+	AppKey       string `json:"appKey" gorm:"uniqueIndex:idx_client_sub_agent,priority:2;column:app_key;size:96;not null"`
+	AppName      string `json:"appName" gorm:"column:app_name;size:96;not null"`
+	Version      string `json:"version" gorm:"size:64"`
+	UserAgent    string `json:"userAgent" gorm:"column:user_agent;size:512"`
+	Format       string `json:"format" gorm:"size:16"`
+	RequestCount int64  `json:"requestCount" gorm:"column:request_count;default:1"`
+	FirstSeen    int64  `json:"firstSeen" gorm:"column:first_seen;index"`
+	LastSeen     int64  `json:"lastSeen" gorm:"column:last_seen;index"`
+}
+
+func (ClientSubscriptionAgent) TableName() string { return "client_subscription_agents" }
+
+// ClientSubscriptionLinkExclusion stores per-client subscription links that
+// must not be emitted. LinkKey is stable across host-row recreation (it uses
+// host group/inbound/address identity rather than the auto-increment row id).
+type ClientSubscriptionLinkExclusion struct {
+	ClientId  int    `json:"clientId" gorm:"primaryKey;column:client_id;index"`
+	LinkKey   string `json:"linkKey" gorm:"primaryKey;column:link_key;size:512"`
+	CreatedAt int64  `json:"createdAt" gorm:"autoCreateTime:milli"`
+}
+
+func (ClientSubscriptionLinkExclusion) TableName() string {
+	return "client_subscription_link_exclusions"
+}
+
 // External link kinds.
 const (
 	ExternalLinkKindLink         = "link"
@@ -995,6 +1028,31 @@ type Host struct {
 
 func (Host) TableName() string { return "hosts" }
 
+// SubscriptionLinkKey returns the stable per-subscription identity of this
+// Host row. It intentionally excludes the auto-increment id because editing a
+// host group recreates its rows. Address plus connection overrides distinguish
+// two outputs that use the same IP with different SNI/Host/path values.
+func (h *Host) SubscriptionLinkKey() string {
+	groupID := strings.TrimSpace(h.GroupId)
+	if groupID == "" {
+		groupID = fmt.Sprintf("row-%d", h.Id)
+	}
+	identity := strings.Join([]string{
+		strings.ToLower(strings.TrimSpace(h.Address)),
+		fmt.Sprintf("%d", h.Port),
+		strings.ToLower(strings.TrimSpace(h.HostHeader)),
+		strings.ToLower(strings.TrimSpace(h.Sni)),
+		strings.TrimSpace(h.Path),
+		strings.ToLower(strings.TrimSpace(h.Security)),
+	}, "\x00")
+	sum := sha256.Sum256([]byte(identity))
+	return fmt.Sprintf("host:%s:%d:%x", groupID, h.InboundId, sum[:12])
+}
+
+func InboundSubscriptionLinkKey(inboundID int) string {
+	return fmt.Sprintf("inbound:%d", inboundID)
+}
+
 func (c *Client) ToRecord() *ClientRecord {
 	rec := &ClientRecord{
 		Email:      c.Email,
@@ -1050,6 +1108,7 @@ func splitWireguardAllowedIPs(csv string) []string {
 
 func (r *ClientRecord) ToClient() *Client {
 	c := &Client{
+		RecordID:   r.Id,
 		ID:         r.UUID,
 		Email:      r.Email,
 		SubID:      r.SubID,

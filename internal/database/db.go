@@ -70,6 +70,8 @@ func allModels() []any {
 		&model.ClientRecord{},
 		&model.ClientInbound{},
 		&model.ClientExternalLink{},
+		&model.ClientSubscriptionAgent{},
+		&model.ClientSubscriptionLinkExclusion{},
 		&model.ClientGroup{},
 		&model.InboundFallback{},
 		&model.Host{},

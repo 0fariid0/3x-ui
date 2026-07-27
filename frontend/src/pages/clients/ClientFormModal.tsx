@@ -12,6 +12,7 @@ import {
   Row,
   Select,
   Space,
+  Spin,
   Switch,
   Tabs,
   Tag,
@@ -65,12 +66,27 @@ interface SaveMetaEdit {
   attach: number[];
   detach: number[];
   externalLinks: ExternalLinkInput[];
+  disabledSubscriptionLinkKeys: string[];
 }
 
 interface SaveMetaCreate {
   isEdit: false;
   email: string;
   externalLinks: ExternalLinkInput[];
+  disabledSubscriptionLinkKeys: string[];
+}
+
+interface SubscriptionLinkOption {
+  key: string;
+  name: string;
+  address: string;
+  port: number;
+  inboundId: number;
+  inboundName: string;
+  protocol: string;
+  source: 'host' | 'inbound';
+  formats: string[];
+  enabled: boolean;
 }
 
 interface SaveCreatePayload {
@@ -204,6 +220,9 @@ export default function ClientFormModal({
   const [ipsLoading, setIpsLoading] = useState(false);
   const [ipsClearing, setIpsClearing] = useState(false);
   const [ipsModalOpen, setIpsModalOpen] = useState(false);
+  const [subscriptionLinkOptions, setSubscriptionLinkOptions] = useState<SubscriptionLinkOption[]>([]);
+  const [disabledSubscriptionLinkKeys, setDisabledSubscriptionLinkKeys] = useState<Set<string>>(new Set());
+  const [subscriptionLinksLoading, setSubscriptionLinksLoading] = useState(false);
   const fail2ban = useFail2banStatusQuery();
   const limitIpDisabled = !fail2ban.usable;
   const limitIpNotice = getLimitIpNotice(fail2ban, t);
@@ -273,6 +292,44 @@ export default function ClientFormModal({
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isEdit]);
+
+  const inboundIdsKey = useMemo(() => [...(inboundIds || [])].sort((a, b) => a - b).join(','), [inboundIds]);
+
+  useEffect(() => {
+    if (!open || !isEdit || !client?.email) {
+      setSubscriptionLinkOptions([]);
+      setDisabledSubscriptionLinkKeys(new Set());
+      return;
+    }
+    let cancelled = false;
+    setSubscriptionLinksLoading(true);
+    const query = inboundIdsKey ? `?inboundIds=${encodeURIComponent(inboundIdsKey)}` : '';
+    (async () => {
+      try {
+        const msg = await HttpUtil.get(
+          `/panel/api/clients/subscriptionLinkOptions/${encodeURIComponent(client.email)}${query}`,
+          undefined,
+          { silent: true },
+        ) as ApiMsg<SubscriptionLinkOption[]>;
+        if (cancelled) return;
+        const rows = msg?.success && Array.isArray(msg.obj) ? msg.obj : [];
+        setSubscriptionLinkOptions(rows);
+        setDisabledSubscriptionLinkKeys(new Set(rows.filter((row) => !row.enabled).map((row) => row.key)));
+      } finally {
+        if (!cancelled) setSubscriptionLinksLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open, isEdit, client?.email, inboundIdsKey]);
+
+  function setSubscriptionLinkEnabled(key: string, enabled: boolean) {
+    setDisabledSubscriptionLinkKeys((current) => {
+      const next = new Set(current);
+      if (enabled) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   const flowCapableIds = useMemo(() => {
     const ids = new Set<number>();
@@ -571,11 +628,17 @@ export default function ClientFormModal({
           attach: toAttach,
           detach: toDetach,
           externalLinks,
+          disabledSubscriptionLinkKeys: [...disabledSubscriptionLinkKeys],
         });
       } else {
         msg = await save(
           { client: clientPayload, inboundIds: values.inboundIds },
-          { isEdit: false, email: clientPayload.email as string, externalLinks },
+          {
+            isEdit: false,
+            email: clientPayload.email as string,
+            externalLinks,
+            disabledSubscriptionLinkKeys: [],
+          },
         );
       }
       if (msg?.success) close();
@@ -905,6 +968,69 @@ export default function ClientFormModal({
                   label: t('pages.clients.tabLinks'),
                   children: (
                     <>
+                      <Typography.Title level={5} style={{ marginTop: 0 }}>
+                        {t('pages.clients.managedSubscriptionLinks')}
+                      </Typography.Title>
+                      <Typography.Paragraph type="secondary">
+                        {t('pages.clients.managedSubscriptionLinksHint')}
+                      </Typography.Paragraph>
+                      {!isEdit ? (
+                        <Typography.Text type="secondary">
+                          {t('pages.clients.saveBeforeManagingLinks')}
+                        </Typography.Text>
+                      ) : subscriptionLinksLoading ? (
+                        <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}>
+                          <Spin />
+                        </div>
+                      ) : subscriptionLinkOptions.length === 0 ? (
+                        <Typography.Text type="secondary">
+                          {t('pages.clients.noManagedSubscriptionLinks')}
+                        </Typography.Text>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+                          {subscriptionLinkOptions.map((row) => {
+                            const enabledForClient = !disabledSubscriptionLinkKeys.has(row.key);
+                            return (
+                              <div
+                                key={row.key}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: 12,
+                                  padding: '10px 12px',
+                                  border: '1px solid var(--ant-color-border-secondary)',
+                                  borderRadius: 8,
+                                }}
+                              >
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                    <Typography.Text strong>{row.name}</Typography.Text>
+                                    <Tag>{row.protocol.toUpperCase()}</Tag>
+                                    {row.formats.map((format) => (
+                                      <Tag key={format} color={format === 'clash' ? 'gold' : format === 'json' ? 'purple' : 'blue'}>
+                                        {format.toUpperCase()}
+                                      </Tag>
+                                    ))}
+                                  </div>
+                                  <Typography.Text
+                                    type="secondary"
+                                    style={{ display: 'block', fontSize: 12, direction: 'ltr', textAlign: 'left' }}
+                                  >
+                                    {row.address}{row.port > 0 ? `:${row.port}` : ''}
+                                  </Typography.Text>
+                                </div>
+                                <Switch
+                                  checked={enabledForClient}
+                                  aria-label={row.name}
+                                  onChange={(checked) => setSubscriptionLinkEnabled(row.key, checked)}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
                       <Typography.Paragraph type="secondary" style={{ marginTop: 4 }}>
                         {t('pages.clients.linksHint')}
                       </Typography.Paragraph>

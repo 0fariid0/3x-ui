@@ -51,6 +51,8 @@ func (a *ClientController) initRouter(g *gin.RouterGroup) {
 	g.GET("/traffic/:email", a.getTrafficByEmail)
 	g.GET("/subLinks/:subId", a.getSubLinks)
 	g.GET("/links/:email", a.getClientLinks)
+	g.GET("/subscriptionApps/:email", a.getSubscriptionApps)
+	g.GET("/subscriptionLinkOptions/:email", a.getSubscriptionLinkOptions)
 
 	g.POST("/add", a.create)
 	g.POST("/update/:email", a.update)
@@ -58,6 +60,7 @@ func (a *ClientController) initRouter(g *gin.RouterGroup) {
 	g.POST("/:email/attach", a.attach)
 	g.POST("/:email/detach", a.detach)
 	g.POST("/:email/externalLinks", a.setExternalLinks)
+	g.POST("/:email/subscriptionLinkOptions", a.setSubscriptionLinkOptions)
 	g.GET("/export", a.export)
 	g.POST("/import", a.importClients)
 	g.POST("/delOrphans", a.delOrphans)
@@ -199,6 +202,10 @@ type externalLinksBody struct {
 	ExternalLinks []service.ExternalLinkInput `json:"externalLinks"`
 }
 
+type subscriptionLinkOptionsBody struct {
+	DisabledKeys []string `json:"disabledKeys"`
+}
+
 func (a *ClientController) attach(c *gin.Context) {
 	email := c.Param("email")
 	var body attachDetachBody
@@ -226,6 +233,41 @@ func (a *ClientController) setExternalLinks(c *gin.Context) {
 		return
 	}
 	if err := a.clientService.SetExternalLinksByEmail(email, body.ExternalLinks); err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), nil)
+	notifyClientsChanged()
+}
+
+func (a *ClientController) getSubscriptionApps(c *gin.Context) {
+	rows, err := a.clientService.GetSubscriptionAppsByEmail(c.Param("email"))
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
+		return
+	}
+	jsonObj(c, rows, nil)
+}
+
+func (a *ClientController) getSubscriptionLinkOptions(c *gin.Context) {
+	rows, err := a.clientService.GetSubscriptionLinkOptionsByEmail(
+		c.Param("email"),
+		parseInboundIdsQuery(c.Query("inboundIds")),
+	)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
+		return
+	}
+	jsonObj(c, rows, nil)
+}
+
+func (a *ClientController) setSubscriptionLinkOptions(c *gin.Context) {
+	var body subscriptionLinkOptionsBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	if err := a.clientService.SetSubscriptionLinkExclusionsByEmail(c.Param("email"), body.DisabledKeys); err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
 		return
 	}

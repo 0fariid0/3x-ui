@@ -89,13 +89,21 @@ func (s *SubJsonService) GetJsonNamed(subId string, host string, alwaysReturnArr
 			continue
 		}
 		subReq.projectThroughFallbackMaster(inbound)
-		if hostEps := subReq.hostEndpoints(inbound, "json"); len(hostEps) > 0 {
-			injectExternalProxy(inbound, hostEps)
-		}
-
 		for _, client := range clients {
+			selectedInbound := inbound
+			hostSelection := subReq.hostEndpointsForClient(inbound, "json", client.RecordID)
+			if hostSelection.managed {
+				if len(hostSelection.endpoints) == 0 {
+					continue
+				}
+				clone := *inbound
+				injectExternalProxy(&clone, hostSelection.endpoints)
+				selectedInbound = &clone
+			} else if subReq.subscriptionLinkDisabled(client.RecordID, model.InboundSubscriptionLinkKey(inbound.Id)) {
+				continue
+			}
 			seenEmails[client.Email] = struct{}{}
-			configArray = append(configArray, s.getConfig(subReq, inbound, client, host)...)
+			configArray = append(configArray, s.getConfig(subReq, selectedInbound, client, host)...)
 		}
 	}
 	for _, ext := range externalLinks {

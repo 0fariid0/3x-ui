@@ -73,6 +73,7 @@ type SUBController struct {
 	subJsonService  *SubJsonService
 	subClashService *SubClashService
 	settingService  service.SettingService
+	clientService   service.ClientService
 
 	subTemplateMu    sync.RWMutex
 	subTemplateCache map[string]*cachedSubTemplate
@@ -407,6 +408,7 @@ func (a *SUBController) subs(c *gin.Context) {
 	if err != nil || len(subs) == 0 {
 		writeSubError(c, err)
 	} else {
+		a.recordSubscriptionAccess(c, subId, "raw")
 		var result strings.Builder
 		for _, sub := range subs {
 			result.WriteString(sub)
@@ -681,6 +683,7 @@ func (a *SUBController) serveJsonBody(c *gin.Context, alwaysReturnArray bool, co
 	if len(jsonSub) == 0 {
 		return false
 	}
+	a.recordSubscriptionAccess(c, subId, "json")
 	profileUrl := a.subProfileUrl
 	if profileUrl == "" {
 		profileUrl = fmt.Sprintf("%s://%s%s", scheme, hostWithPort, c.Request.RequestURI)
@@ -720,6 +723,7 @@ func (a *SUBController) serveClashBody(c *gin.Context, rawDownload bool) bool {
 	if len(clashSub) == 0 {
 		return false
 	}
+	a.recordSubscriptionAccess(c, subId, "clash")
 	profileUrl := a.subProfileUrl
 	if profileUrl == "" {
 		profileUrl = fmt.Sprintf("%s://%s%s", scheme, hostWithPort, c.Request.RequestURI)
@@ -733,6 +737,15 @@ func (a *SUBController) serveClashBody(c *gin.Context, rawDownload bool) bool {
 	}
 	c.Data(200, "application/yaml; charset=utf-8", []byte(clashSub))
 	return true
+}
+
+func (a *SUBController) recordSubscriptionAccess(c *gin.Context, subID, format string) {
+	if c.Request.Method != http.MethodGet {
+		return
+	}
+	if err := a.clientService.RecordSubscriptionAccess(subID, c.GetHeader("User-Agent"), format); err != nil {
+		logger.Warning("Subscription access tracking failed:", err)
+	}
 }
 
 // ApplyCommonHeaders sets common HTTP headers for subscription responses including user info, update interval, and profile title.

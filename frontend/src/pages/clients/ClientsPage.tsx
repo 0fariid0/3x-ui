@@ -64,7 +64,7 @@ import ClientTrafficCell from '@/components/clients/ClientTrafficCell';
 import ClientSpeedTag, { isActiveSpeed } from '@/components/clients/ClientSpeedTag';
 import ClientCardComment from '@/components/clients/ClientCardComment';
 import AppSidebar from '@/layouts/AppSidebar';
-import { IntlUtil, SizeFormatter } from '@/utils';
+import { HttpUtil, IntlUtil, SizeFormatter } from '@/utils';
 import { setMessageInstance } from '@/utils/messageBus';
 import { LazyMount } from '@/components/utility';
 import { SPEED_COLUMN_WIDTH, SPEED_TAG_CLASS_NAME, SPEED_TAG_STYLE } from '@/components/utility/speedTagStyle';
@@ -707,14 +707,23 @@ export default function ClientsPage() {
   const onSave = useCallback(async (
     payload: Record<string, unknown> | { client: Record<string, unknown>; inboundIds: number[] },
     meta:
-      | { isEdit: false; email: string; externalLinks: ExternalLinkInput[] }
-      | { isEdit: true; email: string; attach: number[]; detach: number[]; externalLinks: ExternalLinkInput[] },
+      | { isEdit: false; email: string; externalLinks: ExternalLinkInput[]; disabledSubscriptionLinkKeys: string[] }
+      | { isEdit: true; email: string; attach: number[]; detach: number[]; externalLinks: ExternalLinkInput[]; disabledSubscriptionLinkKeys: string[] },
   ) => {
+    const setSubscriptionLinkOptions = async (email: string, disabledKeys: string[]) => HttpUtil.post(
+      `/panel/api/clients/${encodeURIComponent(email)}/subscriptionLinkOptions`,
+      { disabledKeys },
+      { headers: { 'Content-Type': 'application/json' } },
+    );
     if (!meta.isEdit) {
       const createMsg = await create(payload);
       if (!createMsg?.success) return createMsg;
       if (meta.email && meta.externalLinks.length > 0) {
         const r = await setExternalLinks(meta.email, meta.externalLinks);
+        if (!r?.success) return r;
+      }
+      if (meta.email && meta.disabledSubscriptionLinkKeys.length > 0) {
+        const r = await setSubscriptionLinkOptions(meta.email, meta.disabledSubscriptionLinkKeys);
         if (!r?.success) return r;
       }
       return createMsg;
@@ -734,6 +743,8 @@ export default function ClientsPage() {
     // Always replace the client's external links (an empty set clears them).
     const r = await setExternalLinks(emailKey, meta.externalLinks);
     if (!r?.success) return r;
+    const linkOptionsResult = await setSubscriptionLinkOptions(emailKey, meta.disabledSubscriptionLinkKeys);
+    if (!linkOptionsResult?.success) return linkOptionsResult;
     return updateMsg;
   }, [create, update, attach, detach, setExternalLinks]);
 

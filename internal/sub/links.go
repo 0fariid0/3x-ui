@@ -3,6 +3,7 @@ package sub
 import (
 	"strings"
 
+	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 )
@@ -38,6 +39,24 @@ func (p *LinkProvider) SubLinksForSubId(host, subId string) ([]string, error) {
 func (p *LinkProvider) LinksForClient(host string, inbound *model.Inbound, email string) []string {
 	svc := p.build(host)
 	svc.projectThroughFallbackMaster(inbound)
+
+	// The direct client-link endpoint must honor the same per-client Host
+	// visibility choices as raw/JSON/Clash subscription requests.
+	var rec model.ClientRecord
+	if err := database.GetDB().Where("email = ?", email).First(&rec).Error; err == nil {
+		client := rec.ToClient()
+		svc.primeLinkClients(inbound.Id, []model.Client{*client}, false)
+		selection := svc.hostEndpointsForClient(inbound, "raw", rec.Id)
+		if selection.managed {
+			if len(selection.endpoints) == 0 {
+				return nil
+			}
+			return splitLinkLines(svc.linkFromHosts(inbound, *client, selection.endpoints))
+		}
+		if svc.subscriptionLinkDisabled(rec.Id, model.InboundSubscriptionLinkKey(inbound.Id)) {
+			return nil
+		}
+	}
 	return splitLinkLines(svc.GetLink(inbound, email))
 }
 

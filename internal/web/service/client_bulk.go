@@ -858,6 +858,12 @@ func (s *ClientService) BulkDelete(inboundSvc *InboundService, emails []string, 
 				if e := tx.Where("client_id IN ?", batch).Delete(&model.ClientExternalLink{}).Error; e != nil {
 					return e
 				}
+				if e := tx.Where("client_id IN ?", batch).Delete(&model.ClientSubscriptionAgent{}).Error; e != nil {
+					return e
+				}
+				if e := tx.Where("client_id IN ?", batch).Delete(&model.ClientSubscriptionLinkExclusion{}).Error; e != nil {
+					return e
+				}
 			}
 			if !keepTraffic && len(successEmails) > 0 {
 				for _, batch := range chunkStrings(successEmails, sqlInChunk) {

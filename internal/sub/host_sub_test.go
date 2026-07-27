@@ -456,3 +456,75 @@ func TestSub_PerAddressHostHeaderAndSharedPort(t *testing.T) {
 		t.Fatalf("second address must inherit inbound port and use its own Host header:\n%s", joined)
 	}
 }
+
+func TestSub_PerClientHostVisibility(t *testing.T) {
+	seedSubDB(t)
+	ib := seedSubInbound(t, "s1", "visibility", 53160, 1, wsTLSStream)
+	hostOne := seedHost(t, &model.Host{
+		GroupId: "visible-pool", InboundId: ib.Id, SortOrder: 1, Remark: "ONE",
+		Address: "one.visible.test", Port: 8443, Security: "tls",
+	})
+	hostTwo := seedHost(t, &model.Host{
+		GroupId: "visible-pool", InboundId: ib.Id, SortOrder: 2, Remark: "TWO",
+		Address: "two.visible.test", Port: 8443, Security: "tls",
+	})
+
+	var client model.ClientRecord
+	if err := database.GetDB().Where("sub_id = ?", "s1").First(&client).Error; err != nil {
+		t.Fatalf("load client: %v", err)
+	}
+	if err := database.GetDB().Create(&model.ClientSubscriptionLinkExclusion{
+		ClientId: client.Id,
+		LinkKey:  hostOne.SubscriptionLinkKey(),
+	}).Error; err != nil {
+		t.Fatalf("create exclusion: %v", err)
+	}
+
+	links, _, _, _, err := NewSubService("").GetSubs("s1", "req.example.com")
+	if err != nil {
+		t.Fatalf("GetSubs: %v", err)
+	}
+	joined := strings.Join(links, "\n")
+	if strings.Contains(joined, "one.visible.test") {
+		t.Fatalf("disabled host leaked into subscription: %s", joined)
+	}
+	if !strings.Contains(joined, "two.visible.test") {
+		t.Fatalf("enabled host missing from subscription: %s", joined)
+	}
+
+	if err := database.GetDB().Create(&model.ClientSubscriptionLinkExclusion{
+		ClientId: client.Id,
+		LinkKey:  hostTwo.SubscriptionLinkKey(),
+	}).Error; err != nil {
+		t.Fatalf("create second exclusion: %v", err)
+	}
+	links, _, _, _, err = NewSubService("").GetSubs("s1", "req.example.com")
+	if err != nil {
+		t.Fatalf("GetSubs with all links hidden: %v", err)
+	}
+	if len(links) != 0 {
+		t.Fatalf("all managed host links are disabled, got: %v", links)
+	}
+}
+
+func TestSub_PerClientDefaultInboundVisibility(t *testing.T) {
+	seedSubDB(t)
+	ib := seedSubInbound(t, "s1", "default-visibility", 53161, 1, `{"network":"tcp","security":"tls"}`)
+	var client model.ClientRecord
+	if err := database.GetDB().Where("sub_id = ?", "s1").First(&client).Error; err != nil {
+		t.Fatalf("load client: %v", err)
+	}
+	if err := database.GetDB().Create(&model.ClientSubscriptionLinkExclusion{
+		ClientId: client.Id,
+		LinkKey:  model.InboundSubscriptionLinkKey(ib.Id),
+	}).Error; err != nil {
+		t.Fatalf("create inbound exclusion: %v", err)
+	}
+	links, _, _, _, err := NewSubService("").GetSubs("s1", "req.example.com")
+	if err != nil {
+		t.Fatalf("GetSubs: %v", err)
+	}
+	if len(links) != 0 {
+		t.Fatalf("disabled default inbound link leaked: %v", links)
+	}
+}

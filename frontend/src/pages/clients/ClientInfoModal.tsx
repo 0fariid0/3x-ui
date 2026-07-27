@@ -55,6 +55,17 @@ interface ApiMsg<T = unknown> {
   obj?: T;
 }
 
+interface SubscriptionAgent {
+  id: number;
+  appName: string;
+  version?: string;
+  userAgent?: string;
+  format?: string;
+  requestCount?: number;
+  firstSeen?: number;
+  lastSeen?: number;
+}
+
 const DEFAULT_SUB: SubSettings = {
   enable: false,
   subURI: '',
@@ -97,11 +108,13 @@ export default function ClientInfoModal({
   const [ipsClearing, setIpsClearing] = useState(false);
   const [ipsModalOpen, setIpsModalOpen] = useState(false);
   const [downloadingFormat, setDownloadingFormat] = useState<keyof typeof SUBSCRIPTION_DOWNLOAD_NAMES | null>(null);
+  const [subscriptionAgents, setSubscriptionAgents] = useState<SubscriptionAgent[]>([]);
 
   useEffect(() => {
     if (!open) {
       setLinks([]);
       setClientIps([]);
+      setSubscriptionAgents([]);
       setIpsModalOpen(false);
       return;
     }
@@ -116,6 +129,24 @@ export default function ClientInfoModal({
     })();
     return () => { cancelled = true; };
   }, [open, client?.subId]);
+
+  useEffect(() => {
+    if (!open || !client?.email) {
+      setSubscriptionAgents([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const msg = await HttpUtil.get(
+        `/panel/api/clients/subscriptionApps/${encodeURIComponent(client.email)}`,
+        undefined,
+        { silent: true },
+      ) as ApiMsg<SubscriptionAgent[]>;
+      if (cancelled) return;
+      setSubscriptionAgents(msg?.success && Array.isArray(msg.obj) ? msg.obj.slice(0, 3) : []);
+    })();
+    return () => { cancelled = true; };
+  }, [open, client?.email]);
 
   const traffic = client?.traffic || null;
   const totalBytes = client?.totalGB || 0;
@@ -330,6 +361,30 @@ export default function ClientInfoModal({
                 <tr>
                   <td>{t('pages.inbounds.updatedAt')}</td>
                   <td><Tag>{dateLabel(client.updatedAt)}</Tag></td>
+                </tr>
+                <tr>
+                  <td>{t('pages.clients.subscriptionApps')}</td>
+                  <td>
+                    {subscriptionAgents.length === 0 ? (
+                      <span className="hint">{t('pages.clients.noSubscriptionApps')}</span>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {subscriptionAgents.map((agent) => (
+                          <div key={agent.id} style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                            <Tooltip title={agent.userAgent || agent.appName}>
+                              <Tag color="blue">
+                                {agent.appName}{agent.version ? ` ${agent.version}` : ''}
+                              </Tag>
+                            </Tooltip>
+                            {agent.format && <Tag>{agent.format.toUpperCase()}</Tag>}
+                            <span className="hint">
+                              {t('pages.clients.lastSubscriptionUpdate')}: {dateLabel(agent.lastSeen)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </td>
                 </tr>
                 {client.group && (
                   <tr>

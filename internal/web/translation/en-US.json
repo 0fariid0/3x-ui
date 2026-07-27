@@ -944,7 +944,14 @@
         "delOrphans": "{count} unattached clients deleted",
         "imported": "{count} clients imported",
         "importedMixed": "{ok} imported, {failed} skipped"
-      }
+      },
+      "subscriptionApps": "Recent subscription apps",
+      "noSubscriptionApps": "No subscription update has been recorded yet.",
+      "lastSubscriptionUpdate": "Last update",
+      "managedSubscriptionLinks": "Client subscription links",
+      "managedSubscriptionLinksHint": "Disable any managed Host or default inbound link for this client. The choice applies to raw, JSON and Clash subscriptions.",
+      "saveBeforeManagingLinks": "Save the client first, then edit it to manage its subscription links.",
+      "noManagedSubscriptionLinks": "No managed subscription links are available for the selected inbounds."
     },
     "groups": {
       "title": "Groups",

@@ -68,6 +68,9 @@ type SubService struct {
 	// with the clients array left out; generators read only inbound-level
 	// fields (encryption, method, version, …) from it.
 	settingsByInbound map[int]map[string]any
+	// disabledLinkKeysByClient caches per-client subscription link exclusions
+	// (managed Host rows and default inbound links) for this request.
+	disabledLinkKeysByClient map[int]map[string]struct{}
 }
 
 // NewSubService creates a new subscription service with the given configuration.
@@ -131,8 +134,38 @@ func (s *SubService) PrepareForRequest(host string) {
 	s.clientsByInbound = map[int]map[string]model.Client{}
 	s.fullyPrimedInbounds = map[int]bool{}
 	s.settingsByInbound = map[int]map[string]any{}
+	s.disabledLinkKeysByClient = map[int]map[string]struct{}{}
 	s.loadNodes()
 	s.loadRemarkSettings()
+}
+
+func (s *SubService) disabledSubscriptionLinkKeys(clientID int) map[string]struct{} {
+	if clientID <= 0 {
+		return nil
+	}
+	if cached, ok := s.disabledLinkKeysByClient[clientID]; ok {
+		return cached
+	}
+	var rows []model.ClientSubscriptionLinkExclusion
+	if err := database.GetDB().Where("client_id = ?", clientID).Find(&rows).Error; err != nil {
+		logger.Warning("SubService - disabledSubscriptionLinkKeys:", err)
+		s.disabledLinkKeysByClient[clientID] = map[string]struct{}{}
+		return s.disabledLinkKeysByClient[clientID]
+	}
+	keys := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		keys[row.LinkKey] = struct{}{}
+	}
+	s.disabledLinkKeysByClient[clientID] = keys
+	return keys
+}
+
+func (s *SubService) subscriptionLinkDisabled(clientID int, key string) bool {
+	if clientID <= 0 || key == "" {
+		return false
+	}
+	_, disabled := s.disabledSubscriptionLinkKeys(clientID)[key]
+	return disabled
 }
 
 // primeLinkClients caches clients (first occurrence per email, matching the
@@ -330,16 +363,22 @@ func (s *SubService) getSubs(subId string) ([]string, []string, int64, xray.Clie
 			continue
 		}
 		s.projectThroughFallbackMaster(inbound)
-		// Host overrides apply AFTER fallback projection so a host's
-		// address/TLS wins over the projected master stream.
-		hostEps := s.hostEndpoints(inbound, "raw")
 		for _, client := range clients {
 			if client.Enable {
 				hasEnabledClient = true
 			}
 			var link string
-			if len(hostEps) > 0 {
-				link = s.linkFromHosts(inbound, client, hostEps)
+			// Host overrides apply AFTER fallback projection so a host's
+			// address/TLS wins over the projected master stream. Per-client
+			// exclusions are applied to raw/JSON/Clash consistently.
+			hostSelection := s.hostEndpointsForClient(inbound, "raw", client.RecordID)
+			if hostSelection.managed {
+				if len(hostSelection.endpoints) == 0 {
+					continue
+				}
+				link = s.linkFromHosts(inbound, client, hostSelection.endpoints)
+			} else if s.subscriptionLinkDisabled(client.RecordID, model.InboundSubscriptionLinkKey(inbound.Id)) {
+				continue
 			} else {
 				link = s.GetLink(inbound, client.Email)
 			}
@@ -386,7 +425,6 @@ func (s *SubService) inboundLinks(inbound *model.Inbound) []string {
 	}
 	s.primeLinkClients(inbound.Id, clients, true)
 	s.projectThroughFallbackMaster(inbound)
-	hostEps := s.hostEndpoints(inbound, "raw")
 	var out []string
 	seen := make(map[string]struct{}, len(clients))
 	for _, client := range clients {
@@ -396,8 +434,14 @@ func (s *SubService) inboundLinks(inbound *model.Inbound) []string {
 		}
 		seen[key] = struct{}{}
 		var link string
-		if len(hostEps) > 0 {
-			link = s.linkFromHosts(inbound, client, hostEps)
+		hostSelection := s.hostEndpointsForClient(inbound, "raw", client.RecordID)
+		if hostSelection.managed {
+			if len(hostSelection.endpoints) == 0 {
+				continue
+			}
+			link = s.linkFromHosts(inbound, client, hostSelection.endpoints)
+		} else if s.subscriptionLinkDisabled(client.RecordID, model.InboundSubscriptionLinkKey(inbound.Id)) {
+			continue
 		} else {
 			link = s.GetLink(inbound, client.Email)
 		}
