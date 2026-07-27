@@ -1,10 +1,10 @@
-import { useRef } from 'react';
-import { Button, Input, Popover, Tooltip } from 'antd';
+import { forwardRef, useImperativeHandle, useRef } from 'react';
+import { Button, Input, Popover, Select, Tooltip } from 'antd';
 import type { InputRef } from 'antd';
 import { CodeOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 
-import { hasRemarkTokens, previewRemark, wrapToken } from '@/lib/remark/remarkVariables';
+import { REMARK_TEMPLATE_PRESETS, hasRemarkTokens, previewRemark, wrapToken } from '@/lib/remark/remarkVariables';
 import RemarkVarPicker from './RemarkVarPicker';
 
 interface RemarkTemplateFieldProps {
@@ -13,16 +13,26 @@ interface RemarkTemplateFieldProps {
   onChange?: (value: string) => void;
   maxLength?: number;
   placeholder?: string;
+  showPresets?: boolean;
+  excludeTokens?: string[];
 }
 
 /**
  * RemarkTemplateField is a text input augmented with a {{VAR}} template picker
  * (insert-at-caret) and a live, sample-based preview of the expanded result.
- * Used for the global subscription Remark Template.
+ * Used for both the global subscription template and per-Host config names.
  */
-export default function RemarkTemplateField({ value = '', onChange, maxLength, placeholder }: RemarkTemplateFieldProps) {
+const RemarkTemplateField = forwardRef<InputRef, RemarkTemplateFieldProps>(function RemarkTemplateField({
+  value = '',
+  onChange,
+  maxLength,
+  placeholder,
+  showPresets = true,
+  excludeTokens = [],
+}, forwardedRef) {
   const { t } = useTranslation();
   const inputRef = useRef<InputRef>(null);
+  useImperativeHandle(forwardedRef, () => inputRef.current as InputRef);
 
   function insertToken(token: string) {
     const el = inputRef.current?.input;
@@ -49,7 +59,7 @@ export default function RemarkTemplateField({ value = '', onChange, maxLength, p
         onChange={(e) => onChange?.(e.target.value)}
         suffix={
           <Popover
-            content={<RemarkVarPicker onPick={insertToken} />}
+            content={<RemarkVarPicker onPick={insertToken} excludeTokens={excludeTokens} />}
             trigger="click"
             placement="bottomRight"
             title={t('pages.hosts.remarkVars.title')}
@@ -60,6 +70,17 @@ export default function RemarkTemplateField({ value = '', onChange, maxLength, p
           </Popover>
         }
       />
+      {showPresets && (
+        <Select
+          size="small"
+          value={undefined}
+          placeholder={t('pages.hosts.remarkVars.quickTemplates')}
+          options={REMARK_TEMPLATE_PRESETS.map((template) => ({ value: template, label: template }))}
+          onChange={(template) => onChange?.(maxLength ? template.slice(0, maxLength) : template)}
+          style={{ width: '100%', marginTop: 6, fontFamily: 'monospace' }}
+          popupMatchSelectWidth={false}
+        />
+      )}
       {hasRemarkTokens(value) && (
         <div style={{ fontSize: 12, marginTop: 4, opacity: 0.7 }}>
           {t('pages.hosts.remarkVars.preview')}:{' '}
@@ -68,4 +89,6 @@ export default function RemarkTemplateField({ value = '', onChange, maxLength, p
       )}
     </div>
   );
-}
+});
+
+export default RemarkTemplateField;

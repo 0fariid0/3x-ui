@@ -7,14 +7,17 @@ import { activateOnKey } from '@/utils/a11y';
 interface RemarkVarPickerProps {
   /** Called with the bare token (e.g. "EMAIL") when a chip is clicked. */
   onPick: (token: string) => void;
+  /** Tokens that are not meaningful in the current field context. */
+  excludeTokens?: string[];
 }
 
 /**
  * RemarkVarPicker is the grouped, tooltipped chip list of {{VAR}} tokens used by
  * the global remark-template field.
  */
-export default function RemarkVarPicker({ onPick }: RemarkVarPickerProps) {
+export default function RemarkVarPicker({ onPick, excludeTokens = [] }: RemarkVarPickerProps) {
   const { t } = useTranslation();
+  const excluded = new Set(excludeTokens);
   return (
     <div style={{ maxWidth: 460, maxHeight: 'min(70vh, 640px)', overflowY: 'auto' }}>
       <Typography.Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 8 }}>
@@ -26,7 +29,7 @@ export default function RemarkVarPicker({ onPick }: RemarkVarPickerProps) {
             {t(`pages.hosts.remarkVars.groups.${group}`)}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {REMARK_VARIABLES.filter((v) => v.group === group).map((v) => (
+            {REMARK_VARIABLES.filter((v) => v.group === group && !excluded.has(v.token)).map((v) => (
               <Tooltip key={v.token} title={t(`pages.hosts.remarkVars.desc${v.token}`)}>
                 <Tag
                   role="button"

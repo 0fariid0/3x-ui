@@ -41,6 +41,7 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings }: 
   const directIPs = ruleGetter(templateSettings, 'direct', 'ip');
   const directDomains = ruleGetter(templateSettings, 'direct', 'domain');
   const ipv4Domains = ruleGetter(templateSettings, 'IPv4', 'domain');
+  const warpDomains = ruleGetter(templateSettings, 'warp', 'domain');
 
   const torrentActive = BITTORRENT_PROTOCOLS.every((p) => blockedProtocols.includes(p));
   const defaultOutboundTag = getDefaultOutboundTag(templateSettings);
@@ -174,6 +175,21 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings }: 
               ruleSetter(tt, 'IPv4', 'domain', v);
               syncOutbound(tt, 'IPv4', ipv4Settings);
             })}
+          />
+        }
+      />
+
+      <SettingListItem
+        title={t('pages.xray.warpRouting')}
+        description={t('pages.xray.warpRoutingDesc')}
+        paddings="small"
+        control={
+          <Select
+            mode="tags"
+            value={warpDomains}
+            style={{ width: '100%' }}
+            options={SERVICES_OPTIONS}
+            onChange={(v) => mutate((tt) => ruleSetter(tt, 'warp', 'domain', v))}
           />
         }
       />

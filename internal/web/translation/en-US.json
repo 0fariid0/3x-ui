@@ -1053,11 +1053,11 @@
         "serverDescription": "Optional note shown under the remark.",
         "allowInsecure": "Skip TLS certificate verification (allowInsecure / skip-cert-verify).",
         "vlessRoute": "Single VLESS route value (0-65535) baked into the UUID, e.g. 443. Leave blank for none.",
-        "remark": "Custom name for this Host's subscription config. Leave empty to use the inbound/default name."
+        "remark": "Complete name or template for this Host's subscription config. When set, only this value is used; it is not combined with the global name. Leave empty to use the global/inbound default."
       },
       "remarkVars": {
         "title": "Template Variables",
-        "intro": "Click a variable to add it. It is replaced per client when the subscription is generated.",
+        "intro": "Click a variable to insert it. Host names can use the same variables and are expanded independently for every config.",
         "preview": "Preview",
         "groups": {
           "client": "Client",
@@ -1093,7 +1093,8 @@
         "descRESET_DAYS": "Traffic reset period in days",
         "descPROTOCOL": "Inbound protocol (VLESS, VMess, Trojan, …)",
         "descTRANSPORT": "Transport network (tcp, ws, grpc, …)",
-        "descSECURITY": "Transport security (TLS, REALITY, NONE)"
+        "descSECURITY": "Transport security (TLS, REALITY, NONE)",
+        "quickTemplates": "Quick templates"
       },
       "toasts": {
         "list": "Failed to load hosts",

@@ -17,6 +17,7 @@ import type { HostRecord } from '@/api/queries/useHostsQuery';
 import { BulkAddHostSchema, type BulkAddHostValues } from '@/schemas/api/host';
 import type { InboundOption } from '@/schemas/client';
 import { ALPN_OPTION, UTLS_FINGERPRINT } from '@/schemas/primitives';
+import { RemarkTemplateField } from '@/components/form';
 import { FormField, rhfZodValidate } from '@/components/form/rhf';
 import { useNodesQuery } from '@/api/queries/useNodesQuery';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -182,7 +183,7 @@ export default function HostFormModal({ open, mode, host, inboundOptions, existi
                 children: (
                   <>
                     <FormField name="remark" label={t('pages.hosts.fields.remark')} tooltip={t('pages.hosts.hints.remark')} rules={{ validate: rhfZodValidate(BulkAddHostSchema.shape.remark) }}>
-                      <Input maxLength={256} />
+                      <RemarkTemplateField maxLength={256} placeholder="{{INBOUND}}-{{EMAIL}}" excludeTokens={['HOST']} />
                     </FormField>
                     <FormField name="serverDescription" label={t('pages.hosts.fields.serverDescription')} tooltip={t('pages.hosts.hints.serverDescription')}>
                       <Input maxLength={64} />

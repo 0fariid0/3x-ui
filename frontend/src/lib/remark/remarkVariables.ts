@@ -15,6 +15,15 @@ export interface RemarkVar {
 
 export const REMARK_VAR_GROUPS: RemarkVarGroup[] = ['client', 'traffic', 'time', 'connection'];
 
+export const REMARK_TEMPLATE_PRESETS: string[] = [
+  '{{EMAIL}}',
+  '{{INBOUND}}-{{EMAIL}}',
+  '{{INBOUND}}-{{EMAIL}}|📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D',
+  '{{EMAIL}}|📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D',
+  '{{STATUS_EMOJI}} {{INBOUND}}-{{EMAIL}}',
+  '{{INBOUND}}|{{PROTOCOL}}-{{TRANSPORT}}-{{SECURITY}}',
+];
+
 export const REMARK_VARIABLES: RemarkVar[] = [
   // Client identity
   { token: 'EMAIL', group: 'client', sample: 'john' },

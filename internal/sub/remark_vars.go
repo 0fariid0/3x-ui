@@ -600,47 +600,44 @@ func (s *SubService) genTemplatedRemark(inbound *model.Inbound, client model.Cli
 }
 
 // genHostRemark builds one host endpoint's display name for a specific client.
-// A non-empty Host remark is the config name for that endpoint. The global
-// template still supplies optional email/usage/status suffixes. When a template
-// does not explicitly contain {{HOST}}, its {{INBOUND}} name token is replaced
-// by {{HOST}} for host endpoints only. An empty Host remark falls back to the
-// standard inbound-based name/template.
-func (s *SubService) genHostRemark(inbound *model.Inbound, client model.Client, hostRemark string, transport string) string {
-	hostRemark = strings.TrimSpace(hostRemark)
-	if hostRemark == "" {
+// A non-empty Host remark is a complete, per-host name template. It is expanded
+// directly and returned verbatim; the global subscription remark template is
+// not appended. This guarantees that a plain Host name stays exactly that name
+// and a Host template such as {{INBOUND}}-{{EMAIL}}|📊{{TRAFFIC_LEFT}} expands
+// independently for every generated config. An empty Host remark falls back to
+// the standard global/inbound naming path.
+func (s *SubService) genHostRemark(inbound *model.Inbound, client model.Client, hostTemplate string, transport string) string {
+	hostTemplate = strings.TrimSpace(hostTemplate)
+	if hostTemplate == "" {
 		if s.remarkTemplate != "" {
 			return s.genTemplatedRemark(inbound, client, "", transport)
 		}
 		return fallbackRemark(inbound.Remark, client.Email)
 	}
 
-	if s.remarkTemplate == "" {
-		return fallbackRemark(hostRemark, client.Email)
+	ctx := remarkContext{
+		client:    client,
+		stats:     s.statsForClient(inbound, client),
+		inbound:   inbound,
+		transport: transport,
+		security:  inboundSecurity(inbound),
 	}
 
-	ctx := remarkContext{
-		client:     client,
-		stats:      s.statsForClient(inbound, client),
-		inbound:    inbound,
-		hostRemark: hostRemark,
-		transport:  transport,
-		security:   inboundSecurity(inbound),
-	}
-	var tmpl string
-	if s.subscriptionBody {
-		tmpl = s.effectiveTemplate(client.Email)
-	} else {
-		tmpl = filterRemarkTemplate(translateUISingleBrackets(s.remarkTemplate), displayRemoveTokens)
-	}
-	if !strings.Contains(tmpl, "{{HOST}}") {
-		if strings.Contains(tmpl, "{{INBOUND}}") {
-			tmpl = strings.ReplaceAll(tmpl, "{{INBOUND}}", "{{HOST}}")
-		} else {
-			tmpl = "{{HOST}}|" + tmpl
-		}
+	// The Host field itself is the template, so {{HOST}} would otherwise be a
+	// self-reference. Keep it empty in this context; {{INBOUND}} is the token for
+	// the parent inbound name and every other client/usage token still resolves.
+	tmpl := translateUISingleBrackets(hostTemplate)
+	if !s.subscriptionBody {
+		tmpl = filterRemarkTemplate(tmpl, displayRemoveTokens)
 	}
 	if out := expandRemarkVars(tmpl, ctx); strings.TrimSpace(out) != "" {
 		return out
 	}
-	return hostRemark
+
+	// A template made only from unavailable values (for example {{COMMENT}} on
+	// a client without a comment) must never create a nameless config.
+	if ctx.configName() != "" {
+		return ctx.configName()
+	}
+	return client.Email
 }
