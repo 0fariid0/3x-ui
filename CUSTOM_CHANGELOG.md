@@ -5,6 +5,12 @@ This repository is an independently maintained modified version of 3x-ui.
 Base version: v3.5.0
 Repository: https://github.com/0fariid0/3x-ui
 
+## v3.5.11
+
+- Fixed `request body failed validation` when saving subscription-link/remark templates by preserving the Xray health fields in the full settings payload.
+- Made the backend accept older settings payloads that omit Xray health tuning fields and apply safe defaults server-side.
+- Changed the default Xray health monitor state to disabled for fresh installations and missing settings.
+
 ## v3.5.8
 
 - Fixed the v3.5.6 regression where `?name=<client>` replaced every individual Host/config remark with the client email.

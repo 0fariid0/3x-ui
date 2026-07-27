@@ -136,7 +136,7 @@ var defaultValueMap = map[string]string{
 	"scheduledRestartLastSuccess":   "false",
 	"scheduledRestartLastMessage":   "",
 	"scheduledRestartFollowUpXray":  "false",
-	"xrayHealthEnable":              "true",
+	"xrayHealthEnable":              "false",
 	"xrayHealthFailureThreshold":    "2",
 	"xrayHealthRestartCooldown":     "5",
 	"xrayHealthMaxRestarts":         "3",

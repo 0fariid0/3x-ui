@@ -95,10 +95,10 @@ type AllSetting struct {
 	ScheduledRestartUnit        string `json:"scheduledRestartUnit" form:"scheduledRestartUnit"`
 	ScheduledRestartPanel       bool   `json:"scheduledRestartPanel" form:"scheduledRestartPanel"`
 	XrayHealthEnable            bool   `json:"xrayHealthEnable" form:"xrayHealthEnable"`
-	XrayHealthFailureThreshold  int    `json:"xrayHealthFailureThreshold" form:"xrayHealthFailureThreshold" validate:"gte=1,lte=60"`
-	XrayHealthRestartCooldown   int    `json:"xrayHealthRestartCooldown" form:"xrayHealthRestartCooldown" validate:"gte=1,lte=1440"`
-	XrayHealthMaxRestarts       int    `json:"xrayHealthMaxRestarts" form:"xrayHealthMaxRestarts" validate:"gte=1,lte=100"`
-	XrayHealthWindowMinutes     int    `json:"xrayHealthWindowMinutes" form:"xrayHealthWindowMinutes" validate:"gte=1,lte=1440"`
+	XrayHealthFailureThreshold  int    `json:"xrayHealthFailureThreshold" form:"xrayHealthFailureThreshold" validate:"omitempty,gte=1,lte=60"`
+	XrayHealthRestartCooldown   int    `json:"xrayHealthRestartCooldown" form:"xrayHealthRestartCooldown" validate:"omitempty,gte=1,lte=1440"`
+	XrayHealthMaxRestarts       int    `json:"xrayHealthMaxRestarts" form:"xrayHealthMaxRestarts" validate:"omitempty,gte=1,lte=100"`
+	XrayHealthWindowMinutes     int    `json:"xrayHealthWindowMinutes" form:"xrayHealthWindowMinutes" validate:"omitempty,gte=1,lte=1440"`
 	SubEncrypt                  bool   `json:"subEncrypt" form:"subEncrypt"`
 	SubURI                      string `json:"subURI" form:"subURI"`
 	SubJsonPath                 string `json:"subJsonPath" form:"subJsonPath"`

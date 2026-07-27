@@ -156,7 +156,7 @@ export function useXraySetting(): UseXraySettingResult {
   const [scheduledRestartUnit, setScheduledRestartUnit] = useState<ScheduledRestartUnit>('hours');
   const [scheduledRestartPanel, setScheduledRestartPanel] = useState(false);
   const [scheduledRestartTimezone, setScheduledRestartTimezone] = useState<ScheduledRestartTimezone>('local');
-  const [xrayHealthEnable, setXrayHealthEnable] = useState(true);
+  const [xrayHealthEnable, setXrayHealthEnable] = useState(false);
   const [xrayHealthFailureThreshold, setXrayHealthFailureThreshold] = useState(2);
   const [xrayHealthRestartCooldown, setXrayHealthRestartCooldown] = useState(5);
   const [xrayHealthMaxRestarts, setXrayHealthMaxRestarts] = useState(3);
@@ -221,7 +221,7 @@ export function useXraySetting(): UseXraySettingResult {
     const nextScheduledUnit = obj.scheduledRestartUnit || 'hours';
     const nextScheduledPanel = !!obj.scheduledRestartPanel;
     const nextScheduledTimezone = obj.scheduledRestartTimezone || 'local';
-    const nextHealthEnable = obj.xrayHealthEnable ?? true;
+    const nextHealthEnable = obj.xrayHealthEnable ?? false;
     const nextHealthFailureThreshold = obj.xrayHealthFailureThreshold || 2;
     const nextHealthRestartCooldown = obj.xrayHealthRestartCooldown || 5;
     const nextHealthMaxRestarts = obj.xrayHealthMaxRestarts || 3;
@@ -319,7 +319,7 @@ export function useXraySetting(): UseXraySettingResult {
         scheduledRestartUnit: sentScheduled.unit || 'hours',
         scheduledRestartPanel: !!sentScheduled.panel,
         scheduledRestartTimezone: sentScheduled.timezone || 'local',
-        xrayHealthEnable: sentScheduled.healthEnable ?? true,
+        xrayHealthEnable: sentScheduled.healthEnable ?? false,
         xrayHealthFailureThreshold: sentScheduled.healthFailureThreshold || 2,
         xrayHealthRestartCooldown: sentScheduled.healthRestartCooldown || 5,
         xrayHealthMaxRestarts: sentScheduled.healthMaxRestarts || 3,

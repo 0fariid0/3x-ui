@@ -56,6 +56,11 @@ export class AllSetting {
   scheduledRestartInterval = 24;
   scheduledRestartUnit: 'minutes' | 'hours' | 'days' = 'hours';
   scheduledRestartPanel = false;
+  xrayHealthEnable = false;
+  xrayHealthFailureThreshold = 2;
+  xrayHealthRestartCooldown = 5;
+  xrayHealthMaxRestarts = 3;
+  xrayHealthWindowMinutes = 30;
   subCertFile = '';
   subKeyFile = '';
   subUpdates = 12;
