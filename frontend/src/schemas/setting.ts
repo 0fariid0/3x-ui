@@ -18,6 +18,7 @@ export const AllSettingSchema = z.object({
   expireDiff: nonNegativeInt.optional(),
   trafficDiff: nonNegativeInt.max(100).optional(),
   remarkTemplate: z.string().optional(),
+  subShowIdentityOnAllLinks: z.boolean().optional(),
   datepicker: z.enum(['gregorian', 'jalalian']).optional(),
   tgBotEnable: z.boolean().optional(),
   tgBotToken: z.string().optional(),
@@ -61,6 +62,7 @@ export const AllSettingSchema = z.object({
   scheduledRestartInterval: z.number().int().min(1).optional(),
   scheduledRestartUnit: z.enum(['minutes', 'hours', 'days']).optional(),
   scheduledRestartPanel: z.boolean().optional(),
+  scheduledRestartTimezone: z.enum(['local', 'tehran']).optional(),
   xrayHealthEnable: z.boolean().optional(),
   xrayHealthFailureThreshold: z.number().int().min(1).max(60).optional(),
   xrayHealthRestartCooldown: z.number().int().min(1).max(1440).optional(),
@@ -111,3 +113,7 @@ export const AllSettingSchema = z.object({
 }).loose();
 
 export type AllSettingInput = z.infer<typeof AllSettingSchema>;
+
+export const FactoryDefaultsSchema = z.record(z.string(), z.string());
+
+export type FactoryDefaults = z.infer<typeof FactoryDefaultsSchema>;

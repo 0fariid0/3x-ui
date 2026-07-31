@@ -72,10 +72,10 @@ Built as an enhanced fork of the original X-UI project, 3X-UI adds broader proto
 bash <(curl -Ls https://raw.githubusercontent.com/0fariid0/3x-ui/main/install.sh)
 ```
 
-To install a specific version, append its tag (e.g. `v3.5.6`):
+To install a specific version, append its tag (e.g. `v3.4.0`):
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/0fariid0/3x-ui/main/install.sh) v3.5.6
+bash <(curl -Ls https://raw.githubusercontent.com/0fariid0/3x-ui/main/install.sh) v3.4.0
 ```
 
 To install the rolling **dev** build (latest per-commit pre-release from `main`, not a stable release), pass `dev-latest`:
@@ -86,7 +86,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/0fariid0/3x-ui/main/install.sh
 
 During installation a random username, password, and access path are generated. After installation, run `x-ui` to open the management menu, where you can start/stop the service, view or reset your login credentials, manage SSL certificates, and more.
 
-For full documentation, please visit the [project Wiki](https://github.com/MHSanaei/3x-ui/wiki).
+For full documentation, please visit the [project Wiki](https://github.com/0fariid0/3x-ui/wiki).
 
 ### Unattended install
 
@@ -128,21 +128,7 @@ systemctl restart x-ui
 
 The source SQLite file is left untouched; remove it manually once you have verified the new backend.
 
-### Docker
-
-The default `docker compose up -d` keeps using SQLite. To run with the bundled PostgreSQL service, uncomment the two `XUI_DB_*` env lines in `docker-compose.yml` and start with the profile:
-
-```bash
-docker compose --profile postgres up -d
-```
-
-The image bundles Fail2ban (enabled by default) to enforce per-client **IP limits**. Fail2ban bans offenders with `iptables`, which requires the `NET_ADMIN` capability. `docker-compose.yml` already grants it via `cap_add`; if you start the container with `docker run` instead, add the capabilities yourself, otherwise bans are logged but never applied:
-
-```bash
-docker run -d --cap-add=NET_ADMIN --cap-add=NET_RAW ... ghcr.io/0fariid0/3x-ui
-```
-
-## Environment Variables
+### Environment Variables
 
 | Variable | Description | Default |
 | --- | --- | --- |
@@ -203,4 +189,4 @@ Tools and integrations built by the community around 3x-ui.
 
 ## Stargazers over Time
 
-[![Stargazers over time](https://starchart.cc/0fariid0/3x-ui.svg?variant=adaptive)](https://starchart.cc/0fariid0/3x-ui)
+[![Stargazers over time](https://starchart.cc/MHSanaei/3x-ui.svg?variant=adaptive)](https://starchart.cc/MHSanaei/3x-ui)

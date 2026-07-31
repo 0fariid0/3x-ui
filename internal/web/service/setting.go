@@ -37,6 +37,7 @@ const (
 	DefaultSubClashUserAgentRegex = `(?i)(clash|mihomo)`
 	DefaultSubJsonUserAgentRegex  = ``
 	DefaultRemarkTemplate         = "{{INBOUND}}-{{EMAIL}}|📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D"
+	DefaultTrustedProxyCIDRs      = "127.0.0.1/32,::1/128"
 	maxRegexLength                = 2048
 )
 
@@ -61,13 +62,14 @@ var defaultValueMap = map[string]string{
 	"nodeMtlsClientCAPem":           "",
 	"webBasePath":                   normalizeBasePath(getEnv("XUI_INIT_WEB_BASE_PATH", "/")),
 	"sessionMaxAge":                 "360",
-	"trustedProxyCIDRs":             "127.0.0.1/32,::1/128",
+	"trustedProxyCIDRs":             DefaultTrustedProxyCIDRs,
 	"pageSize":                      "25",
 	"expireDiff":                    "0",
 	"trafficDiff":                   "0",
 	"remarkTemplate":                DefaultRemarkTemplate,
 	"subscriptionDisplayHostEnable": "false",
 	"subscriptionDisplayHostRemark": "📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D",
+	"subShowIdentityOnAllLinks":     "false",
 	"timeLocation":                  "Local",
 	"tgBotEnable":                   "false",
 	"tgBotToken":                    "",
@@ -711,6 +713,10 @@ func (s *SettingService) UpdateSubscriptionDisplayHost(config *entity.Subscripti
 
 func (s *SettingService) GetRemarkTemplate() (string, error) {
 	return s.getString("remarkTemplate")
+}
+
+func (s *SettingService) GetSubShowIdentityOnAllLinks() (bool, error) {
+	return s.getBool("subShowIdentityOnAllLinks")
 }
 
 func (s *SettingService) GetSecret() ([]byte, error) {
@@ -1650,4 +1656,34 @@ func (s *SettingService) GetDefaultSettings(host string) (any, error) {
 	}
 
 	return result, nil
+}
+
+var factoryDefaultSecretKeys = map[string]bool{
+	"tgBotToken":     true,
+	"twoFactorToken": true,
+	"ldapPassword":   true,
+	"smtpPassword":   true,
+}
+
+/*
+GetFactoryDefaults returns the shipped default value per setting, keyed by
+the AllSetting json field name. Unlike GetDefaultSettings (which reports
+current effective values), this is defaultValueMap projected through the
+AllSetting field set: only keys that exist as an AllSetting json tag are
+returned, minus the credential fields in factoryDefaultSecretKeys. Keys
+with no AllSetting field (secret, panelGuid, the node mTLS material,
+xrayTemplateConfig) are excluded structurally rather than by deny-list.
+*/
+func (s *SettingService) GetFactoryDefaults() map[string]string {
+	result := make(map[string]string)
+	for _, field := range reflect_util.GetFields(reflect.TypeFor[entity.AllSetting]()) {
+		key := field.Tag.Get("json")
+		if key == "" || factoryDefaultSecretKeys[key] {
+			continue
+		}
+		if value, ok := defaultValueMap[key]; ok {
+			result[key] = value
+		}
+	}
+	return result
 }

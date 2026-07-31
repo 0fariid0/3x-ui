@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ComponentType } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ComponentType, CSSProperties } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Drawer, Layout, Menu } from 'antd';
@@ -39,9 +39,12 @@ import { useAllSettings } from '@/api/queries/useAllSettings';
 import { useServerClock } from '@/hooks/useServerClock';
 import './AppSidebar.css';
 
-const SIDEBAR_COLLAPSED_KEY = 'isSidebarCollapsed';
 const REPO_URL = 'https://github.com/0fariid0/3x-ui';
 const LOGOUT_KEY = '__logout__';
+const RAIL_WIDTH = 72;
+const railStyle = { '--sider-rail': `${RAIL_WIDTH}px` } as CSSProperties;
+
+let hoveredAcrossRemounts = false;
 
 type IconName = 'dashboard' | 'inbound' | 'team' | 'groups' | 'setting' | 'tool' | 'cluster' | 'hosts' | 'logout' | 'apidocs' | 'outbound' | 'routing';
 
@@ -60,14 +63,6 @@ const iconByName: Record<IconName, ComponentType> = {
   routing: SwapOutlined,
 };
 
-function readCollapsed(): boolean {
-  try {
-    return JSON.parse(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) || 'false');
-  } catch {
-    return false;
-  }
-}
-
 function VersionBadge({ version, collapsed }: { version: string; collapsed?: boolean }) {
   if (!version) return null;
   const label = formatPanelVersion(version);
@@ -76,7 +71,7 @@ function VersionBadge({ version, collapsed }: { version: string; collapsed?: boo
       href={REPO_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className={`sider-version${collapsed ? ' is-collapsed' : ''}`}
+      className="sider-version"
       aria-label={`GitHub ${label}`}
       title={label}
     >
@@ -117,8 +112,23 @@ export default function AppSidebar() {
   const serverClock = useServerClock();
   const showSubFormats = !!(allSetting.subJsonEnable || allSetting.subClashEnable);
 
-  const [collapsed, setCollapsed] = useState<boolean>(() => readCollapsed());
+  const [hovered, setHovered] = useState(() => hoveredAcrossRemounts);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const railCollapsed = !hovered;
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const updateHovered = useCallback((value: boolean) => {
+    hoveredAcrossRemounts = value;
+    setHovered(value);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const el = rootRef.current;
+      if (el) updateHovered(el.matches(':hover'));
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [updateHovered]);
 
   const currentTheme: 'light' | 'dark' = isDark ? 'dark' : 'light';
   const panelVersion = window.X_UI_CUR_VER || '';
@@ -187,7 +197,7 @@ export default function AppSidebar() {
       if (tab.key === '/xray') {
         return { key: tab.key, icon: <Icon />, label: tab.title, children: xrayChildren };
       }
-      return { key: tab.key, icon: <Icon />, label: tab.title };
+      return { key: tab.key, icon: <Icon />, label: tab.title, title: '' };
     }),
   [settingsChildren, xrayChildren]);
 
@@ -204,13 +214,6 @@ export default function AppSidebar() {
     openLink(String(key));
   }, [openLink]);
 
-  const onSiderCollapse = useCallback((isCollapsed: boolean, type: 'clickTrigger' | 'responsive') => {
-    if (type === 'clickTrigger') {
-      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(isCollapsed));
-      setCollapsed(isCollapsed);
-    }
-  }, []);
-
   const cycleTheme = useCallback((id: string) => {
     pauseAnimationsUntilLeave(id);
     if (!isDark) {
@@ -225,20 +228,24 @@ export default function AppSidebar() {
   }, [isDark, isUltra, toggleTheme, toggleUltra]);
 
   return (
-    <div className="ant-sidebar">
+    <div
+      ref={rootRef}
+      className="ant-sidebar"
+      style={railStyle}
+      onMouseEnter={() => updateHovered(true)}
+      onMouseLeave={() => updateHovered(false)}
+    >
       <Layout.Sider
         theme={currentTheme}
         width={220}
-        collapsible
-        collapsed={collapsed}
-        breakpoint="md"
-        onCollapse={onSiderCollapse}
+        collapsedWidth={RAIL_WIDTH}
+        collapsed={railCollapsed}
       >
-        <div className={`sider-brand${collapsed ? ' sider-brand-collapsed' : ''}`}>
+        <div className="sider-brand">
           <div className="brand-block">
-            <span className="brand-text">{collapsed ? '3X' : '3X-UI'}</span>
+            <span className="brand-text">{railCollapsed ? '3X' : '3X-UI'}</span>
           </div>
-          {!collapsed && (
+          {!railCollapsed && (
             <div className="brand-actions">
               <div
                 className="sidebar-server-clock"
@@ -261,7 +268,7 @@ export default function AppSidebar() {
           theme={currentTheme}
           mode="inline"
           selectedKeys={[selectedKey]}
-          openKeys={collapsed ? undefined : openKeys}
+          openKeys={railCollapsed ? undefined : openKeys}
           onOpenChange={(keys) => setOpenKeys(keys as string[])}
           className="sider-nav"
           items={toMenuItems(navItems)}
@@ -276,7 +283,7 @@ export default function AppSidebar() {
           onClick={onMenuClick}
         />
         <div className="sider-footer">
-          <VersionBadge version={panelVersion} collapsed={collapsed} />
+          <VersionBadge version={panelVersion} collapsed={railCollapsed} />
         </div>
       </Layout.Sider>
 

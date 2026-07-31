@@ -123,7 +123,7 @@ func (s *SubClashService) GetClashNamed(subId string, host string, nameMode stri
 		}
 	}
 
-	finalYAML, err := yaml.Marshal(config)
+	finalYAML, err := marshalClashYAML(config)
 	if err != nil {
 		return "", "", err
 	}

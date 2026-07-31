@@ -14,6 +14,7 @@ export class AllSetting {
   expireDiff = 0;
   trafficDiff = 0;
   remarkTemplate = '{{INBOUND}}-{{EMAIL}}|📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D';
+  subShowIdentityOnAllLinks = false;
   datepicker: 'gregorian' | 'jalalian' = 'gregorian';
   tgBotEnable = false;
   tgBotToken = '';
@@ -56,6 +57,11 @@ export class AllSetting {
   scheduledRestartInterval = 24;
   scheduledRestartUnit: 'minutes' | 'hours' | 'days' = 'hours';
   scheduledRestartPanel = false;
+  scheduledRestartTimezone: 'local' | 'tehran' = 'local';
+  scheduledRestartLastAt = 0;
+  scheduledRestartLastTarget = '';
+  scheduledRestartLastSuccess = false;
+  scheduledRestartLastMessage = '';
   xrayHealthEnable = false;
   xrayHealthFailureThreshold = 2;
   xrayHealthRestartCooldown = 5;
@@ -99,7 +105,7 @@ export class AllSetting {
   ldapDefaultTotalGB = 0;
   ldapDefaultExpiryDays = 0;
   ldapDefaultLimitIP = 0;
-  tgEnabledEvents = '';
+  tgEnabledEvents = 'login.attempt,cpu.high';
   smtpEnable = false;
   smtpHost = '';
   smtpPort = 587;
@@ -109,7 +115,7 @@ export class AllSetting {
   smtpFromName = '';
   smtpTo = '';
   smtpEncryptionType = 'starttls';
-  smtpEnabledEvents = '';
+  smtpEnabledEvents = 'login.attempt,cpu.high';
   smtpCpu = 80;
   smtpMemory = 80;
   outboundDownThreshold = 3;

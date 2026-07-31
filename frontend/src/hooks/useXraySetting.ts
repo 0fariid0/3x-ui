@@ -14,8 +14,23 @@ import {
   type OutboundTrafficRow,
 } from '@/schemas/xray';
 
-const DIRTY_POLL_MS = 1000;
 const DEFAULT_TEST_URL = 'https://www.google.com/generate_204';
+const DEFAULT_SCHEDULED_RESTART = JSON.stringify({
+  enabled: false,
+  interval: 24,
+  unit: 'hours',
+  panel: false,
+  timezone: 'local',
+  healthEnable: false,
+  healthFailureThreshold: 2,
+  healthRestartCooldown: 5,
+  healthMaxRestarts: 3,
+  healthWindowMinutes: 30,
+});
+
+function normalizeOutboundTestUrl(url: string) {
+  return url || DEFAULT_TEST_URL;
+}
 // One HTTP-mode batch request tests this many outbounds through a single
 // shared temp xray instance; chunking keeps responses bounded (~30s worst
 // case — each probe is a cold plus a warm request) and lands Test All
@@ -147,7 +162,6 @@ export function useXraySetting(): UseXraySettingResult {
     staleTime: Infinity,
   });
 
-  const [saveDisabled, setSaveDisabled] = useState(true);
   const [xraySetting, setXraySettingState] = useState('');
   const [templateSettings, setTemplateSettingsState] = useState<XraySettingsValue | null>(null);
   const [outboundTestUrl, setOutboundTestUrlState] = useState(DEFAULT_TEST_URL);
@@ -172,8 +186,8 @@ export function useXraySetting(): UseXraySettingResult {
   const [testingAll, setTestingAll] = useState(false);
 
   const oldXraySettingRef = useRef('');
-  const oldOutboundTestUrlRef = useRef('');
-  const oldScheduledRestartRef = useRef('');
+  const oldOutboundTestUrlRef = useRef(DEFAULT_TEST_URL);
+  const oldScheduledRestartRef = useRef(DEFAULT_SCHEDULED_RESTART);
   const syncingRef = useRef(false);
   const xraySettingRef = useRef('');
   const outboundTestUrlRef = useRef(outboundTestUrl);
@@ -204,6 +218,11 @@ export function useXraySetting(): UseXraySettingResult {
     if (!configQuery.data) return;
     const obj = configQuery.data;
     const pretty = JSON.stringify(obj.xraySetting, null, 2);
+    const nextUrl = normalizeOutboundTestUrl(obj.outboundTestUrl || '');
+    const isDirty = oldXraySettingRef.current !== xraySettingRef.current
+      || normalizeOutboundTestUrl(oldOutboundTestUrlRef.current) !== normalizeOutboundTestUrl(outboundTestUrlRef.current)
+      || oldScheduledRestartRef.current !== scheduledRestartRef.current;
+    if (isDirty) return;
     syncingRef.current = true;
     setXraySettingState(pretty);
     setTemplateSettingsState(obj.xraySetting);
@@ -213,7 +232,6 @@ export function useXraySetting(): UseXraySettingResult {
     setClientReverseTags(obj.clientReverseTags || []);
     setSubscriptionOutbounds(obj.subscriptionOutbounds || []);
     setSubscriptionOutboundTags(obj.subscriptionOutboundTags || []);
-    const nextUrl = obj.outboundTestUrl || DEFAULT_TEST_URL;
     setOutboundTestUrlState(nextUrl);
     oldOutboundTestUrlRef.current = nextUrl;
     const nextScheduledEnable = !!obj.scheduledRestartEnable;
@@ -248,7 +266,6 @@ export function useXraySetting(): UseXraySettingResult {
       healthMaxRestarts: nextHealthMaxRestarts,
       healthWindowMinutes: nextHealthWindowMinutes,
     });
-    setSaveDisabled(true);
   }, [configQuery.data]);
 
   const fetched = configQuery.data !== undefined || configQuery.isError;
@@ -298,7 +315,7 @@ export function useXraySetting(): UseXraySettingResult {
   const saveMut = useMutation({
     mutationFn: async () => {
       const sentXraySetting = xraySettingRef.current;
-      const sentTestUrl = outboundTestUrlRef.current || DEFAULT_TEST_URL;
+      const sentTestUrl = normalizeOutboundTestUrl(outboundTestUrlRef.current);
       const sentScheduled = JSON.parse(scheduledRestartRef.current || '{}') as {
         enabled?: boolean;
         interval?: number;
@@ -332,7 +349,6 @@ export function useXraySetting(): UseXraySettingResult {
       oldXraySettingRef.current = sentXraySetting;
       oldOutboundTestUrlRef.current = sentTestUrl;
       oldScheduledRestartRef.current = JSON.stringify(sentScheduled);
-      setSaveDisabled(true);
       queryClient.invalidateQueries({ queryKey: keys.xray.config() });
       queryClient.invalidateQueries({ queryKey: ['xray', 'scheduled-restart-status'] });
     },
@@ -527,15 +543,9 @@ export function useXraySetting(): UseXraySettingResult {
     }
   }, [testingAll, testOutbound, testSubscriptionOutbound, postOutboundTestBatch]);
 
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      const dirtyXray = oldXraySettingRef.current !== xraySettingRef.current;
-      const dirtyUrl = oldOutboundTestUrlRef.current !== outboundTestUrlRef.current;
-      const dirtyScheduled = oldScheduledRestartRef.current !== scheduledRestartRef.current;
-      setSaveDisabled(!(dirtyXray || dirtyUrl || dirtyScheduled));
-    }, DIRTY_POLL_MS);
-    return () => window.clearInterval(timer);
-  }, []);
+  const saveDisabled = oldXraySettingRef.current === xraySetting
+    && normalizeOutboundTestUrl(oldOutboundTestUrlRef.current) === normalizeOutboundTestUrl(outboundTestUrl)
+    && oldScheduledRestartRef.current === scheduledRestartRef.current;
 
   const outboundsTraffic = useMemo(() => trafficQuery.data ?? [], [trafficQuery.data]);
 

@@ -1,94 +1,16 @@
-# Custom Changelog
+# Custom changelog
 
-## v3.5.12
+## v3.6.0
 
+Based on the official 3x-ui v3.6.0 source while preserving the custom feature set maintained in this repository.
+
+- Kept per-host subscription names, full template variables, presets, and exact fallback behavior.
+- Kept per-client link visibility, disabled-host opt-in, per-address headers, and effective host port handling.
+- Kept subscription application history with up to three recent applications.
+- Kept the single always-first display-only subscription entry.
+- Kept scheduled Xray/x-ui restarts, aligned schedules, Tehran/server clock, restart history, and delayed Xray follow-up restart.
+- Kept Xray health monitoring and loop protection, disabled by default.
+- Kept QR click-to-copy and client-specific subscription profile names.
+- Kept WARP routing controls and removed upstream Telegram/documentation/donation shortcuts from the panel UI.
+- Updated installer, updater, panel update checks, and releases to `0fariid0/3x-ui`.
 - Removed the Docker GitHub Actions workflow.
-- Fixed Windows release compilation by using the platform-specific detached-process helper.
-- Fixed golangci findings in scheduled panel restart and subscription-link selection code.
-- Fixed frontend type checking for restart/health props, client email exports, and optional template selection.
-- Corrected the per-client subscription visibility regression test so globally disabled hosts stay off unless explicitly enabled.
-
-This repository is an independently maintained modified version of 3x-ui.
-
-Base version: v3.5.0
-Repository: https://github.com/0fariid0/3x-ui
-
-## v3.5.11
-
-- Fixed `request body failed validation` when saving subscription-link/remark templates by preserving the Xray health fields in the full settings payload.
-- Made the backend accept older settings payloads that omit Xray health tuning fields and apply safe defaults server-side.
-- Changed the default Xray health monitor state to disabled for fresh installations and missing settings.
-
-## v3.5.8
-
-- Fixed the v3.5.6 regression where `?name=<client>` replaced every individual Host/config remark with the client email.
-- Globally enabled Hosts and default inbound links are enabled for every client unless that client explicitly disables them.
-- Newly added enabled Hosts automatically appear for all attached clients.
-- Globally disabled Hosts remain hidden by default but can be enabled for selected clients from the client Links tab.
-- Disabled inbounds are omitted from per-client link controls and subscription output.
-- Host editing now shows “active for all clients” for enabled Hosts, or lists the clients explicitly opted into a disabled Host.
-
-## v3.5.7
-
-- Added one optional permanent informational subscription entry.
-- The informational entry is always first in RAW, JSON, and Clash outputs.
-- It is emitted once per subscription even when a client belongs to several inbounds.
-- Added a Hosts-page editor with the existing remark variables and quick templates.
-- Uses a fixed display-only target: VLESS at 1.1.1.1:1.
-
-## v3.5.6
-
-- Added subscription refresh activity tracking with the last update time, app name, app version, output format, user agent, and request count.
-- Keeps and displays at most the three most recently used distinct subscription apps for each client.
-- Browser visits to the subscription information page are ignored so they do not consume an app slot.
-- Added a per-client managed-link list in the Links tab, showing each config name and its address/port.
-- Each managed Host or default inbound output can be hidden for one client without affecting other clients.
-- Per-client visibility is enforced consistently in raw, JSON, Clash, client QR/link views, and direct client-link output.
-- Added SQLite/PostgreSQL-safe atomic app-activity upserts, migration coverage, cleanup on client deletion, and regression tests.
-
-## v3.5.5
-
-- Subscription links shown in the panel now contain the actual URL-encoded client email in `?name=...` instead of the literal word `email`.
-- Raw, JSON, and Clash subscription endpoints accept that exact name value and apply it consistently to every generated config.
-- Legacy `?name=email` links remain supported.
-- Public subscription-page copy links also use the owning client's actual email when it is known.
-- Improved updater downloads with retries, archive validation, and an automatic IPv4 fallback for VPS networks whose GitHub release CDN route over IPv6 is broken.
-
-## v3.5.4
-
-- Added configurable Xray health monitoring with confirmed-failure detection.
-- Added automatic Xray recovery only after a real crash; manual and intentional restart windows are ignored.
-- Added restart cooldown and a rolling-window circuit breaker to prevent restart loops.
-- Aligned scheduled restarts to real clock boundaries (for example :00/:15/:30/:45 and full hours).
-- Clicking a QR code now copies its represented link instead of downloading the image.
-- Subscription URLs now include `?name=email`; raw, JSON, and Clash outputs can name every config with the client email.
-- Host addresses are stored and displayed without an embedded port. The group port applies to every address, while port `0` inherits the inbound port.
-- Added a separate WS/HTTPUpgrade/XHTTP Host header for every IP or domain in a Host group.
-- Updated generated OpenAPI files and tests so the custom Host behavior and new Xray settings are covered by GitHub Actions.
-
-## v3.5.3
-
-- Removed the @XrayUI Telegram link from the dashboard.
-- Removed the Sanaei documentation and donation buttons from the sidebar.
-- Added configurable scheduled restarts under Xray Settings > Basic.
-- Supports minute, hour, and day intervals.
-- Restarts Xray Core by default, with an optional full x-ui panel restart.
-
-## v3.5.2
-
-- Host config names are now complete per-Host templates and are never combined with another name.
-- Added full per-client expansion of Host templates such as `{{EMAIL}}` and `{{INBOUND}}-{{EMAIL}}|📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D`.
-- Plain Host names are emitted exactly as entered.
-- Empty Host names still fall back to the global/inbound default naming logic.
-- Added quick-pick remark template presets to the global and per-Host name fields.
-- Restored the WARP routing selector below IPv4 routing in Xray basic routing settings.
-
-## v3.5.1
-
-- Added a per-Host subscription config name.
-- Made the Host config name optional.
-- Empty Host names fall back to the inbound/default config name.
-- Preserved explicitly configured `{{INBOUND}}` + `{{HOST}}` templates.
-- Redirected installer, updater, panel update checks, and repository links to `0fariid0/3x-ui`.
-- Configured tagged GitHub Actions builds as stable releases.
-- Configured Docker publishing to `ghcr.io/0fariid0/3x-ui`.
