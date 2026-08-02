@@ -286,3 +286,10 @@
     grid-template-columns: 1fr;
   }
 }
+
+.client-report-divider {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.client-report-divider .ant-select { width: 82px; }

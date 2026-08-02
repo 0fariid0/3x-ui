@@ -32,7 +32,10 @@ type ClientDailyUsage struct {
 
 type ClientHourlyUsage struct {
 	Hour  int   `json:"hour"`
-	Bytes int64 `json:"bytes"`
+	Up    int64 `json:"up"`
+	Down  int64 `json:"down"`
+	Total int64 `json:"total"`
+	Bytes int64 `json:"bytes"` // Backward-compatible alias of Total.
 }
 
 type ClientReportApp struct {
@@ -57,19 +60,55 @@ type ClientReportHost struct {
 }
 
 type ClientInsightReport struct {
-	Email         string                  `json:"email"`
-	Days          int                     `json:"days"`
-	LastOnline    int64                   `json:"lastOnline"`
-	RecentIPCount int                     `json:"recentIpCount"`
-	RecentIPs     []model.ClientIPHistory `json:"recentIps"`
-	Apps          []ClientReportApp       `json:"apps"`
-	Hosts         []ClientReportHost      `json:"hosts"`
-	DailyUsage    []ClientDailyUsage      `json:"dailyUsage"`
-	HourlyUsage   []ClientHourlyUsage     `json:"hourlyUsage"`
-	PeakHour      int                     `json:"peakHour"`
-	PeakHourBytes int64                   `json:"peakHourBytes"`
-	Events        []model.ClientEvent     `json:"events"`
-	Anomalies     []model.ClientAnomaly   `json:"anomalies"`
+	Email             string                  `json:"email"`
+	Days              int                     `json:"days"`
+	LastOnline        int64                   `json:"lastOnline"`
+	RecentIPCount     int                     `json:"recentIpCount"`
+	RecentIPs         []model.ClientIPHistory `json:"recentIps"`
+	Apps              []ClientReportApp       `json:"apps"`
+	Hosts             []ClientReportHost      `json:"hosts"`
+	DailyUsage        []ClientDailyUsage      `json:"dailyUsage"`
+	HourlyUsage       []ClientHourlyUsage     `json:"hourlyUsage"`
+	TotalUp           int64                   `json:"totalUp"`
+	TotalDown         int64                   `json:"totalDown"`
+	TotalUsage        int64                   `json:"totalUsage"`
+	AverageDaily      int64                   `json:"averageDaily"`
+	PeakDay           string                  `json:"peakDay"`
+	PeakDayBytes      int64                   `json:"peakDayBytes"`
+	PeakHour          int                     `json:"peakHour"`
+	PeakHourBytes     int64                   `json:"peakHourBytes"`
+	PeakMinuteBytes   int64                   `json:"peakMinuteBytes"`
+	LatestMinuteBytes int64                   `json:"latestMinuteBytes"`
+	ActiveDays        int                     `json:"activeDays"`
+	ActiveMinutes     int                     `json:"activeMinutes"`
+	FirstDataAt       int64                   `json:"firstDataAt"`
+	LastDataAt        int64                   `json:"lastDataAt"`
+	Events            []model.ClientEvent     `json:"events"`
+	Anomalies         []model.ClientAnomaly   `json:"anomalies"`
+}
+
+type ClientUsageAlert struct {
+	Email             string  `json:"email"`
+	TotalUp           int64   `json:"totalUp"`
+	TotalDown         int64   `json:"totalDown"`
+	TotalUsage        int64   `json:"totalUsage"`
+	AverageDaily      int64   `json:"averageDaily"`
+	PeakMinuteBytes   int64   `json:"peakMinuteBytes"`
+	ActiveMinutes     int     `json:"activeMinutes"`
+	RecentIPCount     int     `json:"recentIpCount"`
+	LastOnline        int64   `json:"lastOnline"`
+	AnomalyCount      int     `json:"anomalyCount"`
+	LastAnomalyKind   string  `json:"lastAnomalyKind,omitempty"`
+	LastAnomalyStatus string  `json:"lastAnomalyStatus,omitempty"`
+	Severity          string  `json:"severity"`
+	QuotaBytes        int64   `json:"quotaBytes"`
+	UsagePercent      float64 `json:"usagePercent"`
+}
+
+type ClientUsageAlerts struct {
+	Days      int                `json:"days"`
+	Generated int64              `json:"generatedAt"`
+	Items     []ClientUsageAlert `json:"items"`
 }
 
 func (s *ClientInsightService) RecordTraffic(clientTraffics []*xray.ClientTraffic, at time.Time) error {
@@ -275,18 +314,47 @@ func (s *ClientInsightService) GetReport(email string, days int) (*ClientInsight
 			row.Down += bucket.Down
 			row.Total += bucket.Up + bucket.Down
 		}
-		hourly[t.Hour()].Bytes += bucket.Up + bucket.Down
+		hourly[t.Hour()].Up += bucket.Up
+		hourly[t.Hour()].Down += bucket.Down
+		hourly[t.Hour()].Total += bucket.Up + bucket.Down
+		hourly[t.Hour()].Bytes = hourly[t.Hour()].Total
 	}
 	daily := make([]ClientDailyUsage, 0, days)
+	var totalUp, totalDown, peakDayBytes, peakMinuteBytes, latestMinuteBytes int64
+	peakDay := ""
+	activeDays := 0
 	for i := 0; i < days; i++ {
 		day := start.AddDate(0, 0, i).Format("2006-01-02")
-		daily = append(daily, *dailyMap[day])
+		row := *dailyMap[day]
+		daily = append(daily, row)
+		totalUp += row.Up
+		totalDown += row.Down
+		if row.Total > 0 {
+			activeDays++
+		}
+		if row.Total > peakDayBytes {
+			peakDay, peakDayBytes = row.Day, row.Total
+		}
 	}
 	peakHour, peakBytes := 0, int64(0)
 	for _, row := range hourly {
 		if row.Bytes > peakBytes {
 			peakHour, peakBytes = row.Hour, row.Bytes
 		}
+	}
+	for i, bucket := range buckets {
+		minuteBytes := bucket.Up + bucket.Down
+		if minuteBytes > peakMinuteBytes {
+			peakMinuteBytes = minuteBytes
+		}
+		if i == len(buckets)-1 {
+			latestMinuteBytes = minuteBytes
+		}
+	}
+	totalUsage := totalUp + totalDown
+	averageDaily := int64(0)
+	if days > 0 {
+		averageDaily = totalUsage / int64(days)
 	}
 
 	var traffic xray.ClientTraffic
@@ -319,11 +387,102 @@ func (s *ClientInsightService) GetReport(email string, days int) (*ClientInsight
 	var anomalies []model.ClientAnomaly
 	_ = db.Where("email = ?", email).Order("created_at DESC, id DESC").Limit(50).Find(&anomalies).Error
 
+	firstDataAt, lastDataAt := int64(0), int64(0)
+	if len(buckets) > 0 {
+		firstDataAt = buckets[0].BucketStart
+		lastDataAt = buckets[len(buckets)-1].BucketStart
+	}
 	return &ClientInsightReport{
 		Email: email, Days: days, LastOnline: traffic.LastOnline, RecentIPCount: int(recentIPCount), RecentIPs: ips,
-		Apps: apps, Hosts: hosts, DailyUsage: daily, HourlyUsage: hourly, PeakHour: peakHour, PeakHourBytes: peakBytes,
+		Apps: apps, Hosts: hosts, DailyUsage: daily, HourlyUsage: hourly,
+		TotalUp: totalUp, TotalDown: totalDown, TotalUsage: totalUsage, AverageDaily: averageDaily,
+		PeakDay: peakDay, PeakDayBytes: peakDayBytes, PeakHour: peakHour, PeakHourBytes: peakBytes,
+		PeakMinuteBytes: peakMinuteBytes, LatestMinuteBytes: latestMinuteBytes,
+		ActiveDays: activeDays, ActiveMinutes: len(buckets), FirstDataAt: firstDataAt, LastDataAt: lastDataAt,
 		Events: events, Anomalies: anomalies,
 	}, nil
+}
+
+func normalizeInsightDays(days int) int {
+	if days < 1 {
+		return 7
+	}
+	if days > 365 {
+		return 365
+	}
+	return days
+}
+
+func normalizeInsightLimit(limit int) int {
+	if limit < 1 {
+		return 8
+	}
+	if limit > 50 {
+		return 50
+	}
+	return limit
+}
+
+func (s *ClientInsightService) GetUsageAlerts(days, limit int) (*ClientUsageAlerts, error) {
+	days = normalizeInsightDays(days)
+	limit = normalizeInsightLimit(limit)
+	start := time.Now().AddDate(0, 0, -days).UnixMilli()
+	db := database.GetDB()
+	type aggregate struct {
+		Email         string `gorm:"column:email"`
+		TotalUp       int64  `gorm:"column:total_up"`
+		TotalDown     int64  `gorm:"column:total_down"`
+		TotalUsage    int64  `gorm:"column:total_usage"`
+		PeakMinute    int64  `gorm:"column:peak_minute"`
+		ActiveMinutes int    `gorm:"column:active_minutes"`
+	}
+	var rows []aggregate
+	if err := db.Model(&model.ClientTrafficBucket{}).
+		Select("email, COALESCE(SUM(up),0) AS total_up, COALESCE(SUM(down),0) AS total_down, COALESCE(SUM(up + down),0) AS total_usage, COALESCE(MAX(up + down),0) AS peak_minute, COUNT(*) AS active_minutes").
+		Where("bucket_start >= ?", start).
+		Group("email").
+		Order("total_usage DESC").
+		Limit(limit * 3).
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	items := make([]ClientUsageAlert, 0, limit)
+	for _, row := range rows {
+		if len(items) >= limit {
+			break
+		}
+		var rec model.ClientRecord
+		if err := db.Where("email = ?", row.Email).First(&rec).Error; err != nil {
+			continue
+		}
+		var traffic xray.ClientTraffic
+		_ = db.Where("email = ?", row.Email).First(&traffic).Error
+		var recentIPCount int64
+		_ = db.Model(&model.ClientIPHistory{}).Where("email = ? AND last_seen >= ?", row.Email, start).Count(&recentIPCount).Error
+		var anomalyCount int64
+		_ = db.Model(&model.ClientAnomaly{}).Where("email = ? AND created_at >= ?", row.Email, start).Count(&anomalyCount).Error
+		var latest model.ClientAnomaly
+		_ = db.Where("email = ? AND created_at >= ?", row.Email, start).Order("created_at DESC, id DESC").First(&latest).Error
+		severity := "info"
+		if anomalyCount > 0 {
+			severity = "warning"
+		}
+		if latest.Status == "acted" || latest.Status == "open" {
+			severity = "critical"
+		}
+		usagePercent := float64(0)
+		if rec.TotalGB > 0 {
+			usagePercent = float64(row.TotalUsage) * 100 / float64(rec.TotalGB)
+		}
+		items = append(items, ClientUsageAlert{
+			Email: row.Email, TotalUp: row.TotalUp, TotalDown: row.TotalDown, TotalUsage: row.TotalUsage,
+			AverageDaily: row.TotalUsage / int64(days), PeakMinuteBytes: row.PeakMinute,
+			ActiveMinutes: row.ActiveMinutes, RecentIPCount: int(recentIPCount), LastOnline: traffic.LastOnline,
+			AnomalyCount: int(anomalyCount), LastAnomalyKind: latest.Kind, LastAnomalyStatus: latest.Status,
+			Severity: severity, QuotaBytes: rec.TotalGB, UsagePercent: usagePercent,
+		})
+	}
+	return &ClientUsageAlerts{Days: days, Generated: time.Now().UnixMilli(), Items: items}, nil
 }
 
 func currentIPCount(db *gorm.DB, email string) int {

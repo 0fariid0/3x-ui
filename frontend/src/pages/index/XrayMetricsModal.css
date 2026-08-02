@@ -62,4 +62,3 @@
 @media (prefers-reduced-motion: reduce) {
   .obs-dot.is-alive { animation: none; }
 }
-

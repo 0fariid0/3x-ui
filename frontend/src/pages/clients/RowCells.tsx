@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Popover, Space, Tag, Tooltip } from 'antd';
 import {
+  AreaChartOutlined,
   DeleteOutlined,
   EditOutlined,
   InfoCircleOutlined,
@@ -18,20 +19,22 @@ interface ClientRowActionsProps {
   email: string;
   onShowQr: (email: string) => void;
   onShowInfo: (email: string) => void;
+  onShowUsage: (email: string) => void;
   onResetTraffic: (email: string) => void;
   onEdit: (email: string) => void;
   onDelete: (email: string) => void;
 }
 
-// Five Tooltip-wrapped buttons per row, none of which depend on traffic. Left
+// Six Tooltip-wrapped buttons per row, none of which depend on traffic. Left
 // inline they re-ran rc-tooltip's alignment machinery for every visible row on
-// every traffic push — 125 Tooltips on a 25-row page, five seconds apart.
+// every traffic push — 150 Tooltips on a 25-row page, five seconds apart.
 // Keyed on the email rather than the row object, because a push replaces the row
 // object of every client whose counters moved; the page resolves the live row.
 export const ClientRowActions = memo(function ClientRowActions({
   email,
   onShowQr,
   onShowInfo,
+  onShowUsage,
   onResetTraffic,
   onEdit,
   onDelete,
@@ -57,6 +60,16 @@ export const ClientRowActions = memo(function ClientRowActions({
           icon={<InfoCircleOutlined />}
           aria-label={t('pages.clients.clientInfo')}
           onClick={() => onShowInfo(email)}
+        />
+      </Tooltip>
+      <Tooltip title={t('pages.clients.usageDetails')}>
+        <Button
+          size="small"
+          type="text"
+          style={ICON_BUTTON_STYLE}
+          icon={<AreaChartOutlined />}
+          aria-label={t('pages.clients.usageDetails')}
+          onClick={() => onShowUsage(email)}
         />
       </Tooltip>
       <Tooltip title={t('pages.inbounds.resetTraffic')}>

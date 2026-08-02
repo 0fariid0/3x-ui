@@ -352,7 +352,10 @@ export interface ClientEvent {
 
 export interface ClientHourlyUsage {
   bytes: number;
+  down: number;
   hour: number;
+  total: number;
+  up: number;
 }
 
 export interface ClientIPHistory {
@@ -372,19 +375,31 @@ export interface ClientInbound {
 }
 
 export interface ClientInsightReport {
+  activeDays: number;
+  activeMinutes: number;
   anomalies: ClientAnomaly[];
   apps: ClientReportApp[];
+  averageDaily: number;
   dailyUsage: ClientDailyUsage[];
   days: number;
   email: string;
   events: ClientEvent[];
+  firstDataAt: number;
   hosts: ClientReportHost[];
   hourlyUsage: ClientHourlyUsage[];
+  lastDataAt: number;
   lastOnline: number;
+  latestMinuteBytes: number;
+  peakDay: string;
+  peakDayBytes: number;
   peakHour: number;
   peakHourBytes: number;
+  peakMinuteBytes: number;
   recentIpCount: number;
   recentIps: ClientIPHistory[];
+  totalDown: number;
+  totalUp: number;
+  totalUsage: number;
 }
 
 export interface ClientRecord {
@@ -465,6 +480,30 @@ export interface ClientTrafficBucket {
   samples: number;
   up: number;
   updatedAt: number;
+}
+
+export interface ClientUsageAlert {
+  activeMinutes: number;
+  anomalyCount: number;
+  averageDaily: number;
+  email: string;
+  lastAnomalyKind?: string;
+  lastAnomalyStatus?: string;
+  lastOnline: number;
+  peakMinuteBytes: number;
+  quotaBytes: number;
+  recentIpCount: number;
+  severity: string;
+  totalDown: number;
+  totalUp: number;
+  totalUsage: number;
+  usagePercent: number;
+}
+
+export interface ClientUsageAlerts {
+  days: number;
+  generatedAt: number;
+  items: ClientUsageAlert[];
 }
 
 export interface FallbackParentInfo {
@@ -792,4 +831,3 @@ export interface User {
   password: string;
   username: string;
 }
-

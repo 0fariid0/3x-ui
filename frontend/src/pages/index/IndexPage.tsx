@@ -23,6 +23,7 @@ import VitalTile from './VitalTile';
 import ThroughputCard from './ThroughputCard';
 import ConnectionsCard from './ConnectionsCard';
 import SystemStrip from './SystemStrip';
+import UsageAlertsCard from './UsageAlertsCard';
 import { mean, peak, useOverviewHistory } from './useOverviewHistory';
 import type { PanelUpdateInfo } from './PanelUpdateModal';
 const JsonEditor = lazy(() => import('@/components/form/JsonEditor'));
@@ -33,6 +34,7 @@ const SystemHistoryModal = lazy(() => import('./SystemHistoryModal'));
 const XrayMetricsModal = lazy(() => import('./XrayMetricsModal'));
 const XrayLogModal = lazy(() => import('./XrayLogModal'));
 const VersionModal = lazy(() => import('./VersionModal'));
+const ClientUsageModal = lazy(() => import('@/pages/clients/ClientUsageModal'));
 import './IndexPage.css';
 
 export default function IndexPage() {
@@ -62,6 +64,7 @@ export default function IndexPage() {
   const [xrayLogsOpen, setXrayLogsOpen] = useState(false);
   const [versionOpen, setVersionOpen] = useState(false);
   const [configTextOpen, setConfigTextOpen] = useState(false);
+  const [clientUsageEmail, setClientUsageEmail] = useState<string | null>(null);
   const [configText, setConfigText] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingTip, setLoadingTip] = useState(t('loading'));
@@ -270,6 +273,8 @@ export default function IndexPage() {
                     />
                   </div>
 
+                  <UsageAlertsCard onOpenClient={setClientUsageEmail} />
+
                   <SystemStrip
                     status={status}
                     showIp={showIp}
@@ -321,6 +326,14 @@ export default function IndexPage() {
             status={status}
             onClose={() => setVersionOpen(false)}
             onBusy={setBusy}
+          />
+        </LazyMount>
+        <LazyMount when={!!clientUsageEmail}>
+          <ClientUsageModal
+            open={!!clientUsageEmail}
+            email={clientUsageEmail}
+            initialDays={7}
+            onClose={() => setClientUsageEmail(null)}
           />
         </LazyMount>
 

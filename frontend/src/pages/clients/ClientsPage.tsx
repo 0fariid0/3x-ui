@@ -26,6 +26,7 @@ import {
 } from 'antd';
 import type { ColumnsType, TableProps } from 'antd/es/table';
 import {
+  AreaChartOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   DeleteOutlined,
@@ -69,6 +70,7 @@ import { LazyMount } from '@/components/utility';
 import { SPEED_COLUMN_WIDTH, SPEED_TAG_CLASS_NAME, SPEED_TAG_STYLE } from '@/components/utility/speedTagStyle';
 const ClientFormModal = lazy(() => import('./ClientFormModal'));
 const ClientInfoModal = lazy(() => import('./ClientInfoModal'));
+const ClientUsageModal = lazy(() => import('./ClientUsageModal'));
 const ClientQrModal = lazy(() => import('./ClientQrModal'));
 const ClientBulkAddModal = lazy(() => import('./ClientBulkAddModal'));
 const ClientBulkAdjustModal = lazy(() => import('./ClientBulkAdjustModal'));
@@ -257,6 +259,7 @@ export default function ClientsPage() {
   const [editingExternalLinks, setEditingExternalLinks] = useState<ExternalLink[]>([]);
   const [infoOpen, setInfoOpen] = useState(false);
   const [infoClient, setInfoClient] = useState<ClientRecord | null>(null);
+  const [clientUsageEmail, setClientUsageEmail] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [qrClient, setQrClient] = useState<ClientRecord | null>(null);
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
@@ -562,6 +565,11 @@ export default function ClientsPage() {
     setInfoOpen(true);
   }, [hydrate]);
 
+  const onShowUsage = useCallback((email: string) => {
+    if (!email) return;
+    setClientUsageEmail(email);
+  }, []);
+
   const onShowQr = useCallback(async (email: string) => {
     const row = rowsByEmail.current.get(email);
     if (!row) return;
@@ -831,12 +839,13 @@ export default function ClientsPage() {
     {
       title: t('pages.clients.actions'),
       key: 'actions',
-      width: 200,
+      width: 235,
       render: (_v, record) => (
         <ClientRowActions
           email={record.email}
           onShowQr={onShowQr}
           onShowInfo={onShowInfo}
+          onShowUsage={onShowUsage}
           onResetTraffic={onResetTraffic}
           onEdit={onEdit}
           onDelete={onDelete}
@@ -1455,6 +1464,11 @@ export default function ClientsPage() {
                                               onClick: () => onShowQr(row.email),
                                             },
                                             {
+                                              key: 'usage',
+                                              label: <><AreaChartOutlined /> {t('pages.clients.usageDetails')}</>,
+                                              onClick: () => onShowUsage(row.email),
+                                            },
+                                            {
                                               key: 'reset',
                                               label: <><RetweetOutlined /> {t('pages.inbounds.resetTraffic')}</>,
                                               onClick: () => onResetTraffic(row.email),
@@ -1532,6 +1546,14 @@ export default function ClientsPage() {
             isOnline={infoClient ? isOnline(infoClient.email) : false}
             subSettings={subSettings}
             onOpenChange={setInfoOpen}
+          />
+        </LazyMount>
+        <LazyMount when={!!clientUsageEmail}>
+          <ClientUsageModal
+            open={!!clientUsageEmail}
+            email={clientUsageEmail}
+            initialDays={7}
+            onClose={() => setClientUsageEmail(null)}
           />
         </LazyMount>
         <LazyMount when={qrOpen}>

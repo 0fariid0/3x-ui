@@ -1486,16 +1486,32 @@ export const SCHEMAS: Record<string, unknown> = {
   "ClientHourlyUsage": {
     "properties": {
       "bytes": {
+        "description": "Backward-compatible alias of Total.",
+        "format": "int64",
+        "type": "integer"
+      },
+      "down": {
         "format": "int64",
         "type": "integer"
       },
       "hour": {
         "type": "integer"
+      },
+      "total": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "up": {
+        "format": "int64",
+        "type": "integer"
       }
     },
     "required": [
       "bytes",
-      "hour"
+      "down",
+      "hour",
+      "total",
+      "up"
     ],
     "type": "object"
   },
@@ -1560,6 +1576,12 @@ export const SCHEMAS: Record<string, unknown> = {
   },
   "ClientInsightReport": {
     "properties": {
+      "activeDays": {
+        "type": "integer"
+      },
+      "activeMinutes": {
+        "type": "integer"
+      },
       "anomalies": {
         "items": {
           "$ref": "#/components/schemas/ClientAnomaly"
@@ -1571,6 +1593,10 @@ export const SCHEMAS: Record<string, unknown> = {
           "$ref": "#/components/schemas/ClientReportApp"
         },
         "type": "array"
+      },
+      "averageDaily": {
+        "format": "int64",
+        "type": "integer"
       },
       "dailyUsage": {
         "items": {
@@ -1590,6 +1616,10 @@ export const SCHEMAS: Record<string, unknown> = {
         },
         "type": "array"
       },
+      "firstDataAt": {
+        "format": "int64",
+        "type": "integer"
+      },
       "hosts": {
         "items": {
           "$ref": "#/components/schemas/ClientReportHost"
@@ -1602,7 +1632,22 @@ export const SCHEMAS: Record<string, unknown> = {
         },
         "type": "array"
       },
+      "lastDataAt": {
+        "format": "int64",
+        "type": "integer"
+      },
       "lastOnline": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "latestMinuteBytes": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "peakDay": {
+        "type": "string"
+      },
+      "peakDayBytes": {
         "format": "int64",
         "type": "integer"
       },
@@ -1610,6 +1655,10 @@ export const SCHEMAS: Record<string, unknown> = {
         "type": "integer"
       },
       "peakHourBytes": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "peakMinuteBytes": {
         "format": "int64",
         "type": "integer"
       },
@@ -1621,22 +1670,46 @@ export const SCHEMAS: Record<string, unknown> = {
           "$ref": "#/components/schemas/ClientIPHistory"
         },
         "type": "array"
+      },
+      "totalDown": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "totalUp": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "totalUsage": {
+        "format": "int64",
+        "type": "integer"
       }
     },
     "required": [
+      "activeDays",
+      "activeMinutes",
       "anomalies",
       "apps",
+      "averageDaily",
       "dailyUsage",
       "days",
       "email",
       "events",
+      "firstDataAt",
       "hosts",
       "hourlyUsage",
+      "lastDataAt",
       "lastOnline",
+      "latestMinuteBytes",
+      "peakDay",
+      "peakDayBytes",
       "peakHour",
       "peakHourBytes",
+      "peakMinuteBytes",
       "recentIpCount",
-      "recentIps"
+      "recentIps",
+      "totalDown",
+      "totalUp",
+      "totalUsage"
     ],
     "type": "object"
   },
@@ -1954,6 +2027,101 @@ export const SCHEMAS: Record<string, unknown> = {
       "samples",
       "up",
       "updatedAt"
+    ],
+    "type": "object"
+  },
+  "ClientUsageAlert": {
+    "properties": {
+      "activeMinutes": {
+        "type": "integer"
+      },
+      "anomalyCount": {
+        "type": "integer"
+      },
+      "averageDaily": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "email": {
+        "type": "string"
+      },
+      "lastAnomalyKind": {
+        "type": "string"
+      },
+      "lastAnomalyStatus": {
+        "type": "string"
+      },
+      "lastOnline": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "peakMinuteBytes": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "quotaBytes": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "recentIpCount": {
+        "type": "integer"
+      },
+      "severity": {
+        "type": "string"
+      },
+      "totalDown": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "totalUp": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "totalUsage": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "usagePercent": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "activeMinutes",
+      "anomalyCount",
+      "averageDaily",
+      "email",
+      "lastOnline",
+      "peakMinuteBytes",
+      "quotaBytes",
+      "recentIpCount",
+      "severity",
+      "totalDown",
+      "totalUp",
+      "totalUsage",
+      "usagePercent"
+    ],
+    "type": "object"
+  },
+  "ClientUsageAlerts": {
+    "properties": {
+      "days": {
+        "type": "integer"
+      },
+      "generatedAt": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "items": {
+        "items": {
+          "$ref": "#/components/schemas/ClientUsageAlert"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "days",
+      "generatedAt",
+      "items"
     ],
     "type": "object"
   },

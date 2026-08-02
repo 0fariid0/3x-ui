@@ -96,6 +96,50 @@ func TestClientInsightReportAggregatesUsageAndRecentMetadata(t *testing.T) {
 	if len(report.Events) != 1 || report.Events[0].Kind != "renewed" {
 		t.Fatalf("events = %#v, want renewal event", report.Events)
 	}
+	if report.TotalUp != 400 || report.TotalDown != 600 || report.TotalUsage != 1000 {
+		t.Fatalf("totals up/down/all = %d/%d/%d, want 400/600/1000", report.TotalUp, report.TotalDown, report.TotalUsage)
+	}
+	if report.PeakMinuteBytes != 700 || report.ActiveDays != 2 || report.ActiveMinutes != 2 {
+		t.Fatalf("peak/active = %d/%d/%d, want 700/2/2", report.PeakMinuteBytes, report.ActiveDays, report.ActiveMinutes)
+	}
+	currentHour := now.Hour()
+	if report.HourlyUsage[currentHour].Up != 300 || report.HourlyUsage[currentHour].Down != 400 || report.HourlyUsage[currentHour].Total != 700 {
+		t.Fatalf("current hour = %#v, want up/down/total 300/400/700", report.HourlyUsage[currentHour])
+	}
+}
+
+func TestUsageAlertsOrdersHighConsumersAndIncludesAnomalies(t *testing.T) {
+	setupSettingTestDB(t)
+	db := database.GetDB()
+	now := time.Now().Truncate(time.Minute)
+	for _, rec := range []model.ClientRecord{
+		{Email: "heavy@example.com", SubID: "heavy", UUID: "44444444-4444-4444-8444-444444444444", Enable: true, TotalGB: 10_000},
+		{Email: "light@example.com", SubID: "light", UUID: "55555555-5555-4555-8555-555555555555", Enable: true, TotalGB: 10_000},
+	} {
+		copy := rec
+		if err := db.Create(&copy).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Create(&[]model.ClientTrafficBucket{
+		{Email: "heavy@example.com", BucketStart: now.UnixMilli(), Up: 700, Down: 800},
+		{Email: "light@example.com", BucketStart: now.UnixMilli(), Up: 100, Down: 200},
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&model.ClientAnomaly{Email: "heavy@example.com", Kind: "spike", Status: "open", Action: "alert", CreatedAt: now.UnixMilli()}).Error; err != nil {
+		t.Fatal(err)
+	}
+	alerts, err := (&ClientInsightService{}).GetUsageAlerts(7, 8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(alerts.Items) != 2 || alerts.Items[0].Email != "heavy@example.com" {
+		t.Fatalf("alerts = %#v, want heavy client first", alerts.Items)
+	}
+	if alerts.Items[0].AnomalyCount != 1 || alerts.Items[0].Severity != "critical" {
+		t.Fatalf("heavy alert anomaly/severity = %d/%s, want 1/critical", alerts.Items[0].AnomalyCount, alerts.Items[0].Severity)
+	}
 }
 
 func TestInsightCleanupPreservesActiveActionAndItsManualChangeHistory(t *testing.T) {

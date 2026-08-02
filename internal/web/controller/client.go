@@ -62,6 +62,7 @@ func (a *ClientController) initRouter(g *gin.RouterGroup) {
 	g.GET("/subscriptionApps/:email", a.getSubscriptionApps)
 	g.GET("/subscriptionLinkOptions/:email", a.getSubscriptionLinkOptions)
 	g.GET("/report/:email", a.getReport)
+	g.GET("/usageAlerts", a.getUsageAlerts)
 
 	g.POST("/add", a.create)
 	g.POST("/update/:email", a.update)
@@ -190,6 +191,17 @@ func (a *ClientController) getReport(c *gin.Context) {
 		return
 	}
 	jsonObj(c, report, nil)
+}
+
+func (a *ClientController) getUsageAlerts(c *gin.Context) {
+	days, _ := strconv.Atoi(c.DefaultQuery("days", "7"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "8"))
+	alerts, err := a.insightService.GetUsageAlerts(days, limit)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
+		return
+	}
+	jsonObj(c, alerts, nil)
 }
 
 func (a *ClientController) create(c *gin.Context) {

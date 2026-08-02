@@ -372,7 +372,10 @@ export type ClientEvent = z.infer<typeof ClientEventSchema>;
 
 export const ClientHourlyUsageSchema = z.object({
   bytes: z.number().int(),
+  down: z.number().int(),
   hour: z.number().int(),
+  total: z.number().int(),
+  up: z.number().int(),
 });
 export type ClientHourlyUsage = z.infer<typeof ClientHourlyUsageSchema>;
 
@@ -395,19 +398,31 @@ export const ClientInboundSchema = z.object({
 export type ClientInbound = z.infer<typeof ClientInboundSchema>;
 
 export const ClientInsightReportSchema = z.object({
+  activeDays: z.number().int(),
+  activeMinutes: z.number().int(),
   anomalies: z.array(z.lazy(() => ClientAnomalySchema)),
   apps: z.array(z.lazy(() => ClientReportAppSchema)),
+  averageDaily: z.number().int(),
   dailyUsage: z.array(z.lazy(() => ClientDailyUsageSchema)),
   days: z.number().int(),
   email: z.string(),
   events: z.array(z.lazy(() => ClientEventSchema)),
+  firstDataAt: z.number().int(),
   hosts: z.array(z.lazy(() => ClientReportHostSchema)),
   hourlyUsage: z.array(z.lazy(() => ClientHourlyUsageSchema)),
+  lastDataAt: z.number().int(),
   lastOnline: z.number().int(),
+  latestMinuteBytes: z.number().int(),
+  peakDay: z.string(),
+  peakDayBytes: z.number().int(),
   peakHour: z.number().int(),
   peakHourBytes: z.number().int(),
+  peakMinuteBytes: z.number().int(),
   recentIpCount: z.number().int(),
   recentIps: z.array(z.lazy(() => ClientIPHistorySchema)),
+  totalDown: z.number().int(),
+  totalUp: z.number().int(),
+  totalUsage: z.number().int(),
 });
 export type ClientInsightReport = z.infer<typeof ClientInsightReportSchema>;
 
@@ -496,6 +511,32 @@ export const ClientTrafficBucketSchema = z.object({
   updatedAt: z.number().int(),
 });
 export type ClientTrafficBucket = z.infer<typeof ClientTrafficBucketSchema>;
+
+export const ClientUsageAlertSchema = z.object({
+  activeMinutes: z.number().int(),
+  anomalyCount: z.number().int(),
+  averageDaily: z.number().int(),
+  email: z.string(),
+  lastAnomalyKind: z.string().optional(),
+  lastAnomalyStatus: z.string().optional(),
+  lastOnline: z.number().int(),
+  peakMinuteBytes: z.number().int(),
+  quotaBytes: z.number().int(),
+  recentIpCount: z.number().int(),
+  severity: z.string(),
+  totalDown: z.number().int(),
+  totalUp: z.number().int(),
+  totalUsage: z.number().int(),
+  usagePercent: z.number(),
+});
+export type ClientUsageAlert = z.infer<typeof ClientUsageAlertSchema>;
+
+export const ClientUsageAlertsSchema = z.object({
+  days: z.number().int(),
+  generatedAt: z.number().int(),
+  items: z.array(z.lazy(() => ClientUsageAlertSchema)),
+});
+export type ClientUsageAlerts = z.infer<typeof ClientUsageAlertsSchema>;
 
 export const FallbackParentInfoSchema = z.object({
   masterId: z.number().int(),
@@ -841,4 +882,3 @@ export const UserSchema = z.object({
   username: z.string(),
 });
 export type User = z.infer<typeof UserSchema>;
-

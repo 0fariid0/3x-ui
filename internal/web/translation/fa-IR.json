@@ -254,7 +254,15 @@
       "healthCritical": "{list} — بحرانی",
       "panel": "پنل",
       "threads": "نخ‌ها",
-      "uptime": "مدت کارکرد"
+      "uptime": "مدت کارکرد",
+      "usageAlerts": "هشدار مصرف کاربران",
+      "usageAlertsSub": "پرمصرف‌ترین کاربران و موارد مشکوک در بازه انتخاب‌شده",
+      "noUsageAlerts": "هنوز مصرفی برای نمایش ثبت نشده است",
+      "usageAlertCritical": "نیازمند بررسی",
+      "usageAlertWarning": "مصرف غیرعادی",
+      "usageAlertHigh": "پرمصرف",
+      "usageAlertCount": "{{count}} هشدار",
+      "day": "روز"
     },
     "inbounds": {
       "totalDownUp": "دریافت/ارسال کل",
@@ -860,7 +868,7 @@
       "recentIpCount": "تعداد IPهای اخیر",
       "peakUsageHour": "شلوغ‌ترین ساعت مصرف",
       "peakHourUsage": "مصرف در شلوغ‌ترین ساعت",
-      "dailyUsage": "نمودار مصرف روزانه ۳۰ روز اخیر",
+      "dailyUsage": "نمودار مصرف روزانه",
       "recentIps": "IPهای اخیر",
       "appsAndOs": "برنامه و سیستم‌عامل",
       "usedHosts": "Hostهای مرتبط",
@@ -894,7 +902,23 @@
         "sharing": "اتصال هم‌زمان یا اخیر از {{count}} IP شناسایی شد.",
         "sustained": "مصرف مداوم با نرخ {{rate}} در دقیقه شناسایی شد.",
         "spike": "جهش مصرف با نرخ {{rate}} در دقیقه شناسایی شد."
-      }
+      },
+      "usageDetails": "جزئیات مصرف",
+      "usageTab": "مصرف",
+      "usageTotal": "مصرف کل بازه",
+      "usageAverageDaily": "میانگین روزانه",
+      "usagePeakDay": "پرمصرف‌ترین روز",
+      "usagePeakMinute": "بیشترین مصرف دقیقه‌ای",
+      "activeDays": "روزهای فعال",
+      "usageChart": "نمودار مصرف آپلود و دانلود",
+      "usageChartRange": "گزارش {{days}} روزه",
+      "latestMinute": "آخرین دقیقه ثبت‌شده",
+      "activeMinutes": "دقایق دارای مصرف",
+      "hourlyPattern": "الگوی مصرف ساعتی",
+      "rangeBreakdown": "جزئیات بازه",
+      "firstSeen": "اولین مشاهده",
+      "lastSeen": "آخرین مشاهده",
+      "seenCount": "تعداد مشاهده"
     },
     "groups": {
       "name": "نام",

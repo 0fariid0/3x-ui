@@ -340,7 +340,10 @@ export const EXAMPLES: Record<string, unknown> = {
   },
   "ClientHourlyUsage": {
     "bytes": 0,
-    "hour": 0
+    "down": 0,
+    "hour": 0,
+    "total": 0,
+    "up": 0
   },
   "ClientIPHistory": {
     "email": "",
@@ -357,6 +360,8 @@ export const EXAMPLES: Record<string, unknown> = {
     "inboundId": 0
   },
   "ClientInsightReport": {
+    "activeDays": 0,
+    "activeMinutes": 0,
     "anomalies": [
       {
         "action": "",
@@ -390,6 +395,7 @@ export const EXAMPLES: Record<string, unknown> = {
         "version": ""
       }
     ],
+    "averageDaily": 0,
     "dailyUsage": [
       {
         "day": "",
@@ -410,6 +416,7 @@ export const EXAMPLES: Record<string, unknown> = {
         "summary": ""
       }
     ],
+    "firstDataAt": 0,
     "hosts": [
       {
         "address": "",
@@ -423,12 +430,20 @@ export const EXAMPLES: Record<string, unknown> = {
     "hourlyUsage": [
       {
         "bytes": 0,
-        "hour": 0
+        "down": 0,
+        "hour": 0,
+        "total": 0,
+        "up": 0
       }
     ],
+    "lastDataAt": 0,
     "lastOnline": 0,
+    "latestMinuteBytes": 0,
+    "peakDay": "",
+    "peakDayBytes": 0,
     "peakHour": 0,
     "peakHourBytes": 0,
+    "peakMinuteBytes": 0,
     "recentIpCount": 0,
     "recentIps": [
       {
@@ -439,7 +454,10 @@ export const EXAMPLES: Record<string, unknown> = {
         "lastSeen": 0,
         "seenCount": 0
       }
-    ]
+    ],
+    "totalDown": 0,
+    "totalUp": 0,
+    "totalUsage": 0
   },
   "ClientRecord": {
     "adTag": "",
@@ -514,6 +532,46 @@ export const EXAMPLES: Record<string, unknown> = {
     "samples": 0,
     "up": 0,
     "updatedAt": 0
+  },
+  "ClientUsageAlert": {
+    "activeMinutes": 0,
+    "anomalyCount": 0,
+    "averageDaily": 0,
+    "email": "",
+    "lastAnomalyKind": "",
+    "lastAnomalyStatus": "",
+    "lastOnline": 0,
+    "peakMinuteBytes": 0,
+    "quotaBytes": 0,
+    "recentIpCount": 0,
+    "severity": "",
+    "totalDown": 0,
+    "totalUp": 0,
+    "totalUsage": 0,
+    "usagePercent": 0
+  },
+  "ClientUsageAlerts": {
+    "days": 0,
+    "generatedAt": 0,
+    "items": [
+      {
+        "activeMinutes": 0,
+        "anomalyCount": 0,
+        "averageDaily": 0,
+        "email": "",
+        "lastAnomalyKind": "",
+        "lastAnomalyStatus": "",
+        "lastOnline": 0,
+        "peakMinuteBytes": 0,
+        "quotaBytes": 0,
+        "recentIpCount": 0,
+        "severity": "",
+        "totalDown": 0,
+        "totalUp": 0,
+        "totalUsage": 0,
+        "usagePercent": 0
+      }
+    ]
   },
   "FallbackParentInfo": {
     "masterId": 0,

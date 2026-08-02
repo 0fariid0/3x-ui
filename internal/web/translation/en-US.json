@@ -254,7 +254,15 @@
       "healthCritical": "{list} — critical",
       "panel": "Panel",
       "threads": "Threads",
-      "uptime": "Uptime"
+      "uptime": "Uptime",
+      "usageAlerts": "Client usage alerts",
+      "usageAlertsSub": "Top consumers and suspicious usage in the selected range",
+      "noUsageAlerts": "No usage has been recorded yet",
+      "usageAlertCritical": "Review now",
+      "usageAlertWarning": "Abnormal usage",
+      "usageAlertHigh": "High usage",
+      "usageAlertCount": "{{count}} alerts",
+      "day": "day"
     },
     "inbounds": {
       "totalDownUp": "Total Sent/Received",
@@ -860,7 +868,7 @@
       "recentIpCount": "Recent IP count",
       "peakUsageHour": "Busiest usage hour",
       "peakHourUsage": "Usage in busiest hour",
-      "dailyUsage": "Daily usage — last 30 days",
+      "dailyUsage": "Daily usage chart",
       "recentIps": "Recent IP addresses",
       "appsAndOs": "Applications and operating systems",
       "usedHosts": "Associated Hosts",
@@ -894,7 +902,23 @@
         "sharing": "Connections from {{count}} live or recent IPs were detected.",
         "sustained": "Sustained traffic of {{rate}} per minute was detected.",
         "spike": "A traffic spike of {{rate}} per minute was detected."
-      }
+      },
+      "usageDetails": "Usage details",
+      "usageTab": "Usage",
+      "usageTotal": "Total usage",
+      "usageAverageDaily": "Daily average",
+      "usagePeakDay": "Peak day",
+      "usagePeakMinute": "Peak minute",
+      "activeDays": "Active days",
+      "usageChart": "Upload and download usage",
+      "usageChartRange": "{{days}}-day report",
+      "latestMinute": "Latest recorded minute",
+      "activeMinutes": "Active minutes",
+      "hourlyPattern": "Hourly usage pattern",
+      "rangeBreakdown": "Range breakdown",
+      "firstSeen": "First seen",
+      "lastSeen": "Last seen",
+      "seenCount": "Seen count"
     },
     "groups": {
       "name": "Name",

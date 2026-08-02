@@ -599,6 +599,16 @@ export const sections: readonly Section[] = [
       },
       {
         method: 'GET',
+        path: '/panel/api/clients/usageAlerts',
+        summary: 'Return the highest-usage clients for the selected range, enriched with recent IP count, peak minute, anomaly state, quota percentage, and last-online metadata.',
+        params: [
+          { name: 'days', in: 'query', type: 'integer', optional: true, defaultValue: 7, desc: 'Usage aggregation range, 1 to 365 days.' },
+          { name: 'limit', in: 'query', type: 'integer', optional: true, defaultValue: 8, desc: 'Maximum number of clients, 1 to 50.' },
+        ],
+        responseSchema: 'ClientUsageAlerts',
+      },
+      {
+        method: 'GET',
         path: '/panel/api/clients/get/tgId/:tgId',
         summary: 'Fetch clients by Telegram user ID. Returns an array since multiple clients can share the same Telegram ID.',
         params: [

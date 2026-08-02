@@ -92,6 +92,8 @@ func run(root, outDir string) error {
 				"ClientReportApp",
 				"ClientReportHost",
 				"ClientInsightReport",
+				"ClientUsageAlert",
+				"ClientUsageAlerts",
 			),
 		},
 		{
@@ -132,21 +134,25 @@ func run(root, outDir string) error {
 		return err
 	}
 
-	if err := os.WriteFile(filepath.Join(target, "zod.ts"), zodBuf.Bytes(), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(target, "zod.ts"), normalizeGenerated(zodBuf.Bytes()), 0o644); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(target, "types.ts"), typesBuf.Bytes(), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(target, "types.ts"), normalizeGenerated(typesBuf.Bytes()), 0o644); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(target, "examples.ts"), examplesBuf.Bytes(), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(target, "examples.ts"), normalizeGenerated(examplesBuf.Bytes()), 0o644); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(target, "schemas.ts"), schemasBuf.Bytes(), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(target, "schemas.ts"), normalizeGenerated(schemasBuf.Bytes()), 0o644); err != nil {
 		return err
 	}
 
 	fmt.Printf("openapigen: wrote %d schemas to %s\n", len(schemas), target)
 	return nil
+}
+
+func normalizeGenerated(content []byte) []byte {
+	return append(bytes.TrimRight(content, " \t\r\n"), '\n')
 }
 
 func setOf(names ...string) map[string]bool {

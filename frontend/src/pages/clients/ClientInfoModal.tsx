@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Divider, Empty, Modal, Popover, Spin, Tag, Tooltip, message } from 'antd';
+import { Button, Divider, Empty, Modal, Popover, Select, Spin, Tag, Tooltip, message } from 'antd';
 import { CopyOutlined, DownloadOutlined, EyeOutlined, QrcodeOutlined, ReloadOutlined } from '@ant-design/icons';
 
 import { ClipboardManager, FileManager, HttpUtil, IntlUtil, SizeFormatter } from '@/utils';
@@ -143,6 +143,7 @@ export default function ClientInfoModal({
   const [subscriptionAgents, setSubscriptionAgents] = useState<SubscriptionAgent[]>([]);
   const [clientReport, setClientReport] = useState<ClientInsightReport | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
+  const [reportDays, setReportDays] = useState(30);
 
   useEffect(() => {
     if (!open) {
@@ -193,7 +194,7 @@ export default function ClientInfoModal({
     (async () => {
       try {
         const msg = await HttpUtil.get(
-          `/panel/api/clients/report/${encodeURIComponent(client.email)}?days=30`,
+          `/panel/api/clients/report/${encodeURIComponent(client.email)}?days=${reportDays}`,
           undefined,
           { silent: true },
         ) as ApiMsg<ClientInsightReport>;
@@ -205,7 +206,7 @@ export default function ClientInfoModal({
       }
     })();
     return () => { cancelled = true; };
-  }, [open, client?.email]);
+  }, [open, client?.email, reportDays]);
 
   const traffic = client?.traffic || null;
   const totalBytes = client?.totalGB || 0;
@@ -519,7 +520,26 @@ export default function ClientInfoModal({
               </tbody>
             </table>
 
-            <Divider>{t('pages.clients.detailedReport')}</Divider>
+            <Divider>
+              <div className="client-report-divider">
+                <span>{t('pages.clients.detailedReport')}</span>
+                <Select
+                  size="small"
+                  value={reportDays}
+                  onChange={setReportDays}
+                  options={[
+                    { value: 1, label: '24h' },
+                    { value: 7, label: '7d' },
+                    { value: 14, label: '14d' },
+                    { value: 30, label: '30d' },
+                    { value: 60, label: '60d' },
+                    { value: 90, label: '90d' },
+                    { value: 180, label: '180d' },
+                    { value: 365, label: '365d' },
+                  ]}
+                />
+              </div>
+            </Divider>
             {reportLoading ? (
               <div className="client-report-loading"><Spin /></div>
             ) : !clientReport ? (

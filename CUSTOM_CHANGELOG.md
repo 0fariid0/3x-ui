@@ -1,5 +1,13 @@
 # Custom changelog
 
+## v3.6.5
+
+- Added configurable client-usage ranges from 24 hours to 365 days.
+- Added a dedicated desktop usage-chart action for every client.
+- Added a full client usage modal with upload/download charts, hourly pattern, totals, averages, peak minute/day/hour, IPs, apps, hosts, anomalies, and change history.
+- Added a dashboard section for top consumers and abnormal-usage alerts with direct access to each client report.
+- Added enriched report totals and a new `/panel/api/clients/usageAlerts` endpoint.
+
 ## v3.6.4
 
 Built directly from the custom v3.6.0 source. Versions v3.6.1, v3.6.2, and v3.6.3 are not part of this release history.

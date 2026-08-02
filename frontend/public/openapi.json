@@ -1512,16 +1512,32 @@
       "ClientHourlyUsage": {
         "properties": {
           "bytes": {
+            "description": "Backward-compatible alias of Total.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "down": {
             "format": "int64",
             "type": "integer"
           },
           "hour": {
             "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "up": {
+            "format": "int64",
+            "type": "integer"
           }
         },
         "required": [
           "bytes",
-          "hour"
+          "down",
+          "hour",
+          "total",
+          "up"
         ],
         "type": "object"
       },
@@ -1586,6 +1602,12 @@
       },
       "ClientInsightReport": {
         "properties": {
+          "activeDays": {
+            "type": "integer"
+          },
+          "activeMinutes": {
+            "type": "integer"
+          },
           "anomalies": {
             "items": {
               "$ref": "#/components/schemas/ClientAnomaly"
@@ -1597,6 +1619,10 @@
               "$ref": "#/components/schemas/ClientReportApp"
             },
             "type": "array"
+          },
+          "averageDaily": {
+            "format": "int64",
+            "type": "integer"
           },
           "dailyUsage": {
             "items": {
@@ -1616,6 +1642,10 @@
             },
             "type": "array"
           },
+          "firstDataAt": {
+            "format": "int64",
+            "type": "integer"
+          },
           "hosts": {
             "items": {
               "$ref": "#/components/schemas/ClientReportHost"
@@ -1628,7 +1658,22 @@
             },
             "type": "array"
           },
+          "lastDataAt": {
+            "format": "int64",
+            "type": "integer"
+          },
           "lastOnline": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "latestMinuteBytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "peakDay": {
+            "type": "string"
+          },
+          "peakDayBytes": {
             "format": "int64",
             "type": "integer"
           },
@@ -1636,6 +1681,10 @@
             "type": "integer"
           },
           "peakHourBytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "peakMinuteBytes": {
             "format": "int64",
             "type": "integer"
           },
@@ -1647,22 +1696,46 @@
               "$ref": "#/components/schemas/ClientIPHistory"
             },
             "type": "array"
+          },
+          "totalDown": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "totalUp": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "totalUsage": {
+            "format": "int64",
+            "type": "integer"
           }
         },
         "required": [
+          "activeDays",
+          "activeMinutes",
           "anomalies",
           "apps",
+          "averageDaily",
           "dailyUsage",
           "days",
           "email",
           "events",
+          "firstDataAt",
           "hosts",
           "hourlyUsage",
+          "lastDataAt",
           "lastOnline",
+          "latestMinuteBytes",
+          "peakDay",
+          "peakDayBytes",
           "peakHour",
           "peakHourBytes",
+          "peakMinuteBytes",
           "recentIpCount",
-          "recentIps"
+          "recentIps",
+          "totalDown",
+          "totalUp",
+          "totalUsage"
         ],
         "type": "object"
       },
@@ -1980,6 +2053,101 @@
           "samples",
           "up",
           "updatedAt"
+        ],
+        "type": "object"
+      },
+      "ClientUsageAlert": {
+        "properties": {
+          "activeMinutes": {
+            "type": "integer"
+          },
+          "anomalyCount": {
+            "type": "integer"
+          },
+          "averageDaily": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "email": {
+            "type": "string"
+          },
+          "lastAnomalyKind": {
+            "type": "string"
+          },
+          "lastAnomalyStatus": {
+            "type": "string"
+          },
+          "lastOnline": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "peakMinuteBytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "quotaBytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "recentIpCount": {
+            "type": "integer"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "totalDown": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "totalUp": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "totalUsage": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "usagePercent": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "activeMinutes",
+          "anomalyCount",
+          "averageDaily",
+          "email",
+          "lastOnline",
+          "peakMinuteBytes",
+          "quotaBytes",
+          "recentIpCount",
+          "severity",
+          "totalDown",
+          "totalUp",
+          "totalUsage",
+          "usagePercent"
+        ],
+        "type": "object"
+      },
+      "ClientUsageAlerts": {
+        "properties": {
+          "days": {
+            "type": "integer"
+          },
+          "generatedAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientUsageAlert"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "days",
+          "generatedAt",
+          "items"
         ],
         "type": "object"
       },
@@ -6568,6 +6736,8 @@
                 "example": {
                   "success": true,
                   "obj": {
+                    "activeDays": 0,
+                    "activeMinutes": 0,
                     "anomalies": [
                       {
                         "action": "",
@@ -6601,6 +6771,7 @@
                         "version": ""
                       }
                     ],
+                    "averageDaily": 0,
                     "dailyUsage": [
                       {
                         "day": "",
@@ -6621,6 +6792,7 @@
                         "summary": ""
                       }
                     ],
+                    "firstDataAt": 0,
                     "hosts": [
                       {
                         "address": "",
@@ -6634,12 +6806,20 @@
                     "hourlyUsage": [
                       {
                         "bytes": 0,
-                        "hour": 0
+                        "down": 0,
+                        "hour": 0,
+                        "total": 0,
+                        "up": 0
                       }
                     ],
+                    "lastDataAt": 0,
                     "lastOnline": 0,
+                    "latestMinuteBytes": 0,
+                    "peakDay": "",
+                    "peakDayBytes": 0,
                     "peakHour": 0,
                     "peakHourBytes": 0,
+                    "peakMinuteBytes": 0,
                     "recentIpCount": 0,
                     "recentIps": [
                       {
@@ -6649,6 +6829,89 @@
                         "ip": "",
                         "lastSeen": 0,
                         "seenCount": 0
+                      }
+                    ],
+                    "totalDown": 0,
+                    "totalUp": 0,
+                    "totalUsage": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/clients/usageAlerts": {
+      "get": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Return the highest-usage clients for the selected range, enriched with recent IP count, peak minute, anomaly state, quota percentage, and last-online metadata.",
+        "operationId": "get_panel_api_clients_usageAlerts",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "description": "Usage aggregation range, 1 to 365 days.",
+            "schema": {
+              "type": "integer",
+              "default": 7
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of clients, 1 to 50.",
+            "schema": {
+              "type": "integer",
+              "default": 8
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/ClientUsageAlerts"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "days": 0,
+                    "generatedAt": 0,
+                    "items": [
+                      {
+                        "activeMinutes": 0,
+                        "anomalyCount": 0,
+                        "averageDaily": 0,
+                        "email": "",
+                        "lastAnomalyKind": "",
+                        "lastAnomalyStatus": "",
+                        "lastOnline": 0,
+                        "peakMinuteBytes": 0,
+                        "quotaBytes": 0,
+                        "recentIpCount": 0,
+                        "severity": "",
+                        "totalDown": 0,
+                        "totalUp": 0,
+                        "totalUsage": 0,
+                        "usagePercent": 0
                       }
                     ]
                   }

@@ -1,0 +1,37 @@
+Fara Xray v3.6.5 validation report
+==================================
+
+Base
+----
+- Built from the complete custom v3.6.4 source tree.
+- internal/config/version is 3.6.5.
+
+Implemented
+-----------
+- Configurable client report ranges: 1, 7, 14, 30, 60, 90, 180, and 365 days.
+- One-day reports use separate hourly upload/download series; longer ranges use daily series.
+- Dedicated desktop usage-chart action plus the mobile action menu entry.
+- Full tabbed client report modal styled after the system-history modal.
+- Dashboard high-consumer and abnormal-usage section with direct report navigation.
+- Detailed totals, daily average, peak day/hour/minute, active days/minutes, first/last data,
+  recent IPs, applications/OS, used Hosts, anomalies, and client change history.
+- New GET /panel/api/clients/usageAlerts endpoint and expanded client report schema.
+- Generated TypeScript, Zod, JSON Schema, examples, and public OpenAPI were regenerated.
+
+Validation completed
+--------------------
+- All 488 Go source files parsed successfully with go/parser.
+- Changed Go files are gofmt-clean.
+- Changed TypeScript/TSX and generated files passed isolated TypeScript syntax transpilation.
+- Persian/English translations, package.json, and public OpenAPI JSON parse successfully.
+- CSS brace checks passed for all changed report/dashboard stylesheets.
+- install.sh, update.sh, and x-ui.sh pass bash syntax validation.
+- Replacement simulation from the v3.6.4 source passes git diff --cached --check.
+- OpenAPI generation completed: 39 schemas, 172 paths, 176 operations, 12 tags.
+
+Environment limitation
+----------------------
+- Full dependency-aware Go tests and the complete Vite production build were not run locally.
+  This environment has Go 1.23.2 and Node 22, while the repository requires Go 1.26.5 and
+  Node 24, and required dependencies/toolchains cannot be downloaded here. GitHub Actions
+  remains the final full build and test check after pushing tag v3.6.5.
