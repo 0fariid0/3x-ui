@@ -19,6 +19,16 @@ export const transportBitsSchema = z.number().int();
 export type transportBits = z.infer<typeof transportBitsSchema>;
 
 export const AllSettingSchema = z.object({
+  anomalyAction: z.string(),
+  anomalyActionMinutes: z.number().int().min(1).max(10080),
+  anomalyCooldownMinutes: z.number().int().min(1).max(10080),
+  anomalyEnable: z.boolean(),
+  anomalyHistoryDays: z.number().int().min(1).max(3650),
+  anomalySharedIPThreshold: z.number().int().min(2).max(10000),
+  anomalySpikeMBPerMinute: z.number().int().min(1).max(1048576),
+  anomalySustainedMBPerMinute: z.number().int().min(1).max(1048576),
+  anomalySustainedMinutes: z.number().int().min(1).max(1440),
+  anomalyThrottleInboundId: z.number().int().min(0),
   datepicker: z.string(),
   expireDiff: z.number().int().min(0),
   externalTrafficInformEnable: z.boolean(),
@@ -93,6 +103,10 @@ export const AllSettingSchema = z.object({
   subJsonUserAgentRegex: z.string(),
   subKeyFile: z.string(),
   subListen: z.string(),
+  subMaintenanceEnable: z.boolean(),
+  subMaintenanceFallbackLinks: z.string(),
+  subMaintenanceMessage: z.string().max(256),
+  subMaintenanceMode: z.string(),
   subPath: z.string(),
   subPort: z.number().int().min(1).max(65535),
   subProfileUrl: z.string(),
@@ -135,6 +149,16 @@ export const AllSettingSchema = z.object({
 export type AllSetting = z.infer<typeof AllSettingSchema>;
 
 export const AllSettingViewSchema = z.object({
+  anomalyAction: z.string(),
+  anomalyActionMinutes: z.number().int().min(1).max(10080),
+  anomalyCooldownMinutes: z.number().int().min(1).max(10080),
+  anomalyEnable: z.boolean(),
+  anomalyHistoryDays: z.number().int().min(1).max(3650),
+  anomalySharedIPThreshold: z.number().int().min(2).max(10000),
+  anomalySpikeMBPerMinute: z.number().int().min(1).max(1048576),
+  anomalySustainedMBPerMinute: z.number().int().min(1).max(1048576),
+  anomalySustainedMinutes: z.number().int().min(1).max(1440),
+  anomalyThrottleInboundId: z.number().int().min(0),
   datepicker: z.string(),
   expireDiff: z.number().int().min(0),
   externalTrafficInformEnable: z.boolean(),
@@ -216,6 +240,10 @@ export const AllSettingViewSchema = z.object({
   subJsonUserAgentRegex: z.string(),
   subKeyFile: z.string(),
   subListen: z.string(),
+  subMaintenanceEnable: z.boolean(),
+  subMaintenanceFallbackLinks: z.string(),
+  subMaintenanceMessage: z.string().max(256),
+  subMaintenanceMode: z.string(),
   subPath: z.string(),
   subPort: z.number().int().min(1).max(65535),
   subProfileUrl: z.string(),
@@ -304,6 +332,60 @@ export const ClientSchema = z.object({
 });
 export type Client = z.infer<typeof ClientSchema>;
 
+export const ClientAnomalySchema = z.object({
+  action: z.string(),
+  actionUntil: z.number().int(),
+  appliedInboundId: z.number().int(),
+  createdAt: z.number().int(),
+  details: z.string(),
+  email: z.string(),
+  id: z.number().int(),
+  ipCount: z.number().int(),
+  kind: z.string(),
+  observedBytesPerMin: z.number().int(),
+  previousEnable: z.boolean(),
+  previousInboundIds: z.string(),
+  resolvedAt: z.number().int(),
+  severity: z.string(),
+  status: z.string(),
+  thresholdBytesPerMin: z.number().int(),
+});
+export type ClientAnomaly = z.infer<typeof ClientAnomalySchema>;
+
+export const ClientDailyUsageSchema = z.object({
+  day: z.string(),
+  down: z.number().int(),
+  total: z.number().int(),
+  up: z.number().int(),
+});
+export type ClientDailyUsage = z.infer<typeof ClientDailyUsageSchema>;
+
+export const ClientEventSchema = z.object({
+  createdAt: z.number().int(),
+  details: z.string(),
+  email: z.string(),
+  id: z.number().int(),
+  kind: z.string(),
+  summary: z.string(),
+});
+export type ClientEvent = z.infer<typeof ClientEventSchema>;
+
+export const ClientHourlyUsageSchema = z.object({
+  bytes: z.number().int(),
+  hour: z.number().int(),
+});
+export type ClientHourlyUsage = z.infer<typeof ClientHourlyUsageSchema>;
+
+export const ClientIPHistorySchema = z.object({
+  email: z.string(),
+  firstSeen: z.number().int(),
+  id: z.number().int(),
+  ip: z.string(),
+  lastSeen: z.number().int(),
+  seenCount: z.number().int(),
+});
+export type ClientIPHistory = z.infer<typeof ClientIPHistorySchema>;
+
 export const ClientInboundSchema = z.object({
   clientId: z.number().int(),
   createdAt: z.number().int(),
@@ -311,6 +393,23 @@ export const ClientInboundSchema = z.object({
   inboundId: z.number().int(),
 });
 export type ClientInbound = z.infer<typeof ClientInboundSchema>;
+
+export const ClientInsightReportSchema = z.object({
+  anomalies: z.array(z.lazy(() => ClientAnomalySchema)),
+  apps: z.array(z.lazy(() => ClientReportAppSchema)),
+  dailyUsage: z.array(z.lazy(() => ClientDailyUsageSchema)),
+  days: z.number().int(),
+  email: z.string(),
+  events: z.array(z.lazy(() => ClientEventSchema)),
+  hosts: z.array(z.lazy(() => ClientReportHostSchema)),
+  hourlyUsage: z.array(z.lazy(() => ClientHourlyUsageSchema)),
+  lastOnline: z.number().int(),
+  peakHour: z.number().int(),
+  peakHourBytes: z.number().int(),
+  recentIpCount: z.number().int(),
+  recentIps: z.array(z.lazy(() => ClientIPHistorySchema)),
+});
+export type ClientInsightReport = z.infer<typeof ClientInsightReportSchema>;
 
 export const ClientRecordSchema = z.object({
   adTag: z.string(),
@@ -342,6 +441,29 @@ export const ClientRecordSchema = z.object({
 });
 export type ClientRecord = z.infer<typeof ClientRecordSchema>;
 
+export const ClientReportAppSchema = z.object({
+  appName: z.string(),
+  firstSeen: z.number().int(),
+  format: z.string().optional(),
+  id: z.number().int(),
+  lastSeen: z.number().int(),
+  os: z.string().optional(),
+  requestCount: z.number().int(),
+  userAgent: z.string().optional(),
+  version: z.string().optional(),
+});
+export type ClientReportApp = z.infer<typeof ClientReportAppSchema>;
+
+export const ClientReportHostSchema = z.object({
+  address: z.string(),
+  id: z.number().int(),
+  inboundId: z.number().int(),
+  lastSeen: z.number().int(),
+  port: z.number().int(),
+  remark: z.string(),
+});
+export type ClientReportHost = z.infer<typeof ClientReportHostSchema>;
+
 export const ClientReverseSchema = z.object({
   tag: z.string(),
 });
@@ -362,6 +484,18 @@ export const ClientTrafficSchema = z.object({
   uuid: z.string(),
 });
 export type ClientTraffic = z.infer<typeof ClientTrafficSchema>;
+
+export const ClientTrafficBucketSchema = z.object({
+  bucketStart: z.number().int(),
+  createdAt: z.number().int(),
+  down: z.number().int(),
+  email: z.string(),
+  id: z.number().int(),
+  samples: z.number().int(),
+  up: z.number().int(),
+  updatedAt: z.number().int(),
+});
+export type ClientTrafficBucket = z.infer<typeof ClientTrafficBucketSchema>;
 
 export const FallbackParentInfoSchema = z.object({
   masterId: z.number().int(),

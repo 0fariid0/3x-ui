@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Card, theme } from 'antd';
 
 import { Sparkline } from '@/components/viz';
@@ -30,36 +30,37 @@ export default function VitalTile({
 }: VitalTileProps) {
   const { token } = theme.useToken();
   const meanColor = token.colorTextTertiary;
+
   const referenceLines = useMemo(
     () => (data.length > 1 ? [{ y: mean(data), dash: '3 4', color: meanColor }] : []),
     [data, meanColor],
   );
-  const meterStyle = {
-    '--fx-meter': `${Math.min(100, Math.max(0, percent)) * 3.6}deg`,
-    '--fx-meter-color': statusColor,
-  } as CSSProperties;
 
   return (
     <Card hoverable className="ov-tile" styles={{ body: { padding: 0 } }}>
-      <div className="ov-tile-top">
-        <div className="ov-tile-identity">
-          <span className="ov-tile-icon">{icon}</span>
-          <div>
-            <span className="ov-kicker">{label}</span>
-            <strong>{detail}</strong>
-          </div>
-        </div>
-        <div className="ov-meter" style={meterStyle}>
-          <div><span>{percent.toFixed(0)}</span><small>%</small></div>
-        </div>
+      <div className="ov-tile-head">
+        <span className="ov-tile-icon">{icon}</span>
+        <span className="ov-kicker">{label}</span>
+      </div>
+
+      <div className="ov-tile-value">
+        <span className="ov-tile-number">{percent.toFixed(1)}</span>
+        <span className="ov-tile-unit">%</span>
+      </div>
+
+      <div className="ov-tile-detail">{detail}</div>
+
+      <div className="ov-tile-foot">
+        <span>{footLeft}</span>
+        <span>{footRight}</span>
       </div>
 
       <div className="ov-tile-chart">
         <Sparkline
           data={data}
-          height={isMobile ? 54 : 70}
-          strokeWidth={1.8}
-          fillOpacity={0.28}
+          height={isMobile ? 48 : 62}
+          strokeWidth={1.5}
+          fillOpacity={0.3}
           showGrid={false}
           showMarker={false}
           valueMax={peak(data) > 0 ? null : 100}
@@ -68,11 +69,6 @@ export default function VitalTile({
           yFormatter={(v) => `${v.toFixed(0)}%`}
           name1={label}
         />
-      </div>
-
-      <div className="ov-tile-foot">
-        <span>{footLeft}</span>
-        <span>{footRight}</span>
       </div>
     </Card>
   );

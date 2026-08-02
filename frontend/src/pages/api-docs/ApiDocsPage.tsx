@@ -6,7 +6,6 @@ import 'swagger-ui-react/swagger-ui.css';
 
 import { useTheme } from '@/hooks/useTheme';
 import AppSidebar from '@/layouts/AppSidebar';
-import FaraPageHeader from '@/components/fara/FaraPageHeader';
 import './ApiDocsPage.css';
 
 const basePath = window.X_UI_BASE_PATH || '';
@@ -30,9 +29,7 @@ export default function ApiDocsPage() {
 
         <Layout className="content-shell">
           <Layout.Content className="content-area">
-            <div className="fx-page-stack">
-              <FaraPageHeader section="api" title={t('menu.apiDocs')} />
-              <div className="docs-wrapper" role="region" aria-label={t('menu.apiDocs')}>
+            <div className="docs-wrapper" role="region" aria-label={t('menu.apiDocs')}>
               <SwaggerUI
                 url={openApiUrl}
                 docExpansion="list"
@@ -40,7 +37,6 @@ export default function ApiDocsPage() {
                 tryItOutEnabled
                 persistAuthorization
               />
-              </div>
             </div>
           </Layout.Content>
         </Layout>

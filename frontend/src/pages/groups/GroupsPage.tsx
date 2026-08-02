@@ -47,7 +47,6 @@ import { useClients } from '@/hooks/useClients';
 import { HttpUtil, SizeFormatter } from '@/utils';
 import { setMessageInstance } from '@/utils/messageBus';
 import AppSidebar from '@/layouts/AppSidebar';
-import FaraPageHeader from '@/components/fara/FaraPageHeader';
 import { LazyMount } from '@/components/utility';
 import { keys } from '@/api/queryKeys';
 import {
@@ -475,9 +474,7 @@ export default function GroupsPage() {
                   extra={<Button type="primary" loading={loading} onClick={() => groupsQuery.refetch()}>{t('refresh')}</Button>}
                 />
               ) : (
-                <div className="fx-page-stack">
-                  <FaraPageHeader section="groups" title={t('menu.groups')} />
-                  <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 12]}>
+                <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 12]}>
                   <Col span={24}>
                     <Card size="small" hoverable className="summary-card">
                       <Row gutter={[16, isMobile ? 16 : 12]}>
@@ -550,7 +547,6 @@ export default function GroupsPage() {
                     </Card>
                   </Col>
                 </Row>
-                </div>
               )}
             </Spin>
           </Layout.Content>

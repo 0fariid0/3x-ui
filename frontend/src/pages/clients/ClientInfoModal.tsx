@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Divider, Modal, Popover, Tag, Tooltip, message } from 'antd';
+import { Button, Divider, Empty, Modal, Popover, Spin, Tag, Tooltip, message } from 'antd';
 import { CopyOutlined, DownloadOutlined, EyeOutlined, QrcodeOutlined, ReloadOutlined } from '@ant-design/icons';
 
 import { ClipboardManager, FileManager, HttpUtil, IntlUtil, SizeFormatter } from '@/utils';
@@ -53,6 +53,38 @@ interface ClientInfoModalProps {
 interface ApiMsg<T = unknown> {
   success?: boolean;
   obj?: T;
+}
+
+interface ClientReportDailyUsage { day: string; up: number; down: number; total: number; }
+interface ClientReportIP { id: number; ip: string; firstSeen: number; lastSeen: number; seenCount: number; }
+interface ClientReportApp { id: number; appName: string; version?: string; os?: string; userAgent?: string; format?: string; lastSeen?: number; }
+interface ClientReportHost { id: number; inboundId: number; remark?: string; address?: string; port?: number; lastSeen?: number; }
+interface ClientReportEvent { id: number; kind: string; summary: string; details?: string; createdAt: number; }
+interface ClientReportAnomaly {
+  id: number;
+  kind: string;
+  action: string;
+  status: string;
+  details?: string;
+  observedBytesPerMin?: number;
+  thresholdBytesPerMin?: number;
+  ipCount?: number;
+  createdAt: number;
+  resolvedAt?: number;
+}
+interface ClientInsightReport {
+  email: string;
+  days: number;
+  lastOnline: number;
+  recentIpCount: number;
+  recentIps: ClientReportIP[];
+  apps: ClientReportApp[];
+  hosts: ClientReportHost[];
+  dailyUsage: ClientReportDailyUsage[];
+  peakHour: number;
+  peakHourBytes: number;
+  events: ClientReportEvent[];
+  anomalies: ClientReportAnomaly[];
 }
 
 interface SubscriptionAgent {
@@ -109,12 +141,15 @@ export default function ClientInfoModal({
   const [ipsModalOpen, setIpsModalOpen] = useState(false);
   const [downloadingFormat, setDownloadingFormat] = useState<keyof typeof SUBSCRIPTION_DOWNLOAD_NAMES | null>(null);
   const [subscriptionAgents, setSubscriptionAgents] = useState<SubscriptionAgent[]>([]);
+  const [clientReport, setClientReport] = useState<ClientInsightReport | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setLinks([]);
       setClientIps([]);
       setSubscriptionAgents([]);
+      setClientReport(null);
       setIpsModalOpen(false);
       return;
     }
@@ -148,6 +183,30 @@ export default function ClientInfoModal({
     return () => { cancelled = true; };
   }, [open, client?.email]);
 
+  useEffect(() => {
+    if (!open || !client?.email) {
+      setClientReport(null);
+      return;
+    }
+    let cancelled = false;
+    setReportLoading(true);
+    (async () => {
+      try {
+        const msg = await HttpUtil.get(
+          `/panel/api/clients/report/${encodeURIComponent(client.email)}?days=30`,
+          undefined,
+          { silent: true },
+        ) as ApiMsg<ClientInsightReport>;
+        if (!cancelled) setClientReport(msg?.success && msg.obj ? msg.obj : null);
+      } catch (_) {
+        if (!cancelled) setClientReport(null);
+      } finally {
+        if (!cancelled) setReportLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open, client?.email]);
+
   const traffic = client?.traffic || null;
   const totalBytes = client?.totalGB || 0;
   const used = (traffic?.up || 0) + (traffic?.down || 0);
@@ -175,6 +234,23 @@ export default function ClientInfoModal({
   }, [client?.subId, client?.email, subSettings?.subClashEnable, subSettings?.subClashURI]);
 
   const showSubscription = !!(subSettings?.enable && client?.subId);
+  const reportMaxDaily = useMemo(() => Math.max(1, ...(clientReport?.dailyUsage || []).map((row) => row.total || 0)), [clientReport?.dailyUsage]);
+  const eventSummary = (event: ClientReportEvent) => {
+    const key = `pages.clients.eventKinds.${event.kind}`;
+    const translated = t(key);
+    return translated === key ? event.summary : translated;
+  };
+  const anomalyLabel = (item: ClientReportAnomaly) => {
+    const key = `pages.clients.anomalyKinds.${item.kind}`;
+    const translated = t(key);
+    return translated === key ? item.kind : translated;
+  };
+  const anomalyDescription = (item: ClientReportAnomaly) => {
+    if (item.kind === 'sharing') return t('pages.clients.anomalyDescriptions.sharing', { count: item.ipCount || 0 });
+    if (item.kind === 'sustained') return t('pages.clients.anomalyDescriptions.sustained', { rate: SizeFormatter.sizeFormat(item.observedBytesPerMin || 0) });
+    if (item.kind === 'spike') return t('pages.clients.anomalyDescriptions.spike', { rate: SizeFormatter.sizeFormat(item.observedBytesPerMin || 0) });
+    return item.details || item.action;
+  };
   const wgInbound = useMemo(() => findWireguardInbound(client, inboundsById), [client, inboundsById]);
   const wgConfigText = useMemo(() => {
     if (!client || !wgInbound || !isWireguardClient(client)) return '';
@@ -237,7 +313,7 @@ export default function ClientInfoModal({
         open={open}
         title={client ? `${t('pages.clients.clientInfo')} — ${client.email}` : t('pages.clients.clientInfo')}
         footer={null}
-        width={640}
+        width={900}
         onCancel={() => onOpenChange(false)}
       >
         {client && (
@@ -442,6 +518,82 @@ export default function ClientInfoModal({
                 </tr>
               </tbody>
             </table>
+
+            <Divider>{t('pages.clients.detailedReport')}</Divider>
+            {reportLoading ? (
+              <div className="client-report-loading"><Spin /></div>
+            ) : !clientReport ? (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('pages.clients.noReportData')} />
+            ) : (
+              <div className="client-report">
+                <div className="client-report-summary">
+                  <div><span>{t('pages.clients.recentIpCount')}</span><strong>{clientReport.recentIpCount}</strong></div>
+                  <div><span>{t('pages.clients.peakUsageHour')}</span><strong>{String(clientReport.peakHour).padStart(2, '0')}:00</strong></div>
+                  <div><span>{t('pages.clients.peakHourUsage')}</span><strong>{SizeFormatter.sizeFormat(clientReport.peakHourBytes || 0)}</strong></div>
+                  <div><span>{t('lastOnline')}</span><strong>{dateLabel(clientReport.lastOnline)}</strong></div>
+                </div>
+
+                <div className="client-report-section-title">{t('pages.clients.dailyUsage')}</div>
+                <div className="client-report-chart" role="img" aria-label={t('pages.clients.dailyUsage')}>
+                  {clientReport.dailyUsage.map((row) => (
+                    <Tooltip key={row.day} title={`${row.day}: ${SizeFormatter.sizeFormat(row.total)}`}>
+                      <div className="client-report-bar-wrap">
+                        <div className="client-report-bar" style={{ height: `${Math.max(2, (row.total / reportMaxDaily) * 100)}%` }} />
+                        <span>{row.day.slice(8)}</span>
+                      </div>
+                    </Tooltip>
+                  ))}
+                </div>
+
+                <div className="client-report-grid">
+                  <section>
+                    <div className="client-report-section-title">{t('pages.clients.recentIps')}</div>
+                    {clientReport.recentIps.length === 0 ? <span className="hint">—</span> : clientReport.recentIps.slice(0, 8).map((ip) => (
+                      <div className="client-report-row" key={ip.id}><code>{ip.ip}</code><span>{dateLabel(ip.lastSeen)}</span></div>
+                    ))}
+                  </section>
+                  <section>
+                    <div className="client-report-section-title">{t('pages.clients.appsAndOs')}</div>
+                    {clientReport.apps.length === 0 ? <span className="hint">—</span> : clientReport.apps.map((app) => (
+                      <div className="client-report-row" key={app.id}>
+                        <span>{app.appName}{app.version ? ` ${app.version}` : ''}</span>
+                        <Tag>{app.os || t('unknown')}</Tag>
+                      </div>
+                    ))}
+                  </section>
+                  <section>
+                    <div className="client-report-section-title">{t('pages.clients.usedHosts')}</div>
+                    {clientReport.hosts.length === 0 ? <span className="hint">—</span> : clientReport.hosts.slice(0, 10).map((host) => (
+                      <div className="client-report-row" key={host.id}>
+                        <span>{host.remark || host.address || `Inbound ${host.inboundId}`}</span>
+                        <code>{host.address}{host.port ? `:${host.port}` : ''}</code>
+                      </div>
+                    ))}
+                  </section>
+                  <section>
+                    <div className="client-report-section-title">{t('pages.clients.anomalyHistory')}</div>
+                    {clientReport.anomalies.length === 0 ? <span className="hint">—</span> : clientReport.anomalies.slice(0, 8).map((item) => (
+                      <div className="client-report-timeline" key={item.id}>
+                        <Tag color={item.status === 'resolved' ? 'green' : 'orange'}>{anomalyLabel(item)}</Tag>
+                        <span>{anomalyDescription(item)}</span>
+                        <small>{dateLabel(item.createdAt)}</small>
+                      </div>
+                    ))}
+                  </section>
+                </div>
+
+                <div className="client-report-section-title">{t('pages.clients.changeHistory')}</div>
+                <div className="client-report-events">
+                  {clientReport.events.length === 0 ? <span className="hint">—</span> : clientReport.events.slice(0, 15).map((event) => (
+                    <div className="client-report-timeline" key={event.id}>
+                      <Tag>{event.kind}</Tag>
+                      <span>{eventSummary(event)}</span>
+                      <small>{dateLabel(event.createdAt)}</small>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {showSubscription && subLink && (
               <>

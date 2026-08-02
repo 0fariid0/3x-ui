@@ -63,7 +63,6 @@ import ClientTrafficCell from '@/components/clients/ClientTrafficCell';
 import ClientSpeedTag, { isActiveSpeed } from '@/components/clients/ClientSpeedTag';
 import ClientCardComment from '@/components/clients/ClientCardComment';
 import AppSidebar from '@/layouts/AppSidebar';
-import FaraPageHeader from '@/components/fara/FaraPageHeader';
 import { HttpUtil, IntlUtil, SizeFormatter } from '@/utils';
 import { setMessageInstance } from '@/utils/messageBus';
 import { LazyMount } from '@/components/utility';
@@ -1041,9 +1040,7 @@ export default function ClientsPage() {
                   extra={<Button type="primary" loading={refreshing} onClick={onRefreshClick}>{t('refresh')}</Button>}
                 />
               ) : (
-                <div className="fx-page-stack">
-                  <FaraPageHeader section="clients" title={t('menu.clients')} />
-                  <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 12]}>
+                <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 12]}>
                   <Col span={24}>
                     <Card size="small" hoverable className="summary-card">
                       <Row gutter={[16, 12]}>
@@ -1507,7 +1504,6 @@ export default function ClientsPage() {
                     </Card>
                   </Col>
                 </Row>
-                </div>
               )}
             </Spin>
           </Layout.Content>

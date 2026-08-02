@@ -1,7 +1,11 @@
 [English](/README.md) | [فارسی](/README.fa_IR.md) | [العربية](/README.ar_EG.md) | [中文](/README.zh_CN.md) | [Español](/README.es_ES.md) | [Русский](/README.ru_RU.md) | [Türkçe](/README.tr_TR.md)
 
-<h1 align="center">Fara Xray</h1>
-<p align="center">A modern, mobile-first interface for the 3x-ui/Xray control panel.</p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./media/3x-ui-dark.png">
+    <img alt="3x-ui" src="./media/3x-ui-light.png">
+  </picture>
+</p>
 
 <p align="center">
   <a href="https://github.com/0fariid0/3x-ui/releases"><img src="https://img.shields.io/github/v/release/0fariid0/3x-ui" alt="Release"></a>
@@ -12,7 +16,9 @@
   <a href="https://pkg.go.dev/github.com/mhsanaei/3x-ui/v3"><img src="https://pkg.go.dev/badge/github.com/mhsanaei/3x-ui/v3.svg" alt="Go Reference"></a>
 </p>
 
-**Fara Xray** is a customized, modern interface built on top of the open-source 3x-ui project for managing Xray-core servers. It preserves the original backend and protocol capabilities while adding a dark-first responsive experience and custom operational features.
+**3X-UI** is an advanced, open-source web control panel for managing [Xray-core](https://github.com/XTLS/Xray-core) servers. It provides a clean, multi-language interface for deploying, configuring, and monitoring a wide range of proxy and VPN protocols — from a single VPS to multi-node deployments.
+
+Built as an enhanced fork of the original X-UI project, 3X-UI adds broader protocol support, improved stability, per-client traffic accounting, and many quality-of-life features.
 
 > [!IMPORTANT]
 > This project is intended for personal use only. Please do not use it for illegal purposes or in a production environment.
@@ -24,6 +30,9 @@
 - **Fallbacks** — serve multiple protocols on a single port (e.g. VLESS and Trojan on 443) using Xray's fallback support.
 - **Per-client management** — traffic quotas, expiry dates, IP limits, live online status, and one-click share links, QR codes, and subscriptions.
 - **Traffic statistics** — per inbound, per client, and per outbound, with reset controls.
+- **Detailed client reports** — daily usage, recent IPs, subscription apps/OS, related Hosts, peak hours, anomalies, and renewal/change history.
+- **Abnormal usage protection** — configurable spike, sustained-traffic, and possible-sharing detection with alert, temporary disable, or limited-inbound reactions.
+- **Subscription maintenance mode** — prepend a maintenance notice or temporarily replace normal RAW/JSON/Clash profiles with emergency fallback links.
 - **Multi-node support** — manage and scale across multiple servers from a single panel.
 - **Outbound & routing** — WARP, NordVPN, custom routing rules, load balancers, and outbound proxy chaining.
 - **Built-in subscription server** with multiple output formats and [custom page templates](docs/custom-subscription-templates.md).

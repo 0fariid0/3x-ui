@@ -22,8 +22,8 @@ export function usePageTitle() {
 
   useEffect(() => {
     const key = TITLE_KEYS[pathname];
-    const title = key ? t(key) : 'Fara Xray';
+    const title = key ? t(key) : '3X-UI';
     const host = window.location.hostname;
-    document.title = host ? `${title} · Fara Xray · ${host}` : `${title} · Fara Xray`;
+    document.title = host ? `${host} - ${title}` : title;
   }, [pathname, t]);
 }

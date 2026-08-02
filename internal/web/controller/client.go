@@ -16,6 +16,12 @@ func notifyClientsChanged() {
 	websocket.BroadcastInvalidate(websocket.MessageTypeClients)
 }
 
+func recordClientEvents(insights *service.ClientInsightService, emails []string, kind, summary string, details any) {
+	for _, email := range emails {
+		_ = insights.RecordEvent(email, kind, summary, details)
+	}
+}
+
 func parseInboundIdsQuery(raw string) []int {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -36,6 +42,7 @@ type ClientController struct {
 	inboundService service.InboundService
 	xrayService    service.XrayService
 	settingService service.SettingService
+	insightService service.ClientInsightService
 }
 
 func NewClientController(g *gin.RouterGroup) *ClientController {
@@ -54,6 +61,7 @@ func (a *ClientController) initRouter(g *gin.RouterGroup) {
 	g.GET("/links/:email", a.getClientLinks)
 	g.GET("/subscriptionApps/:email", a.getSubscriptionApps)
 	g.GET("/subscriptionLinkOptions/:email", a.getSubscriptionLinkOptions)
+	g.GET("/report/:email", a.getReport)
 
 	g.POST("/add", a.create)
 	g.POST("/update/:email", a.update)
@@ -174,6 +182,16 @@ func (a *ClientController) getByTgId(c *gin.Context) {
 	jsonObj(c, results, nil)
 }
 
+func (a *ClientController) getReport(c *gin.Context) {
+	days, _ := strconv.Atoi(c.DefaultQuery("days", "30"))
+	report, err := a.insightService.GetReport(c.Param("email"), days)
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
+		return
+	}
+	jsonObj(c, report, nil)
+}
+
 func (a *ClientController) create(c *gin.Context) {
 	var payload service.ClientCreatePayload
 	if err := c.ShouldBindJSON(&payload); err != nil {
@@ -189,11 +207,13 @@ func (a *ClientController) create(c *gin.Context) {
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
+	_ = a.insightService.RecordEvent(payload.Client.Email, "created", "Client created", map[string]any{"inboundIds": payload.InboundIds})
 	notifyClientsChanged()
 }
 
 func (a *ClientController) update(c *gin.Context) {
 	email := c.Param("email")
+	previous, _ := a.clientService.GetRecordByEmail(nil, email)
 	var updated model.Client
 	if err := c.ShouldBindJSON(&updated); err != nil {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
@@ -209,6 +229,14 @@ func (a *ClientController) update(c *gin.Context) {
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
+	if updated.Email != email {
+		_ = a.insightService.RenameClientHistory(email, updated.Email)
+	}
+	kind, summary := "updated", "Client settings updated"
+	if previous != nil && (updated.ExpiryTime > previous.ExpiryTime || updated.TotalGB > previous.TotalGB) {
+		kind, summary = "renewed", "Client renewed or quota increased"
+	}
+	_ = a.insightService.RecordEvent(updated.Email, kind, summary, map[string]any{"previousEmail": email, "expiryTime": updated.ExpiryTime, "totalGB": updated.TotalGB, "enable": updated.Enable})
 	notifyClientsChanged()
 }
 
@@ -224,6 +252,7 @@ func (a *ClientController) delete(c *gin.Context) {
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
+	_ = a.insightService.RecordEvent(email, "deleted", "Client deleted", map[string]any{"keepTraffic": keepTraffic})
 	notifyClientsChanged()
 }
 
@@ -255,6 +284,7 @@ func (a *ClientController) attach(c *gin.Context) {
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
+	_ = a.insightService.RecordEvent(email, "attached", "Client attached to inbounds", map[string]any{"inboundIds": body.InboundIds})
 	notifyClientsChanged()
 }
 
@@ -270,6 +300,7 @@ func (a *ClientController) setExternalLinks(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), nil)
+	_ = a.insightService.RecordEvent(email, "external_links", "External subscription links updated", map[string]any{"count": len(body.ExternalLinks)})
 	notifyClientsChanged()
 }
 
@@ -305,6 +336,7 @@ func (a *ClientController) setSubscriptionLinkOptions(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), nil)
+	_ = a.insightService.RecordEvent(c.Param("email"), "subscription_links", "Subscription link visibility updated", map[string]any{"disabledKeys": body.DisabledKeys})
 	notifyClientsChanged()
 }
 
@@ -343,6 +375,7 @@ func (a *ClientController) bulkAdjust(c *gin.Context) {
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
+	recordClientEvents(&a.insightService, req.Emails, "bulk_adjusted", "Client expiry, quota, or flow adjusted", req)
 	notifyClientsChanged()
 }
 
@@ -371,6 +404,7 @@ func (a *ClientController) bulkAttach(c *gin.Context) {
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
+	recordClientEvents(&a.insightService, req.Emails, "attached", "Client attached to inbounds", map[string]any{"inboundIds": req.InboundIds})
 	notifyClientsChanged()
 }
 
@@ -394,6 +428,7 @@ func (a *ClientController) bulkDetach(c *gin.Context) {
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
+	recordClientEvents(&a.insightService, req.Emails, "detached", "Client detached from inbounds", map[string]any{"inboundIds": req.InboundIds})
 	notifyClientsChanged()
 }
 
@@ -412,6 +447,7 @@ func (a *ClientController) bulkDelete(c *gin.Context) {
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
+	recordClientEvents(&a.insightService, req.Emails, "deleted", "Client deleted in bulk", map[string]any{"keepTraffic": req.KeepTraffic})
 	notifyClientsChanged()
 }
 
@@ -442,6 +478,11 @@ func (a *ClientController) bulkSetEnable(c *gin.Context, enable bool) {
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
+	kind, summary := "enabled", "Client enabled"
+	if !enable {
+		kind, summary = "disabled", "Client disabled"
+	}
+	recordClientEvents(&a.insightService, req.Emails, kind, summary, nil)
 	notifyClientsChanged()
 }
 
@@ -459,6 +500,9 @@ func (a *ClientController) bulkCreate(c *gin.Context) {
 	jsonObj(c, result, nil)
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
+	}
+	for _, payload := range payloads {
+		_ = a.insightService.RecordEvent(payload.Client.Email, "created", "Client created in bulk", map[string]any{"inboundIds": payload.InboundIds})
 	}
 	notifyClientsChanged()
 }
@@ -539,6 +583,7 @@ func (a *ClientController) resetTrafficByEmail(c *gin.Context) {
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
+	_ = a.insightService.RecordEvent(email, "traffic_reset", "Client traffic reset", nil)
 	notifyClientsChanged()
 }
 
@@ -559,6 +604,7 @@ func (a *ClientController) updateTrafficByEmail(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), nil)
+	_ = a.insightService.RecordEvent(email, "traffic_adjusted", "Client traffic manually adjusted", req)
 	notifyClientsChanged()
 }
 
@@ -580,6 +626,7 @@ func (a *ClientController) clearIps(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.logCleanSuccess"), nil)
+	_ = a.insightService.RecordEvent(email, "ip_history_cleared", "Live IP log cleared", nil)
 }
 
 func (a *ClientController) onlines(c *gin.Context) {
@@ -643,6 +690,7 @@ func (a *ClientController) detach(c *gin.Context) {
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
+	_ = a.insightService.RecordEvent(email, "detached", "Client detached from inbounds", map[string]any{"inboundIds": body.InboundIds})
 	notifyClientsChanged()
 }
 
@@ -663,5 +711,6 @@ func (a *ClientController) bulkResetTraffic(c *gin.Context) {
 	}
 	jsonObj(c, gin.H{"affected": affected}, nil)
 	a.xrayService.SetToNeedRestart()
+	recordClientEvents(&a.insightService, req.Emails, "traffic_reset", "Client traffic reset in bulk", nil)
 	notifyClientsChanged()
 }

@@ -15,10 +15,12 @@ import (
 
 // XrayTrafficJob collects and processes traffic statistics from Xray, updating the database and optionally informing external APIs.
 type XrayTrafficJob struct {
-	settingService  service.SettingService
-	xrayService     service.XrayService
-	inboundService  service.InboundService
-	outboundService outbound.OutboundService
+	settingService     service.SettingService
+	xrayService        service.XrayService
+	inboundService     service.InboundService
+	outboundService    outbound.OutboundService
+	insightService     service.ClientInsightService
+	lastInsightCleanup time.Time
 }
 
 // clientStatsSnapshotMaxClients caps how many client_traffics rows the job
@@ -78,6 +80,27 @@ func (j *XrayTrafficJob) Run() {
 	traffics, clientTraffics, err := j.xrayService.GetXrayTraffic()
 	if err != nil {
 		return
+	}
+	now := time.Now()
+	if err := j.insightService.RecordTraffic(clientTraffics, now); err != nil {
+		logger.Warning("record client traffic insights failed:", err)
+	}
+	if err := j.insightService.RestoreExpiredActions(&j.inboundService, &j.xrayService); err != nil {
+		logger.Warning("restore expired anomaly actions failed:", err)
+	}
+	if insightSettings, settingErr := j.settingService.GetAllSetting(); settingErr != nil {
+		logger.Warning("get anomaly settings failed:", settingErr)
+	} else {
+		if err := j.insightService.EvaluateAnomalies(clientTraffics, insightSettings, &j.inboundService, &j.xrayService); err != nil {
+			logger.Warning("evaluate client anomalies failed:", err)
+		}
+		if j.lastInsightCleanup.IsZero() || now.Sub(j.lastInsightCleanup) >= 24*time.Hour {
+			if err := j.insightService.Cleanup(insightSettings.AnomalyHistoryDays); err != nil {
+				logger.Warning("cleanup client insight history failed:", err)
+			} else {
+				j.lastInsightCleanup = now
+			}
+		}
 	}
 	needRestart0, clientsDisabled, err := j.inboundService.AddTraffic(traffics, clientTraffics)
 	if err != nil {

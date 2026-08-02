@@ -59,6 +59,10 @@ func migrationModels() []any {
 		&model.NodeClientIp{},
 		&model.ClientGlobalTraffic{},
 		&model.OutboundSubscription{},
+		&model.ClientTrafficBucket{},
+		&model.ClientIPHistory{},
+		&model.ClientEvent{},
+		&model.ClientAnomaly{},
 	}
 }
 

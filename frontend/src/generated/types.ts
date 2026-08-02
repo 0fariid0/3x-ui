@@ -7,6 +7,16 @@ export type staticEgressResolver = string;
 export type transportBits = number;
 
 export interface AllSetting {
+  anomalyAction: string;
+  anomalyActionMinutes: number;
+  anomalyCooldownMinutes: number;
+  anomalyEnable: boolean;
+  anomalyHistoryDays: number;
+  anomalySharedIPThreshold: number;
+  anomalySpikeMBPerMinute: number;
+  anomalySustainedMBPerMinute: number;
+  anomalySustainedMinutes: number;
+  anomalyThrottleInboundId: number;
   datepicker: string;
   expireDiff: number;
   externalTrafficInformEnable: boolean;
@@ -81,6 +91,10 @@ export interface AllSetting {
   subJsonUserAgentRegex: string;
   subKeyFile: string;
   subListen: string;
+  subMaintenanceEnable: boolean;
+  subMaintenanceFallbackLinks: string;
+  subMaintenanceMessage: string;
+  subMaintenanceMode: string;
   subPath: string;
   subPort: number;
   subProfileUrl: string;
@@ -122,6 +136,16 @@ export interface AllSetting {
 }
 
 export interface AllSettingView {
+  anomalyAction: string;
+  anomalyActionMinutes: number;
+  anomalyCooldownMinutes: number;
+  anomalyEnable: boolean;
+  anomalyHistoryDays: number;
+  anomalySharedIPThreshold: number;
+  anomalySpikeMBPerMinute: number;
+  anomalySustainedMBPerMinute: number;
+  anomalySustainedMinutes: number;
+  anomalyThrottleInboundId: number;
   datepicker: string;
   expireDiff: number;
   externalTrafficInformEnable: boolean;
@@ -203,6 +227,10 @@ export interface AllSettingView {
   subJsonUserAgentRegex: string;
   subKeyFile: string;
   subListen: string;
+  subMaintenanceEnable: boolean;
+  subMaintenanceFallbackLinks: string;
+  subMaintenanceMessage: string;
+  subMaintenanceMode: string;
   subPath: string;
   subPort: number;
   subProfileUrl: string;
@@ -287,11 +315,76 @@ export interface Client {
   updated_at?: number;
 }
 
+export interface ClientAnomaly {
+  action: string;
+  actionUntil: number;
+  appliedInboundId: number;
+  createdAt: number;
+  details: string;
+  email: string;
+  id: number;
+  ipCount: number;
+  kind: string;
+  observedBytesPerMin: number;
+  previousEnable: boolean;
+  previousInboundIds: string;
+  resolvedAt: number;
+  severity: string;
+  status: string;
+  thresholdBytesPerMin: number;
+}
+
+export interface ClientDailyUsage {
+  day: string;
+  down: number;
+  total: number;
+  up: number;
+}
+
+export interface ClientEvent {
+  createdAt: number;
+  details: string;
+  email: string;
+  id: number;
+  kind: string;
+  summary: string;
+}
+
+export interface ClientHourlyUsage {
+  bytes: number;
+  hour: number;
+}
+
+export interface ClientIPHistory {
+  email: string;
+  firstSeen: number;
+  id: number;
+  ip: string;
+  lastSeen: number;
+  seenCount: number;
+}
+
 export interface ClientInbound {
   clientId: number;
   createdAt: number;
   flowOverride: string;
   inboundId: number;
+}
+
+export interface ClientInsightReport {
+  anomalies: ClientAnomaly[];
+  apps: ClientReportApp[];
+  dailyUsage: ClientDailyUsage[];
+  days: number;
+  email: string;
+  events: ClientEvent[];
+  hosts: ClientReportHost[];
+  hourlyUsage: ClientHourlyUsage[];
+  lastOnline: number;
+  peakHour: number;
+  peakHourBytes: number;
+  recentIpCount: number;
+  recentIps: ClientIPHistory[];
 }
 
 export interface ClientRecord {
@@ -323,6 +416,27 @@ export interface ClientRecord {
   uuid: string;
 }
 
+export interface ClientReportApp {
+  appName: string;
+  firstSeen: number;
+  format?: string;
+  id: number;
+  lastSeen: number;
+  os?: string;
+  requestCount: number;
+  userAgent?: string;
+  version?: string;
+}
+
+export interface ClientReportHost {
+  address: string;
+  id: number;
+  inboundId: number;
+  lastSeen: number;
+  port: number;
+  remark: string;
+}
+
 export interface ClientReverse {
   tag: string;
 }
@@ -340,6 +454,17 @@ export interface ClientTraffic {
   total: number;
   up: number;
   uuid: string;
+}
+
+export interface ClientTrafficBucket {
+  bucketStart: number;
+  createdAt: number;
+  down: number;
+  email: string;
+  id: number;
+  samples: number;
+  up: number;
+  updatedAt: number;
 }
 
 export interface FallbackParentInfo {

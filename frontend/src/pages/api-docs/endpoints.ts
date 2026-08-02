@@ -589,6 +589,16 @@ export const sections: readonly Section[] = [
       },
       {
         method: 'GET',
+        path: '/panel/api/clients/report/:email',
+        summary: 'Return the detailed per-client report: daily and hourly traffic, recent IP history, detected subscription apps/OS, associated Hosts, anomalies, and the renewal/change timeline.',
+        params: [
+          { name: 'email', in: 'path', type: 'string', desc: 'Client email (unique identifier).' },
+          { name: 'days', in: 'query', type: 'integer', optional: true, defaultValue: 30, desc: 'Daily traffic range, 1 to 365 days.' },
+        ],
+        responseSchema: 'ClientInsightReport',
+      },
+      {
+        method: 'GET',
         path: '/panel/api/clients/get/tgId/:tgId',
         summary: 'Fetch clients by Telegram user ID. Returns an array since multiple clients can share the same Telegram ID.',
         params: [

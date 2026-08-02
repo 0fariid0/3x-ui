@@ -94,6 +94,10 @@ var defaultValueMap = map[string]string{
 	"subSupportUrl":                 "",
 	"subProfileUrl":                 "",
 	"subAnnounce":                   "",
+	"subMaintenanceEnable":          "false",
+	"subMaintenanceMode":            "notice",
+	"subMaintenanceMessage":         "🔧 Server maintenance in progress",
+	"subMaintenanceFallbackLinks":   "",
 	"subEnableRouting":              "false",
 	"subRoutingRules":               "",
 	"subHideSettings":               "false",
@@ -126,6 +130,16 @@ var defaultValueMap = map[string]string{
 	"externalTrafficInformEnable":   "false",
 	"externalTrafficInformURI":      "",
 	"restartXrayOnClientDisable":    "true",
+	"anomalyEnable":                 "false",
+	"anomalySpikeMBPerMinute":       "1024",
+	"anomalySustainedMBPerMinute":   "512",
+	"anomalySustainedMinutes":       "10",
+	"anomalySharedIPThreshold":      "5",
+	"anomalyAction":                 "alert",
+	"anomalyActionMinutes":          "30",
+	"anomalyThrottleInboundId":      "0",
+	"anomalyCooldownMinutes":        "60",
+	"anomalyHistoryDays":            "90",
 	"scheduledRestartEnable":        "false",
 	"scheduledRestartInterval":      "24",
 	"scheduledRestartUnit":          "hours",
@@ -831,6 +845,22 @@ func (s *SettingService) GetSubAnnounce() (string, error) {
 	return s.getString("subAnnounce")
 }
 
+func (s *SettingService) GetSubMaintenanceEnable() (bool, error) {
+	return s.getBool("subMaintenanceEnable")
+}
+
+func (s *SettingService) GetSubMaintenanceMode() (string, error) {
+	return s.getString("subMaintenanceMode")
+}
+
+func (s *SettingService) GetSubMaintenanceMessage() (string, error) {
+	return s.getString("subMaintenanceMessage")
+}
+
+func (s *SettingService) GetSubMaintenanceFallbackLinks() (string, error) {
+	return s.getString("subMaintenanceFallbackLinks")
+}
+
 func (s *SettingService) GetSubEnableRouting() (bool, error) {
 	return s.getBool("subEnableRouting")
 }
@@ -978,6 +1008,31 @@ func (s *SettingService) GetExternalTrafficInformURI() (string, error) {
 func (s *SettingService) SetExternalTrafficInformURI(InformURI string) error {
 	return s.setString("externalTrafficInformURI", InformURI)
 }
+
+func (s *SettingService) GetAnomalyEnable() (bool, error) { return s.getBool("anomalyEnable") }
+func (s *SettingService) GetAnomalySpikeMBPerMinute() (int, error) {
+	return s.getInt("anomalySpikeMBPerMinute")
+}
+func (s *SettingService) GetAnomalySustainedMBPerMinute() (int, error) {
+	return s.getInt("anomalySustainedMBPerMinute")
+}
+func (s *SettingService) GetAnomalySustainedMinutes() (int, error) {
+	return s.getInt("anomalySustainedMinutes")
+}
+func (s *SettingService) GetAnomalySharedIPThreshold() (int, error) {
+	return s.getInt("anomalySharedIPThreshold")
+}
+func (s *SettingService) GetAnomalyAction() (string, error) { return s.getString("anomalyAction") }
+func (s *SettingService) GetAnomalyActionMinutes() (int, error) {
+	return s.getInt("anomalyActionMinutes")
+}
+func (s *SettingService) GetAnomalyThrottleInboundId() (int, error) {
+	return s.getInt("anomalyThrottleInboundId")
+}
+func (s *SettingService) GetAnomalyCooldownMinutes() (int, error) {
+	return s.getInt("anomalyCooldownMinutes")
+}
+func (s *SettingService) GetAnomalyHistoryDays() (int, error) { return s.getInt("anomalyHistoryDays") }
 
 func (s *SettingService) GetRestartXrayOnClientDisable() (bool, error) {
 	return s.getBool("restartXrayOnClientDisable")

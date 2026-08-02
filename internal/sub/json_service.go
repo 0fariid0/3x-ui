@@ -74,7 +74,7 @@ func (s *SubJsonService) GetJsonNamed(subId string, host string, alwaysReturnArr
 	if err != nil {
 		return "", "", err
 	}
-	if len(inbounds) == 0 && len(externalLinks) == 0 {
+	if len(inbounds) == 0 && len(externalLinks) == 0 && !subReq.maintenanceEnabled {
 		return "", "", nil
 	}
 
@@ -82,6 +82,23 @@ func (s *SubJsonService) GetJsonNamed(subId string, host string, alwaysReturnArr
 	var configArray []json_util.RawMessage
 
 	seenEmails := make(map[string]struct{})
+	if maintenanceClient, maintenanceInbound, ok := subReq.subscriptionDisplayContext(subId, inbounds); ok && (subReq.maintenanceActive() || subReq.maintenanceFallbackOnly()) {
+		if config := s.maintenanceConfig(subReq, maintenanceInbound, maintenanceClient); len(config) > 0 {
+			configArray = append(configArray, config)
+			seenEmails[maintenanceClient.Email] = struct{}{}
+		}
+		if subReq.maintenanceFallbackOnly() {
+			configArray = append(configArray, s.maintenanceFallbackConfigs(subReq)...)
+			traffic, _ := subReq.AggregateTrafficByEmails([]string{maintenanceClient.Email})
+			header = fmt.Sprintf("upload=%d; download=%d; total=%d; expire=%d", traffic.Up, traffic.Down, traffic.Total, traffic.ExpiryTime/1000)
+			if len(configArray) == 1 && !alwaysReturnArray {
+				finalJson, _ := json.MarshalIndent(configArray[0], "", "  ")
+				return string(finalJson), header, nil
+			}
+			finalJson, _ := json.MarshalIndent(configArray, "", "  ")
+			return string(finalJson), header, nil
+		}
+	}
 	if displayClient, displayInbound, ok := subReq.subscriptionDisplayContext(subId, inbounds); ok {
 		if displayConfig := s.subscriptionDisplayConfig(subReq, displayInbound, displayClient); len(displayConfig) > 0 {
 			configArray = append(configArray, displayConfig)

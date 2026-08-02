@@ -15,7 +15,6 @@ import { useNodesQuery } from '@/api/queries/useNodesQuery';
 import type { NodeRecord } from '@/api/queries/useNodesQuery';
 import { useNodeMutations } from '@/api/queries/useNodeMutations';
 import AppSidebar from '@/layouts/AppSidebar';
-import FaraPageHeader from '@/components/fara/FaraPageHeader';
 import NodeList from './NodeList';
 import NodeFormModal from './NodeFormModal';
 import { setMessageInstance } from '@/utils/messageBus';
@@ -241,9 +240,7 @@ export default function NodesPage() {
                   extra={<Button type="primary" loading={loading} onClick={() => refetch()}>{t('refresh')}</Button>}
                 />
               ) : (
-                <div className="fx-page-stack">
-                  <FaraPageHeader section="nodes" title={t('menu.nodes')} />
-                  <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 12]}>
+                <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 12]}>
                   <Col span={24}>
                     <Card size="small" hoverable className="summary-card">
                       <Row gutter={[16, isMobile ? 16 : 12]}>
@@ -298,7 +295,6 @@ export default function NodesPage() {
                     />
                   </Col>
                 </Row>
-                </div>
               )}
             </Spin>
           </Layout.Content>

@@ -7,6 +7,7 @@ import (
 	"net/mail"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
 )
@@ -77,6 +78,10 @@ type AllSetting struct {
 	SubSupportUrl               string `json:"subSupportUrl" form:"subSupportUrl"`
 	SubProfileUrl               string `json:"subProfileUrl" form:"subProfileUrl"`
 	SubAnnounce                 string `json:"subAnnounce" form:"subAnnounce"`
+	SubMaintenanceEnable        bool   `json:"subMaintenanceEnable" form:"subMaintenanceEnable"`
+	SubMaintenanceMode          string `json:"subMaintenanceMode" form:"subMaintenanceMode"`
+	SubMaintenanceMessage       string `json:"subMaintenanceMessage" form:"subMaintenanceMessage" validate:"omitempty,max=256"`
+	SubMaintenanceFallbackLinks string `json:"subMaintenanceFallbackLinks" form:"subMaintenanceFallbackLinks"`
 	SubEnableRouting            bool   `json:"subEnableRouting" form:"subEnableRouting"`
 	SubRoutingRules             string `json:"subRoutingRules" form:"subRoutingRules"`
 	SubIncyEnableRouting        bool   `json:"subIncyEnableRouting" form:"subIncyEnableRouting"`
@@ -91,6 +96,16 @@ type AllSetting struct {
 	ExternalTrafficInformEnable bool   `json:"externalTrafficInformEnable" form:"externalTrafficInformEnable"`
 	ExternalTrafficInformURI    string `json:"externalTrafficInformURI" form:"externalTrafficInformURI"`
 	RestartXrayOnClientDisable  bool   `json:"restartXrayOnClientDisable" form:"restartXrayOnClientDisable"`
+	AnomalyEnable               bool   `json:"anomalyEnable" form:"anomalyEnable"`
+	AnomalySpikeMBPerMinute     int    `json:"anomalySpikeMBPerMinute" form:"anomalySpikeMBPerMinute" validate:"gte=1,lte=1048576"`
+	AnomalySustainedMBPerMinute int    `json:"anomalySustainedMBPerMinute" form:"anomalySustainedMBPerMinute" validate:"gte=1,lte=1048576"`
+	AnomalySustainedMinutes     int    `json:"anomalySustainedMinutes" form:"anomalySustainedMinutes" validate:"gte=1,lte=1440"`
+	AnomalySharedIPThreshold    int    `json:"anomalySharedIPThreshold" form:"anomalySharedIPThreshold" validate:"gte=2,lte=10000"`
+	AnomalyAction               string `json:"anomalyAction" form:"anomalyAction"`
+	AnomalyActionMinutes        int    `json:"anomalyActionMinutes" form:"anomalyActionMinutes" validate:"gte=1,lte=10080"`
+	AnomalyThrottleInboundId    int    `json:"anomalyThrottleInboundId" form:"anomalyThrottleInboundId" validate:"gte=0"`
+	AnomalyCooldownMinutes      int    `json:"anomalyCooldownMinutes" form:"anomalyCooldownMinutes" validate:"gte=1,lte=10080"`
+	AnomalyHistoryDays          int    `json:"anomalyHistoryDays" form:"anomalyHistoryDays" validate:"gte=1,lte=3650"`
 	ScheduledRestartEnable      bool   `json:"scheduledRestartEnable" form:"scheduledRestartEnable"`
 	ScheduledRestartInterval    int    `json:"scheduledRestartInterval" form:"scheduledRestartInterval"`
 	ScheduledRestartUnit        string `json:"scheduledRestartUnit" form:"scheduledRestartUnit"`
@@ -204,6 +219,58 @@ func (s *AllSetting) CheckValid() error {
 	}
 	if s.XrayHealthWindowMinutes == 0 {
 		s.XrayHealthWindowMinutes = 30
+	}
+
+	if s.SubMaintenanceMode == "" {
+		s.SubMaintenanceMode = "notice"
+	}
+	if s.SubMaintenanceMode != "notice" && s.SubMaintenanceMode != "fallback" {
+		return common.NewError("subscription maintenance mode must be notice or fallback")
+	}
+	if utf8.RuneCountInString(s.SubMaintenanceMessage) > 256 {
+		return common.NewError("subscription maintenance message is too long")
+	}
+	if len(s.SubMaintenanceFallbackLinks) > 128*1024 {
+		return common.NewError("subscription maintenance fallback list is too large")
+	}
+	if s.AnomalySpikeMBPerMinute == 0 {
+		s.AnomalySpikeMBPerMinute = 1024
+	}
+	if s.AnomalySustainedMBPerMinute == 0 {
+		s.AnomalySustainedMBPerMinute = 512
+	}
+	if s.AnomalySustainedMinutes == 0 {
+		s.AnomalySustainedMinutes = 10
+	}
+	if s.AnomalySharedIPThreshold == 0 {
+		s.AnomalySharedIPThreshold = 5
+	}
+	if s.AnomalyActionMinutes == 0 {
+		s.AnomalyActionMinutes = 30
+	}
+	if s.AnomalyCooldownMinutes == 0 {
+		s.AnomalyCooldownMinutes = 60
+	}
+	if s.AnomalyHistoryDays == 0 {
+		s.AnomalyHistoryDays = 90
+	}
+	if s.AnomalySpikeMBPerMinute < 1 || s.AnomalySpikeMBPerMinute > 1048576 ||
+		s.AnomalySustainedMBPerMinute < 1 || s.AnomalySustainedMBPerMinute > 1048576 ||
+		s.AnomalySustainedMinutes < 1 || s.AnomalySustainedMinutes > 1440 ||
+		s.AnomalySharedIPThreshold < 2 || s.AnomalySharedIPThreshold > 10000 ||
+		s.AnomalyActionMinutes < 1 || s.AnomalyActionMinutes > 10080 ||
+		s.AnomalyCooldownMinutes < 1 || s.AnomalyCooldownMinutes > 10080 ||
+		s.AnomalyHistoryDays < 1 || s.AnomalyHistoryDays > 3650 || s.AnomalyThrottleInboundId < 0 {
+		return common.NewError("abnormal usage settings are outside the allowed range")
+	}
+	if s.AnomalyAction == "" {
+		s.AnomalyAction = "alert"
+	}
+	if s.AnomalyAction != "alert" && s.AnomalyAction != "disable" && s.AnomalyAction != "throttle" {
+		return common.NewError("anomaly action must be alert, disable, or throttle")
+	}
+	if s.AnomalyAction == "throttle" && s.AnomalyEnable && s.AnomalyThrottleInboundId <= 0 {
+		return common.NewError("anomaly throttle inbound is required when throttle action is selected")
 	}
 
 	if (s.SubPort == s.WebPort) && listenAddressesConflict(s.WebListen, s.SubListen) {

@@ -58,6 +58,18 @@ func (j *CheckClientIpJob) Run() {
 		return
 	}
 
+	insightObserved := make(map[string][]model.ClientIpEntry, len(observed))
+	for email, ips := range observed {
+		entries := make([]model.ClientIpEntry, 0, len(ips))
+		for ip, timestamp := range ips {
+			entries = append(entries, model.ClientIpEntry{IP: ip, Timestamp: timestamp})
+		}
+		insightObserved[email] = entries
+	}
+	if err := (&service.ClientInsightService{}).RecordIPHistory(insightObserved); err != nil {
+		logger.Debug("[ClientInsights] record IP history failed:", err)
+	}
+
 	if !isFail2BanEnabled() {
 		return
 	}

@@ -73,8 +73,12 @@ type SubService struct {
 	// displayHostEnabled/displayHostRemark configure one synthetic informational
 	// entry that is prepended once to every subscription, regardless of how many
 	// inbounds the client is attached to.
-	displayHostEnabled bool
-	displayHostRemark  string
+	displayHostEnabled       bool
+	displayHostRemark        string
+	maintenanceEnabled       bool
+	maintenanceMode          string
+	maintenanceMessage       string
+	maintenanceFallbackLinks string
 	// Per-client link visibility caches. Exclusions opt a client out of globally
 	// enabled links; inclusions opt a client into globally disabled Hosts.
 	disabledLinkKeysByClient map[int]map[string]struct{}
@@ -305,6 +309,22 @@ func (s *SubService) loadRemarkSettings() {
 	if err != nil {
 		s.displayHostRemark = ""
 	}
+	s.maintenanceEnabled, err = s.settingService.GetSubMaintenanceEnable()
+	if err != nil {
+		s.maintenanceEnabled = false
+	}
+	s.maintenanceMode, err = s.settingService.GetSubMaintenanceMode()
+	if err != nil || (s.maintenanceMode != "notice" && s.maintenanceMode != "fallback") {
+		s.maintenanceMode = "notice"
+	}
+	s.maintenanceMessage, err = s.settingService.GetSubMaintenanceMessage()
+	if err != nil {
+		s.maintenanceMessage = ""
+	}
+	s.maintenanceFallbackLinks, err = s.settingService.GetSubMaintenanceFallbackLinks()
+	if err != nil {
+		s.maintenanceFallbackLinks = ""
+	}
 }
 
 func (s *SubService) configuredPublicHost() string {
@@ -396,11 +416,25 @@ func (s *SubService) getSubs(subId string) ([]string, []string, int64, xray.Clie
 		return nil, nil, 0, traffic, err
 	}
 
-	if len(inbounds) == 0 && len(externalLinks) == 0 {
+	if len(inbounds) == 0 && len(externalLinks) == 0 && !s.maintenanceEnabled {
 		return nil, nil, 0, traffic, nil
 	}
 
 	seenEmails := make(map[string]struct{})
+	if maintenanceClient, maintenanceInbound, ok := s.subscriptionDisplayContext(subId, inbounds); ok && (s.maintenanceActive() || s.maintenanceFallbackOnly()) {
+		if link := s.maintenanceRawLink(maintenanceInbound, maintenanceClient); link != "" {
+			result = append(result, link)
+			emails = append(emails, maintenanceClient.Email)
+			seenEmails[maintenanceClient.Email] = struct{}{}
+		}
+		if s.maintenanceFallbackOnly() {
+			result = append(result, s.maintenanceFallbackRawLinks()...)
+			hasEnabledClient = maintenanceClient.Enable
+			traffic, lastOnline := s.AggregateTrafficByEmails([]string{maintenanceClient.Email})
+			traffic.Enable = hasEnabledClient
+			return result, emails, lastOnline, traffic, nil
+		}
+	}
 	if displayClient, displayInbound, ok := s.subscriptionDisplayContext(subId, inbounds); ok {
 		if displayLink := s.subscriptionDisplayRawLink(displayInbound, displayClient); displayLink != "" {
 			result = append(result, displayLink)

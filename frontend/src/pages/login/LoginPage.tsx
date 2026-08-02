@@ -13,14 +13,11 @@ import {
   message,
 } from 'antd';
 import {
-  GlobalOutlined,
   KeyOutlined,
   LockOutlined,
-  SafetyCertificateOutlined,
   MoonFilled,
   MoonOutlined,
   SunOutlined,
-  ThunderboltOutlined,
   TranslationOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -176,37 +173,14 @@ export default function LoginPage() {
                 <Spin size="large" />
               </div>
             ) : (
-              <div className="login-stage">
-                <section className="login-showcase">
-                  <div className="login-showcase-brand">
-                    <span className="login-showcase-mark" aria-hidden="true"><i /><i /><i /></span>
-                    <div><strong>Fara Xray</strong><small>فرا ایکس‌ری</small></div>
-                  </div>
-                  <div className="login-showcase-copy">
-                    <span className="login-eyebrow">PRIVATE CONTROL WORKSPACE</span>
-                    <h1>Infrastructure control,<br /><em>without the clutter.</em></h1>
-                    <p>Manage Xray, clients, traffic and subscription delivery from one focused dark workspace.</p>
-                  </div>
-                  <div className="login-feature-grid">
-                    <div><SafetyCertificateOutlined /><span><strong>Secure</strong><small>Protected panel access</small></span></div>
-                    <div><ThunderboltOutlined /><span><strong>Fast</strong><small>Direct operational actions</small></span></div>
-                    <div><GlobalOutlined /><span><strong>Connected</strong><small>Nodes and hosts together</small></span></div>
-                  </div>
-                  <div className="login-showcase-visual" aria-hidden="true">
-                    <span className="visual-core">FX</span>
-                    <span className="visual-orbit orbit-one"><i /></span>
-                    <span className="visual-orbit orbit-two"><i /></span>
-                    <span className="visual-orbit orbit-three"><i /></span>
-                  </div>
-                </section>
-
-                <div className="login-card">
-                  <div className="login-card-heading">
-                    <span className="login-mobile-brand">Fara Xray</span>
-                    <span className="login-card-kicker">AUTHORIZED ACCESS</span>
-                    <h2 className="welcome"><b key={headlineIndex}>{headlineWords[headlineIndex]}</b></h2>
-                    <p>Enter your panel credentials to continue.</p>
-                  </div>
+              <div className="login-card">
+                <div className="brand">
+                  <span className="brand-name">3X-UI</span>
+                  <span className="brand-accent" aria-hidden="true" />
+                </div>
+                <h2 className="welcome">
+                  <b key={headlineIndex}>{headlineWords[headlineIndex]}</b>
+                </h2>
 
                 <FormProvider {...methods}>
                   <Form
@@ -269,7 +243,6 @@ export default function LoginPage() {
                     </Form.Item>
                   </Form>
                 </FormProvider>
-                </div>
               </div>
             )}
           </div>

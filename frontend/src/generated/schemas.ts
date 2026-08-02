@@ -2,6 +2,51 @@
 export const SCHEMAS: Record<string, unknown> = {
   "AllSetting": {
     "properties": {
+      "anomalyAction": {
+        "type": "string"
+      },
+      "anomalyActionMinutes": {
+        "maximum": 10080,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "anomalyCooldownMinutes": {
+        "maximum": 10080,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "anomalyEnable": {
+        "type": "boolean"
+      },
+      "anomalyHistoryDays": {
+        "maximum": 3650,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "anomalySharedIPThreshold": {
+        "maximum": 10000,
+        "minimum": 2,
+        "type": "integer"
+      },
+      "anomalySpikeMBPerMinute": {
+        "maximum": 1048576,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "anomalySustainedMBPerMinute": {
+        "maximum": 1048576,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "anomalySustainedMinutes": {
+        "maximum": 1440,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "anomalyThrottleInboundId": {
+        "minimum": 0,
+        "type": "integer"
+      },
       "datepicker": {
         "type": "string"
       },
@@ -242,6 +287,19 @@ export const SCHEMAS: Record<string, unknown> = {
       "subListen": {
         "type": "string"
       },
+      "subMaintenanceEnable": {
+        "type": "boolean"
+      },
+      "subMaintenanceFallbackLinks": {
+        "type": "string"
+      },
+      "subMaintenanceMessage": {
+        "maxLength": 256,
+        "type": "string"
+      },
+      "subMaintenanceMode": {
+        "type": "string"
+      },
       "subPath": {
         "type": "string"
       },
@@ -379,6 +437,16 @@ export const SCHEMAS: Record<string, unknown> = {
       }
     },
     "required": [
+      "anomalyAction",
+      "anomalyActionMinutes",
+      "anomalyCooldownMinutes",
+      "anomalyEnable",
+      "anomalyHistoryDays",
+      "anomalySharedIPThreshold",
+      "anomalySpikeMBPerMinute",
+      "anomalySustainedMBPerMinute",
+      "anomalySustainedMinutes",
+      "anomalyThrottleInboundId",
       "datepicker",
       "expireDiff",
       "externalTrafficInformEnable",
@@ -453,6 +521,10 @@ export const SCHEMAS: Record<string, unknown> = {
       "subJsonUserAgentRegex",
       "subKeyFile",
       "subListen",
+      "subMaintenanceEnable",
+      "subMaintenanceFallbackLinks",
+      "subMaintenanceMessage",
+      "subMaintenanceMode",
       "subPath",
       "subPort",
       "subProfileUrl",
@@ -496,6 +568,51 @@ export const SCHEMAS: Record<string, unknown> = {
   },
   "AllSettingView": {
     "properties": {
+      "anomalyAction": {
+        "type": "string"
+      },
+      "anomalyActionMinutes": {
+        "maximum": 10080,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "anomalyCooldownMinutes": {
+        "maximum": 10080,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "anomalyEnable": {
+        "type": "boolean"
+      },
+      "anomalyHistoryDays": {
+        "maximum": 3650,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "anomalySharedIPThreshold": {
+        "maximum": 10000,
+        "minimum": 2,
+        "type": "integer"
+      },
+      "anomalySpikeMBPerMinute": {
+        "maximum": 1048576,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "anomalySustainedMBPerMinute": {
+        "maximum": 1048576,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "anomalySustainedMinutes": {
+        "maximum": 1440,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "anomalyThrottleInboundId": {
+        "minimum": 0,
+        "type": "integer"
+      },
       "datepicker": {
         "type": "string"
       },
@@ -757,6 +874,19 @@ export const SCHEMAS: Record<string, unknown> = {
       "subListen": {
         "type": "string"
       },
+      "subMaintenanceEnable": {
+        "type": "boolean"
+      },
+      "subMaintenanceFallbackLinks": {
+        "type": "string"
+      },
+      "subMaintenanceMessage": {
+        "maxLength": 256,
+        "type": "string"
+      },
+      "subMaintenanceMode": {
+        "type": "string"
+      },
       "subPath": {
         "type": "string"
       },
@@ -894,6 +1024,16 @@ export const SCHEMAS: Record<string, unknown> = {
       }
     },
     "required": [
+      "anomalyAction",
+      "anomalyActionMinutes",
+      "anomalyCooldownMinutes",
+      "anomalyEnable",
+      "anomalyHistoryDays",
+      "anomalySharedIPThreshold",
+      "anomalySpikeMBPerMinute",
+      "anomalySustainedMBPerMinute",
+      "anomalySustainedMinutes",
+      "anomalyThrottleInboundId",
       "datepicker",
       "expireDiff",
       "externalTrafficInformEnable",
@@ -975,6 +1115,10 @@ export const SCHEMAS: Record<string, unknown> = {
       "subJsonUserAgentRegex",
       "subKeyFile",
       "subListen",
+      "subMaintenanceEnable",
+      "subMaintenanceFallbackLinks",
+      "subMaintenanceMessage",
+      "subMaintenanceMode",
       "subPath",
       "subPort",
       "subProfileUrl",
@@ -1203,6 +1347,193 @@ export const SCHEMAS: Record<string, unknown> = {
     ],
     "type": "object"
   },
+  "ClientAnomaly": {
+    "description": "ClientAnomaly stores each detected abnormal-usage incident and the state\nneeded to reverse a temporary automatic action.",
+    "properties": {
+      "action": {
+        "type": "string"
+      },
+      "actionUntil": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "appliedInboundId": {
+        "type": "integer"
+      },
+      "createdAt": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "details": {
+        "type": "string"
+      },
+      "email": {
+        "type": "string"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "ipCount": {
+        "type": "integer"
+      },
+      "kind": {
+        "type": "string"
+      },
+      "observedBytesPerMin": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "previousEnable": {
+        "type": "boolean"
+      },
+      "previousInboundIds": {
+        "type": "string"
+      },
+      "resolvedAt": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "severity": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string"
+      },
+      "thresholdBytesPerMin": {
+        "format": "int64",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "action",
+      "actionUntil",
+      "appliedInboundId",
+      "createdAt",
+      "details",
+      "email",
+      "id",
+      "ipCount",
+      "kind",
+      "observedBytesPerMin",
+      "previousEnable",
+      "previousInboundIds",
+      "resolvedAt",
+      "severity",
+      "status",
+      "thresholdBytesPerMin"
+    ],
+    "type": "object"
+  },
+  "ClientDailyUsage": {
+    "properties": {
+      "day": {
+        "type": "string"
+      },
+      "down": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "total": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "up": {
+        "format": "int64",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "day",
+      "down",
+      "total",
+      "up"
+    ],
+    "type": "object"
+  },
+  "ClientEvent": {
+    "description": "ClientEvent is an append-only client timeline used for renewals, edits,\nattachment changes, resets, and automatic anomaly actions.",
+    "properties": {
+      "createdAt": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "details": {
+        "type": "string"
+      },
+      "email": {
+        "type": "string"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "kind": {
+        "type": "string"
+      },
+      "summary": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "createdAt",
+      "details",
+      "email",
+      "id",
+      "kind",
+      "summary"
+    ],
+    "type": "object"
+  },
+  "ClientHourlyUsage": {
+    "properties": {
+      "bytes": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "hour": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "bytes",
+      "hour"
+    ],
+    "type": "object"
+  },
+  "ClientIPHistory": {
+    "description": "ClientIPHistory keeps a bounded historical view of addresses observed for a\nclient. inbound_client_ips remains the short-lived live set used by Limit IP;\nthis table is reporting-only and is retained for the configured history span.",
+    "properties": {
+      "email": {
+        "type": "string"
+      },
+      "firstSeen": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "ip": {
+        "type": "string"
+      },
+      "lastSeen": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "seenCount": {
+        "format": "int64",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "email",
+      "firstSeen",
+      "id",
+      "ip",
+      "lastSeen",
+      "seenCount"
+    ],
+    "type": "object"
+  },
   "ClientInbound": {
     "properties": {
       "clientId": {
@@ -1224,6 +1555,88 @@ export const SCHEMAS: Record<string, unknown> = {
       "createdAt",
       "flowOverride",
       "inboundId"
+    ],
+    "type": "object"
+  },
+  "ClientInsightReport": {
+    "properties": {
+      "anomalies": {
+        "items": {
+          "$ref": "#/components/schemas/ClientAnomaly"
+        },
+        "type": "array"
+      },
+      "apps": {
+        "items": {
+          "$ref": "#/components/schemas/ClientReportApp"
+        },
+        "type": "array"
+      },
+      "dailyUsage": {
+        "items": {
+          "$ref": "#/components/schemas/ClientDailyUsage"
+        },
+        "type": "array"
+      },
+      "days": {
+        "type": "integer"
+      },
+      "email": {
+        "type": "string"
+      },
+      "events": {
+        "items": {
+          "$ref": "#/components/schemas/ClientEvent"
+        },
+        "type": "array"
+      },
+      "hosts": {
+        "items": {
+          "$ref": "#/components/schemas/ClientReportHost"
+        },
+        "type": "array"
+      },
+      "hourlyUsage": {
+        "items": {
+          "$ref": "#/components/schemas/ClientHourlyUsage"
+        },
+        "type": "array"
+      },
+      "lastOnline": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "peakHour": {
+        "type": "integer"
+      },
+      "peakHourBytes": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "recentIpCount": {
+        "type": "integer"
+      },
+      "recentIps": {
+        "items": {
+          "$ref": "#/components/schemas/ClientIPHistory"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "anomalies",
+      "apps",
+      "dailyUsage",
+      "days",
+      "email",
+      "events",
+      "hosts",
+      "hourlyUsage",
+      "lastOnline",
+      "peakHour",
+      "peakHourBytes",
+      "recentIpCount",
+      "recentIps"
     ],
     "type": "object"
   },
@@ -1341,6 +1754,80 @@ export const SCHEMAS: Record<string, unknown> = {
     ],
     "type": "object"
   },
+  "ClientReportApp": {
+    "properties": {
+      "appName": {
+        "type": "string"
+      },
+      "firstSeen": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "format": {
+        "type": "string"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "lastSeen": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "os": {
+        "type": "string"
+      },
+      "requestCount": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "userAgent": {
+        "type": "string"
+      },
+      "version": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "appName",
+      "firstSeen",
+      "id",
+      "lastSeen",
+      "requestCount"
+    ],
+    "type": "object"
+  },
+  "ClientReportHost": {
+    "properties": {
+      "address": {
+        "type": "string"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "inboundId": {
+        "type": "integer"
+      },
+      "lastSeen": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "port": {
+        "type": "integer"
+      },
+      "remark": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "address",
+      "id",
+      "inboundId",
+      "lastSeen",
+      "port",
+      "remark"
+    ],
+    "type": "object"
+  },
   "ClientReverse": {
     "properties": {
       "tag": {
@@ -1422,6 +1909,51 @@ export const SCHEMAS: Record<string, unknown> = {
       "total",
       "up",
       "uuid"
+    ],
+    "type": "object"
+  },
+  "ClientTrafficBucket": {
+    "description": "ClientTrafficBucket stores the traffic delta accumulated inside one\none-minute bucket. Buckets make the per-client charts and anomaly detector\ndurable without writing one row for every five-second Xray poll.",
+    "properties": {
+      "bucketStart": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "createdAt": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "down": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "email": {
+        "type": "string"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "samples": {
+        "type": "integer"
+      },
+      "up": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "updatedAt": {
+        "format": "int64",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "bucketStart",
+      "createdAt",
+      "down",
+      "email",
+      "id",
+      "samples",
+      "up",
+      "updatedAt"
     ],
     "type": "object"
   },

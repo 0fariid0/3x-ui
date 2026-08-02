@@ -1,7 +1,11 @@
 [English](/README.md) | [فارسی](/README.fa_IR.md) | [العربية](/README.ar_EG.md) | [中文](/README.zh_CN.md) | [Español](/README.es_ES.md) | [Русский](/README.ru_RU.md) | [Türkçe](/README.tr_TR.md)
 
-<h1 align="center">Fara Xray | فرا ایکس‌ری</h1>
-<p align="center">رابط مدرن، دارک و موبایل‌محور برای مدیریت Xray بر پایه 3x-ui</p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./media/3x-ui-dark.png">
+    <img alt="3x-ui" src="./media/3x-ui-light.png">
+  </picture>
+</p>
 
 <p align="center">
   <a href="https://github.com/0fariid0/3x-ui/releases"><img src="https://img.shields.io/github/v/release/0fariid0/3x-ui" alt="Release"></a>
@@ -12,7 +16,9 @@
   <a href="https://pkg.go.dev/github.com/mhsanaei/3x-ui/v3"><img src="https://pkg.go.dev/badge/github.com/mhsanaei/3x-ui/v3.svg" alt="Go Reference"></a>
 </p>
 
-**فرا ایکس‌ری (Fara Xray)** نسخه‌ای سفارشی و مدرن بر پایه پروژه متن‌باز 3x-ui برای مدیریت سرورهای Xray-core است. قابلیت‌های اصلی و سازگاری فنی پروژه مادر حفظ شده و رابط کاربری دارک، ریسپانسیو و امکانات اختصاصی مدیریتی به آن اضافه شده است.
+**3X-UI** یک پنل کنترل وب پیشرفته و متن‌باز برای مدیریت سرورهای [Xray-core](https://github.com/XTLS/Xray-core) است. این پنل یک رابط کاربری تمیز و چندزبانه برای استقرار، پیکربندی و نظارت بر طیف گسترده‌ای از پروتکل‌های پراکسی و VPN ارائه می‌دهد — از یک VPS تکی تا استقرارهای چندنودی.
+
+‏3X-UI که به‌عنوان یک فورک بهبودیافته از پروژه‌ی اصلی X-UI ساخته شده است، پشتیبانی گسترده‌تر از پروتکل‌ها، پایداری بهتر، حسابداری ترافیک به‌ازای هر کلاینت و بسیاری از ویژگی‌های رفاهی را اضافه می‌کند.
 
 > [!IMPORTANT]
 > این پروژه فقط برای استفاده‌ی شخصی در نظر گرفته شده است. لطفاً از آن برای اهداف غیرقانونی یا در محیط تولید (production) استفاده نکنید.

@@ -8,6 +8,7 @@ import {
   Tabs,
 } from 'antd';
 import {
+  AlertOutlined,
   ApartmentOutlined,
   BellOutlined,
   ClockCircleOutlined,
@@ -397,6 +398,60 @@ export default function GeneralTab({ allSetting, updateSetting }: GeneralTabProp
             <SettingListItem paddings="small" title={t('pages.settings.ldap.defaultIpLimit')} badge={<DefaultSettingTag settingKey="ldapDefaultLimitIP" value={allSetting.ldapDefaultLimitIP} />}>
               <InputNumber value={allSetting.ldapDefaultLimitIP} min={0} style={{ width: '100%' }}
                 onChange={onNumber((v) => updateSetting({ ldapDefaultLimitIP: v }))} />
+            </SettingListItem>
+          </>
+        ),
+      },
+      {
+        key: '7',
+        label: catTabLabel(<AlertOutlined />, t('pages.settings.anomalyTitle'), isMobile),
+        children: (
+          <>
+            <SettingListItem paddings="small" title={t('pages.settings.anomalyEnable')} description={t('pages.settings.anomalyEnableDesc')}>
+              <Switch checked={allSetting.anomalyEnable} onChange={(v) => updateSetting({ anomalyEnable: v })} />
+            </SettingListItem>
+            <SettingListItem paddings="small" title={t('pages.settings.anomalySpike')} description={t('pages.settings.anomalySpikeDesc')}>
+              <InputNumber value={allSetting.anomalySpikeMBPerMinute} min={1} max={1048576} addonAfter="MB/min" style={{ width: '100%' }}
+                onChange={onNumber((v) => updateSetting({ anomalySpikeMBPerMinute: v }))} />
+            </SettingListItem>
+            <SettingListItem paddings="small" title={t('pages.settings.anomalySustained')} description={t('pages.settings.anomalySustainedDesc')}>
+              <InputNumber value={allSetting.anomalySustainedMBPerMinute} min={1} max={1048576} addonAfter="MB/min" style={{ width: '100%' }}
+                onChange={onNumber((v) => updateSetting({ anomalySustainedMBPerMinute: v }))} />
+            </SettingListItem>
+            <SettingListItem paddings="small" title={t('pages.settings.anomalySustainedMinutes')}>
+              <InputNumber value={allSetting.anomalySustainedMinutes} min={1} max={1440} addonAfter={t('minutes')} style={{ width: '100%' }}
+                onChange={onNumber((v) => updateSetting({ anomalySustainedMinutes: v }))} />
+            </SettingListItem>
+            <SettingListItem paddings="small" title={t('pages.settings.anomalySharedIPs')} description={t('pages.settings.anomalySharedIPsDesc')}>
+              <InputNumber value={allSetting.anomalySharedIPThreshold} min={2} max={10000} style={{ width: '100%' }}
+                onChange={onNumber((v) => updateSetting({ anomalySharedIPThreshold: v }))} />
+            </SettingListItem>
+            <SettingListItem paddings="small" title={t('pages.settings.anomalyAction')} description={t('pages.settings.anomalyActionDesc')}>
+              <Select value={allSetting.anomalyAction} style={{ width: '100%' }} options={[
+                { value: 'alert', label: t('pages.settings.anomalyActionAlert') },
+                { value: 'disable', label: t('pages.settings.anomalyActionDisable') },
+                { value: 'throttle', label: t('pages.settings.anomalyActionThrottle') },
+              ]} onChange={(v) => updateSetting({ anomalyAction: v })} />
+            </SettingListItem>
+            {allSetting.anomalyAction === 'throttle' && (
+              <SettingListItem paddings="small" title={t('pages.settings.anomalyThrottleInbound')} description={t('pages.settings.anomalyThrottleInboundDesc')}>
+                <InputNumber value={allSetting.anomalyThrottleInboundId} min={1} style={{ width: '100%' }}
+                  onChange={onNumber((v) => updateSetting({ anomalyThrottleInboundId: v }))} />
+              </SettingListItem>
+            )}
+            {allSetting.anomalyAction !== 'alert' && (
+              <SettingListItem paddings="small" title={t('pages.settings.anomalyActionMinutes')}>
+                <InputNumber value={allSetting.anomalyActionMinutes} min={1} max={10080} addonAfter={t('minutes')} style={{ width: '100%' }}
+                  onChange={onNumber((v) => updateSetting({ anomalyActionMinutes: v }))} />
+              </SettingListItem>
+            )}
+            <SettingListItem paddings="small" title={t('pages.settings.anomalyCooldown')}>
+              <InputNumber value={allSetting.anomalyCooldownMinutes} min={1} max={10080} addonAfter={t('minutes')} style={{ width: '100%' }}
+                onChange={onNumber((v) => updateSetting({ anomalyCooldownMinutes: v }))} />
+            </SettingListItem>
+            <SettingListItem paddings="small" title={t('pages.settings.anomalyHistoryDays')}>
+              <InputNumber value={allSetting.anomalyHistoryDays} min={1} max={3650} addonAfter={t('days')} style={{ width: '100%' }}
+                onChange={onNumber((v) => updateSetting({ anomalyHistoryDays: v }))} />
             </SettingListItem>
           </>
         ),

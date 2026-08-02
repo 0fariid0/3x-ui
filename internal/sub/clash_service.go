@@ -38,13 +38,39 @@ func (s *SubClashService) GetClashNamed(subId string, host string, nameMode stri
 	if err != nil {
 		return "", "", err
 	}
-	if len(inbounds) == 0 && len(externalLinks) == 0 {
+	if len(inbounds) == 0 && len(externalLinks) == 0 && !subReq.maintenanceEnabled {
 		return "", "", nil
 	}
 
 	var proxies []map[string]any
 
 	seenEmails := make(map[string]struct{})
+	if maintenanceClient, maintenanceInbound, ok := subReq.subscriptionDisplayContext(subId, inbounds); ok && (subReq.maintenanceActive() || subReq.maintenanceFallbackOnly()) {
+		if proxy := s.maintenanceProxy(subReq, maintenanceInbound, maintenanceClient); proxy != nil {
+			proxies = append(proxies, proxy)
+			seenEmails[maintenanceClient.Email] = struct{}{}
+		}
+		if subReq.maintenanceFallbackOnly() {
+			proxies = append(proxies, s.maintenanceFallbackProxies(subReq)...)
+			ensureUniqueProxyNames(proxies)
+			proxyNames := make([]string, 0, len(proxies)+1)
+			for _, proxy := range proxies {
+				if name, ok := proxy["name"].(string); ok && name != "" {
+					proxyNames = append(proxyNames, name)
+				}
+			}
+			proxyNames = append(proxyNames, "DIRECT")
+			config := map[string]any{
+				"proxies":      proxies,
+				"proxy-groups": []map[string]any{{"name": "PROXY", "type": "select", "proxies": proxyNames}},
+				"rules":        []string{"MATCH,PROXY"},
+			}
+			traffic, _ := subReq.AggregateTrafficByEmails([]string{maintenanceClient.Email})
+			header := fmt.Sprintf("upload=%d; download=%d; total=%d; expire=%d", traffic.Up, traffic.Down, traffic.Total, traffic.ExpiryTime/1000)
+			b, err := yaml.Marshal(config)
+			return string(b), header, err
+		}
+	}
 	if displayClient, displayInbound, ok := subReq.subscriptionDisplayContext(subId, inbounds); ok {
 		if displayProxy := s.subscriptionDisplayProxy(subReq, displayInbound, displayClient); displayProxy != nil {
 			proxies = append(proxies, displayProxy)

@@ -1,23 +1,18 @@
-# Fara Xray custom changelog
+# Custom changelog
 
-## v3.6.3 — Responsive interface redesign
+## v3.6.4
 
-- Rebuilt the shared application shell instead of applying another visual theme.
-- Added a fixed desktop sidebar, compact tablet rail, mobile header and bottom navigation dock.
-- Reworked global cards, tables, forms, tabs, modals and page spacing for smaller screens.
-- Simplified page headers and dashboard presentation while preserving existing panel features.
-- Preserved RTL, light, dark and ultra-dark modes.
+Built directly from the custom v3.6.0 source. Versions v3.6.1, v3.6.2, and v3.6.3 are not part of this release history.
 
-## v3.6.2 — Complete Fara Xray interface rebuild
-
-- Replaced the inherited panel navigation with a custom Fara Xray application shell, grouped workspace navigation, command search, desktop workspace bar, and mobile app drawer.
-- Rebuilt the mobile experience with a compact top bar, thumb-friendly bottom dock, responsive forms, horizontally managed data tables, and touch-sized controls.
-- Reorganized dashboard information into an operational bento layout with new service identity, circular resource gauges, network throughput blocks, and quick actions.
-- Added a consistent section hero and visual identity across Dashboard, Inbounds, Clients, Groups, Nodes, Hosts, Settings, Xray, Outbounds, Routing, and API documentation.
-- Rebuilt Settings and Xray pages around task-oriented local navigation and persistent action areas instead of the inherited long-form page layout.
-- Replaced the login page with a split-screen Fara Xray experience and rebuilt the user subscription page around a status hero, QR area, usage summary, and clearer information hierarchy.
-- Reworked cards, tables, forms, modals, tabs, statistics, alerts, spacing, and dark surfaces throughout the panel instead of applying a color-only theme.
-- Preserved all v3.6.0 official fixes and every previously requested custom host, subscription, restart, clock, health-monitor, and visibility feature.
+- Added subscription maintenance mode for RAW, Xray JSON, and Clash/Mihomo outputs.
+  - Notice mode prepends a temporary informational entry while keeping normal configurations.
+  - Fallback mode can replace normal configurations with validated emergency links.
+- Added durable per-client one-minute traffic buckets, recent IP history, application/OS detection, related Hosts, peak-hour analysis, and renewal/change history.
+- Added configurable abnormal-usage detection for sudden traffic spikes, sustained high traffic, and possible subscription sharing.
+- Added automatic reactions: alert only, temporary disable, or temporary transfer to a dedicated limited-speed inbound.
+- Added cooldowns, history retention, reversible actions, rollback protection, and safeguards against overwriting later manual changes.
+- Added a detailed client report endpoint and responsive report UI.
+- Added SQLite/PostgreSQL migrations, OpenAPI schemas, Persian/English translations, and regression tests.
 
 ## v3.6.0
 

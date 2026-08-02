@@ -1,4 +1,4 @@
-import { Alert, Button, Input, InputNumber, Switch, Tabs } from 'antd';
+import { Alert, Button, Input, InputNumber, Select, Switch, Tabs } from 'antd';
 import { BranchesOutlined, CompassOutlined, IdcardOutlined, InfoCircleOutlined, NodeIndexOutlined, SafetyCertificateOutlined, SettingOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -109,6 +109,34 @@ export default function SubscriptionGeneralTab({ allSetting, updateSetting }: Su
               <InputNumber value={allSetting.subUpdates} min={0} max={525600} style={{ width: '100%' }}
                 onChange={onNumber((v) => updateSetting({ subUpdates: v }))} />
             </SettingListItem>
+            <SettingListItem paddings="small" title={t('pages.settings.subMaintenanceEnable')} description={t('pages.settings.subMaintenanceEnableDesc')}>
+              <Switch checked={allSetting.subMaintenanceEnable} onChange={(v) => updateSetting({ subMaintenanceEnable: v })} />
+            </SettingListItem>
+            {allSetting.subMaintenanceEnable && (
+              <>
+                <SettingListItem paddings="small" title={t('pages.settings.subMaintenanceMode')} description={t('pages.settings.subMaintenanceModeDesc')}>
+                  <Select
+                    value={allSetting.subMaintenanceMode}
+                    style={{ width: '100%' }}
+                    options={[
+                      { value: 'notice', label: t('pages.settings.subMaintenanceNotice') },
+                      { value: 'fallback', label: t('pages.settings.subMaintenanceFallback') },
+                    ]}
+                    onChange={(v) => updateSetting({ subMaintenanceMode: v })}
+                  />
+                </SettingListItem>
+                <SettingListItem paddings="small" title={t('pages.settings.subMaintenanceMessage')} description={t('pages.settings.subMaintenanceMessageDesc')}>
+                  <Input.TextArea value={allSetting.subMaintenanceMessage} maxLength={256} showCount rows={3}
+                    onChange={(e) => updateSetting({ subMaintenanceMessage: e.target.value })} />
+                </SettingListItem>
+                {allSetting.subMaintenanceMode === 'fallback' && (
+                  <SettingListItem paddings="small" title={t('pages.settings.subMaintenanceFallbackLinks')} description={t('pages.settings.subMaintenanceFallbackLinksDesc')}>
+                    <Input.TextArea value={allSetting.subMaintenanceFallbackLinks} rows={6} placeholder={'vless://...\ntrojan://...'}
+                      onChange={(e) => updateSetting({ subMaintenanceFallbackLinks: e.target.value })} />
+                  </SettingListItem>
+                )}
+              </>
+            )}
           </>
         ),
       },

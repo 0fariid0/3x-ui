@@ -39,6 +39,10 @@ export class AllSetting {
   subSupportUrl = '';
   subProfileUrl = '';
   subAnnounce = '';
+  subMaintenanceEnable = false;
+  subMaintenanceMode: 'notice' | 'fallback' = 'notice';
+  subMaintenanceMessage = '🔧 Server maintenance in progress';
+  subMaintenanceFallbackLinks = '';
   subEnableRouting = false;
   subRoutingRules = '';
   subIncyEnableRouting = false;
@@ -53,6 +57,16 @@ export class AllSetting {
   externalTrafficInformEnable = false;
   externalTrafficInformURI = '';
   restartXrayOnClientDisable = true;
+  anomalyEnable = false;
+  anomalySpikeMBPerMinute = 1024;
+  anomalySustainedMBPerMinute = 512;
+  anomalySustainedMinutes = 10;
+  anomalySharedIPThreshold = 5;
+  anomalyAction: 'alert' | 'disable' | 'throttle' = 'alert';
+  anomalyActionMinutes = 30;
+  anomalyThrottleInboundId = 0;
+  anomalyCooldownMinutes = 60;
+  anomalyHistoryDays = 90;
   scheduledRestartEnable = false;
   scheduledRestartInterval = 24;
   scheduledRestartUnit: 'minutes' | 'hours' | 'days' = 'hours';
