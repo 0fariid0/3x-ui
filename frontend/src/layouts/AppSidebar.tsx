@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ComponentType, CSSProperties } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import type { ComponentType } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { Drawer, Layout, Menu } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   ApiOutlined,
+  AppstoreOutlined,
   CloseOutlined,
   CloudServerOutlined,
   ClockCircleOutlined,
@@ -41,10 +42,6 @@ import './AppSidebar.css';
 
 const REPO_URL = 'https://github.com/0fariid0/3x-ui';
 const LOGOUT_KEY = '__logout__';
-const RAIL_WIDTH = 72;
-const railStyle = { '--sider-rail': `${RAIL_WIDTH}px` } as CSSProperties;
-
-let hoveredAcrossRemounts = false;
 
 type IconName = 'dashboard' | 'inbound' | 'team' | 'groups' | 'setting' | 'tool' | 'cluster' | 'hosts' | 'logout' | 'apidocs' | 'outbound' | 'routing';
 
@@ -63,20 +60,27 @@ const iconByName: Record<IconName, ComponentType> = {
   routing: SwapOutlined,
 };
 
-function VersionBadge({ version, collapsed }: { version: string; collapsed?: boolean }) {
+function BrandMark({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={`fara-brand ${compact ? 'is-compact' : ''}`}>
+      <span className="fara-brand-mark">F</span>
+      {!compact && (
+        <span className="fara-brand-copy">
+          <strong>Fara Xray</strong>
+          <small>فرا ایکس‌ری</small>
+        </span>
+      )}
+    </div>
+  );
+}
+
+function VersionBadge({ version }: { version: string }) {
   if (!version) return null;
   const label = formatPanelVersion(version);
   return (
-    <a
-      href={REPO_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="sider-version"
-      aria-label={`GitHub ${label}`}
-      title={label}
-    >
+    <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="sider-version" title={label}>
       <GithubOutlined />
-      {!collapsed && <span className="sider-version-text">{label}</span>}
+      <span>{label}</span>
     </a>
   );
 }
@@ -90,14 +94,7 @@ function ThemeCycleButton({ id, isDark, isUltra, onCycle, ariaLabel }: {
 }) {
   const icon = !isDark ? <SunOutlined /> : !isUltra ? <MoonOutlined /> : <MoonFilled />;
   return (
-    <button
-      id={id}
-      type="button"
-      className="sidebar-theme-cycle"
-      aria-label={ariaLabel}
-      title={ariaLabel}
-      onClick={onCycle}
-    >
+    <button id={id} type="button" className="fara-icon-btn" aria-label={ariaLabel} title={ariaLabel} onClick={onCycle}>
       {icon}
     </button>
   );
@@ -111,24 +108,8 @@ export default function AppSidebar() {
   const { allSetting } = useAllSettings();
   const serverClock = useServerClock();
   const showSubFormats = !!(allSetting.subJsonEnable || allSetting.subClashEnable);
-
-  const [hovered, setHovered] = useState(() => hoveredAcrossRemounts);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const railCollapsed = !hovered;
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  const updateHovered = useCallback((value: boolean) => {
-    hoveredAcrossRemounts = value;
-    setHovered(value);
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const el = rootRef.current;
-      if (el) updateHovered(el.matches(':hover'));
-    }, 150);
-    return () => window.clearTimeout(timer);
-  }, [updateHovered]);
+  const [openKeys, setOpenKeys] = useState<string[]>([]);
 
   const currentTheme: 'light' | 'dark' = isDark ? 'dark' : 'light';
   const panelVersion = window.X_UI_CUR_VER || '';
@@ -148,9 +129,6 @@ export default function AppSidebar() {
     { key: LOGOUT_KEY, icon: 'logout', title: t('logout') },
   ], [t]);
 
-  const navItems = useMemo(() => tabs.filter((tab) => tab.icon !== 'logout'), [tabs]);
-  const utilItems = useMemo(() => tabs.filter((tab) => tab.icon === 'logout'), [tabs]);
-
   const settingsChildren = useMemo<NonNullable<MenuProps['items']>>(() => {
     const children: NonNullable<MenuProps['items']> = [
       { key: '/settings#general', icon: <SettingOutlined />, label: t('pages.settings.panelSettings') },
@@ -159,9 +137,7 @@ export default function AppSidebar() {
       { key: '/settings#email', icon: <MailOutlined />, label: t('pages.settings.emailSettings') },
       { key: '/settings#subscription', icon: <CloudServerOutlined />, label: t('pages.settings.subSettings') },
     ];
-    if (showSubFormats) {
-      children.push({ key: '/settings#subscription-formats', icon: <CodeOutlined />, label: 'Sub Formats' });
-    }
+    if (showSubFormats) children.push({ key: '/settings#subscription-formats', icon: <CodeOutlined />, label: 'Sub Formats' });
     return children;
   }, [t, showSubFormats]);
 
@@ -172,34 +148,18 @@ export default function AppSidebar() {
     { key: '/xray#advanced', icon: <CodeOutlined />, label: t('pages.xray.advancedTemplate') },
   ], [t]);
 
-  const settingsActive = pathname === '/settings';
-  const xrayActive = pathname === '/xray';
-  const selectedKey = settingsActive
+  const selectedKey = pathname === '/settings'
     ? `/settings${hash || '#general'}`
-    : xrayActive
+    : pathname === '/xray'
       ? `/xray${hash || '#basic'}`
-      : (pathname === '' ? '/' : pathname);
+      : (pathname || '/');
 
-  const openSubmenu = settingsActive ? '/settings' : xrayActive ? '/xray' : null;
-  const [openKeys, setOpenKeys] = useState<string[]>(() => (openSubmenu ? [openSubmenu] : []));
-  useEffect(() => {
-    if (openSubmenu) {
-      setOpenKeys((keys) => (keys.includes(openSubmenu) ? keys : [...keys, openSubmenu]));
-    }
-  }, [openSubmenu]);
-
-  const toMenuItems = useCallback((items: typeof tabs): MenuProps['items'] =>
-    items.map((tab) => {
-      const Icon = iconByName[tab.icon];
-      if (tab.key === '/settings') {
-        return { key: tab.key, icon: <Icon />, label: tab.title, children: settingsChildren };
-      }
-      if (tab.key === '/xray') {
-        return { key: tab.key, icon: <Icon />, label: tab.title, children: xrayChildren };
-      }
-      return { key: tab.key, icon: <Icon />, label: tab.title, title: '' };
-    }),
-  [settingsChildren, xrayChildren]);
+  const toMenuItems = useCallback((items: typeof tabs): MenuProps['items'] => items.map((tab) => {
+    const Icon = iconByName[tab.icon];
+    if (tab.key === '/settings') return { key: tab.key, icon: <Icon />, label: tab.title, children: settingsChildren };
+    if (tab.key === '/xray') return { key: tab.key, icon: <Icon />, label: tab.title, children: xrayChildren };
+    return { key: tab.key, icon: <Icon />, label: tab.title };
+  }), [settingsChildren, xrayChildren]);
 
   const openLink = useCallback(async (key: string) => {
     if (key === LOGOUT_KEY) {
@@ -208,11 +168,10 @@ export default function AppSidebar() {
       return;
     }
     navigate(key);
+    setDrawerOpen(false);
   }, [navigate]);
 
-  const onMenuClick = useCallback<NonNullable<MenuProps['onClick']>>(({ key }) => {
-    openLink(String(key));
-  }, [openLink]);
+  const onMenuClick = useCallback<NonNullable<MenuProps['onClick']>>(({ key }) => openLink(String(key)), [openLink]);
 
   const cycleTheme = useCallback((id: string) => {
     pauseAnimationsUntilLeave(id);
@@ -227,141 +186,85 @@ export default function AppSidebar() {
     }
   }, [isDark, isUltra, toggleTheme, toggleUltra]);
 
+  const mobileItems = tabs.filter((item) => ['/', '/inbounds', '/clients', '/hosts'].includes(item.key));
+
   return (
-    <div
-      ref={rootRef}
-      className="ant-sidebar"
-      style={railStyle}
-      onMouseEnter={() => updateHovered(true)}
-      onMouseLeave={() => updateHovered(false)}
-    >
-      <Layout.Sider
-        theme={currentTheme}
-        width={220}
-        collapsedWidth={RAIL_WIDTH}
-        collapsed={railCollapsed}
-      >
-        <div className="sider-brand">
-          <div className="brand-block">
-            <span className="brand-text">{railCollapsed ? '3X' : '3X-UI'}</span>
-          </div>
-          {!railCollapsed && (
-            <div className="brand-actions">
-              <div
-                className="sidebar-server-clock"
-                title={`${serverClock.dateTimeText} ${serverClock.data?.timezoneLabel || ''}`.trim()}
-              >
-                <ClockCircleOutlined />
-                <span>{serverClock.clockText}</span>
-              </div>
-              <ThemeCycleButton
-                id="theme-cycle"
-                isDark={isDark}
-                isUltra={isUltra}
-                onCycle={() => cycleTheme('theme-cycle')}
-                ariaLabel={t('menu.theme')}
-              />
+    <>
+      <div className="fara-desktop-sidebar">
+        <Layout.Sider theme={currentTheme} width={256}>
+          <div className="sider-brand"><BrandMark /></div>
+          <div className="sider-section-label">CONTROL CENTER</div>
+          <Menu
+            theme={currentTheme}
+            mode="inline"
+            selectedKeys={[selectedKey]}
+            openKeys={openKeys}
+            onOpenChange={(keys) => setOpenKeys(keys as string[])}
+            className="sider-nav"
+            items={toMenuItems(tabs.filter((tab) => tab.key !== LOGOUT_KEY))}
+            onClick={onMenuClick}
+          />
+          <div className="sider-bottom">
+            <div className="sider-clock-card" title={serverClock.dateTimeText}>
+              <ClockCircleOutlined />
+              <div><strong>{serverClock.clockText}</strong><small>{serverClock.data?.timezoneLabel || ''}</small></div>
             </div>
-          )}
-        </div>
-        <Menu
-          theme={currentTheme}
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          openKeys={railCollapsed ? undefined : openKeys}
-          onOpenChange={(keys) => setOpenKeys(keys as string[])}
-          className="sider-nav"
-          items={toMenuItems(navItems)}
-          onClick={onMenuClick}
-        />
-        <Menu
-          theme={currentTheme}
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          className="sider-utility"
-          items={toMenuItems(utilItems)}
-          onClick={onMenuClick}
-        />
-        <div className="sider-footer">
-          <VersionBadge version={panelVersion} collapsed={railCollapsed} />
-        </div>
-      </Layout.Sider>
+            <div className="sider-actions-row">
+              <ThemeCycleButton id="theme-cycle" isDark={isDark} isUltra={isUltra} onCycle={() => cycleTheme('theme-cycle')} ariaLabel={t('menu.theme')} />
+              <VersionBadge version={panelVersion} />
+              <button className="fara-icon-btn danger" type="button" title={t('logout')} onClick={() => openLink(LOGOUT_KEY)}><LogoutOutlined /></button>
+            </div>
+          </div>
+        </Layout.Sider>
+      </div>
+
+      <header className="fara-mobile-topbar">
+        <button className="fara-icon-btn" type="button" aria-label={t('menu.openMenu')} onClick={() => setDrawerOpen(true)}><MenuOutlined /></button>
+        <BrandMark />
+        <ThemeCycleButton id="theme-cycle-mobile" isDark={isDark} isUltra={isUltra} onCycle={() => cycleTheme('theme-cycle-mobile')} ariaLabel={t('menu.theme')} />
+      </header>
+
+      <nav className="fara-mobile-bottom-nav" aria-label="Primary">
+        {mobileItems.map((item) => {
+          const Icon = iconByName[item.icon];
+          const active = pathname === item.key || (item.key === '/' && pathname === '');
+          return (
+            <button key={item.key} type="button" className={active ? 'active' : ''} onClick={() => openLink(item.key)}>
+              <Icon /><span>{item.title}</span>
+            </button>
+          );
+        })}
+        <button type="button" className={drawerOpen ? 'active' : ''} onClick={() => setDrawerOpen(true)}>
+          <AppstoreOutlined /><span>{t('more')}</span>
+        </button>
+      </nav>
 
       <Drawer
         placement="left"
         closable={false}
         open={drawerOpen}
         rootClassName={currentTheme}
-        size="min(82vw, 320px)"
-        styles={{
-          wrapper: { padding: 0 },
-          body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
-          header: { display: 'none' },
-        }}
+        width="min(88vw, 360px)"
+        styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' }, header: { display: 'none' } }}
         onClose={() => setDrawerOpen(false)}
       >
         <div className="drawer-header">
-          <div className="brand-block">
-            <span className="drawer-brand">3X-UI</span>
-          </div>
-          <div className="drawer-header-actions">
-            <div
-              className="sidebar-server-clock drawer-server-clock"
-              title={`${serverClock.dateTimeText} ${serverClock.data?.timezoneLabel || ''}`.trim()}
-            >
-              <ClockCircleOutlined />
-              <span>{serverClock.clockText}</span>
-            </div>
-            <ThemeCycleButton
-              id="theme-cycle-drawer"
-              isDark={isDark}
-              isUltra={isUltra}
-              onCycle={() => cycleTheme('theme-cycle-drawer')}
-              ariaLabel={t('menu.theme')}
-            />
-            <button
-              className="drawer-close"
-              type="button"
-              aria-label={t('close')}
-              onClick={() => setDrawerOpen(false)}
-            >
-              <CloseOutlined />
-            </button>
-          </div>
+          <BrandMark />
+          <button className="fara-icon-btn" type="button" aria-label={t('close')} onClick={() => setDrawerOpen(false)}><CloseOutlined /></button>
         </div>
+        <div className="drawer-clock"><ClockCircleOutlined /><span>{serverClock.clockText}</span><small>{serverClock.data?.timezoneLabel || ''}</small></div>
         <Menu
           theme={currentTheme}
           mode="inline"
           selectedKeys={[selectedKey]}
           openKeys={openKeys}
           onOpenChange={(keys) => setOpenKeys(keys as string[])}
-          className="drawer-menu drawer-nav"
-          items={toMenuItems(navItems)}
-          onClick={(info) => { onMenuClick(info); setDrawerOpen(false); }}
+          className="drawer-menu"
+          items={toMenuItems(tabs)}
+          onClick={onMenuClick}
         />
-        <Menu
-          theme={currentTheme}
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          className="drawer-menu drawer-utility"
-          items={toMenuItems(utilItems)}
-          onClick={(info) => { onMenuClick(info); setDrawerOpen(false); }}
-        />
-        <div className="drawer-footer">
-          <VersionBadge version={panelVersion} />
-        </div>
+        <div className="drawer-footer"><VersionBadge version={panelVersion} /></div>
       </Drawer>
-
-      {!drawerOpen && (
-        <button
-          className="drawer-handle"
-          type="button"
-          aria-label={t('menu.openMenu')}
-          onClick={() => setDrawerOpen(true)}
-        >
-          <MenuOutlined />
-        </button>
-      )}
-    </div>
+    </>
   );
 }

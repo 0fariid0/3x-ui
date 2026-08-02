@@ -372,3 +372,15 @@
   margin-bottom: 0;
 }
 
+
+/* Fara Xray 3.6.1 visual refresh */
+.login-app { background: radial-gradient(circle at 15% 15%, rgba(91,140,255,.24), transparent 32%), radial-gradient(circle at 85% 82%, rgba(139,77,255,.18), transparent 28%), #080d18; }
+.login-app::before { content: ''; position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 34px 34px; mask-image: radial-gradient(circle at center, #000 15%, transparent 78%); }
+.login-card { width: min(92vw, 430px); border-radius: 26px !important; padding: 34px !important; border: 1px solid rgba(148,163,184,.16) !important; background: rgba(12,19,33,.82) !important; box-shadow: 0 30px 90px rgba(0,0,0,.42) !important; backdrop-filter: blur(24px) saturate(145%); }
+.login-card .brand { justify-content: flex-start; margin-bottom: 24px; }
+.login-card .brand-name { font-size: 25px; font-weight: 850; letter-spacing: -.6px; background: linear-gradient(100deg, #fff, #8fb2ff 60%, #b49cff); -webkit-background-clip: text; color: transparent; }
+.login-card .brand-accent { width: 38px; height: 5px; border-radius: 99px; background: linear-gradient(90deg, #38bdf8, #6c5cff); box-shadow: 0 0 18px rgba(91,140,255,.48); }
+.login-card .welcome { text-align: start; font-size: 16px; color: rgba(226,232,240,.72); margin-bottom: 24px; }
+.login-form .ant-input, .login-form .ant-input-affix-wrapper { min-height: 48px; background: rgba(2,6,23,.46); }
+.login-form .ant-btn-primary { min-height: 50px; border-radius: 14px; font-size: 15px; }
+@media (max-width: 576px) { .login-card { padding: 24px 18px !important; border-radius: 22px !important; } .login-toolbar { top: 14px; inset-inline-end: 14px; } }
