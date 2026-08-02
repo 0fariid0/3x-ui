@@ -1,4 +1,12 @@
-# Custom changelog
+# Fara Xray custom changelog
+
+## v3.6.3 — Responsive interface redesign
+
+- Rebuilt the shared application shell instead of applying another visual theme.
+- Added a fixed desktop sidebar, compact tablet rail, mobile header and bottom navigation dock.
+- Reworked global cards, tables, forms, tabs, modals and page spacing for smaller screens.
+- Simplified page headers and dashboard presentation while preserving existing panel features.
+- Preserved RTL, light, dark and ultra-dark modes.
 
 ## v3.6.2 — Complete Fara Xray interface rebuild
 

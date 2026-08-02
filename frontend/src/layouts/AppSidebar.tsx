@@ -26,7 +26,6 @@ import {
   TeamOutlined,
   ToolOutlined,
 } from '@ant-design/icons';
-
 import { HttpUtil } from '@/utils';
 import { formatPanelVersion } from '@/lib/panel-version';
 import { pauseAnimationsUntilLeave, useTheme } from '@/hooks/useTheme';
@@ -36,7 +35,20 @@ import './AppSidebar.css';
 const REPO_URL = 'https://github.com/0fariid0/3x-ui';
 const LOGOUT_KEY = '__logout__';
 
-type IconName = 'dashboard' | 'inbound' | 'team' | 'groups' | 'setting' | 'tool' | 'cluster' | 'hosts' | 'logout' | 'apidocs' | 'outbound' | 'routing';
+type IconName =
+  | 'dashboard'
+  | 'inbound'
+  | 'team'
+  | 'groups'
+  | 'setting'
+  | 'tool'
+  | 'cluster'
+  | 'hosts'
+  | 'logout'
+  | 'apidocs'
+  | 'outbound'
+  | 'routing';
+
 type NavGroup = 'workspace' | 'network' | 'system';
 
 interface NavItem {
@@ -69,19 +81,29 @@ function isFa(): boolean {
 
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`fx-brand ${compact ? 'is-compact' : ''}`}>
-      <span className="fx-brand-symbol" aria-hidden="true"><i /><i /><i /></span>
+    <div className={`fx-brand${compact ? ' is-compact' : ''}`}>
+      <span className="fx-brand-symbol" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </span>
       {!compact && (
         <span className="fx-brand-copy">
           <strong>Fara Xray</strong>
-          <small>فرا ایکس‌ری</small>
+          <small>CONTROL CENTER</small>
         </span>
       )}
     </div>
   );
 }
 
-function ThemeCycleButton({ id, isDark, isUltra, onCycle, ariaLabel }: {
+function ThemeCycleButton({
+  id,
+  isDark,
+  isUltra,
+  onCycle,
+  ariaLabel,
+}: {
   id: string;
   isDark: boolean;
   isUltra: boolean;
@@ -90,7 +112,14 @@ function ThemeCycleButton({ id, isDark, isUltra, onCycle, ariaLabel }: {
 }) {
   const icon = !isDark ? <SunOutlined /> : !isUltra ? <MoonOutlined /> : <MoonFilled />;
   return (
-    <button id={id} type="button" className="fx-square-btn" aria-label={ariaLabel} title={ariaLabel} onClick={onCycle}>
+    <button
+      id={id}
+      type="button"
+      className="fx-icon-button"
+      aria-label={ariaLabel}
+      title={ariaLabel}
+      onClick={onCycle}
+    >
       {icon}
     </button>
   );
@@ -108,19 +137,88 @@ export default function AppSidebar() {
   const panelVersion = window.X_UI_CUR_VER || '';
   const persian = isFa();
 
-  const tabs = useMemo<NavItem[]>(() => [
-    { key: '/', icon: 'dashboard', title: t('menu.dashboard'), group: 'workspace', hint: persian ? 'نمای کلی و کنترل سریع' : 'Overview and quick control' },
-    { key: '/clients', icon: 'team', title: t('menu.clients'), group: 'workspace', hint: persian ? 'کاربران و اشتراک‌ها' : 'Users and subscriptions' },
-    { key: '/groups', icon: 'groups', title: t('menu.groups'), group: 'workspace', hint: persian ? 'مدیریت دسترسی گروهی' : 'Grouped access control' },
-    { key: '/inbounds', icon: 'inbound', title: t('menu.inbounds'), group: 'network', hint: persian ? 'ورودی‌ها و پروتکل‌ها' : 'Ingress and protocols' },
-    { key: '/hosts', icon: 'hosts', title: t('menu.hosts'), group: 'network', hint: persian ? 'هاست‌های لینک اشتراک' : 'Subscription endpoints' },
-    { key: '/nodes', icon: 'cluster', title: t('menu.nodes'), group: 'network', hint: persian ? 'سرورهای متصل' : 'Connected servers' },
-    { key: '/outbound', icon: 'outbound', title: t('menu.outbounds'), group: 'network', hint: persian ? 'مسیرهای خروجی' : 'Egress paths' },
-    { key: '/routing', icon: 'routing', title: t('menu.routing'), group: 'network', hint: persian ? 'قوانین هدایت ترافیک' : 'Traffic policies' },
-    { key: '/settings', icon: 'setting', title: t('menu.settings'), group: 'system', hint: persian ? 'پنل، امنیت و اشتراک' : 'Panel and security' },
-    { key: '/xray', icon: 'tool', title: t('menu.xray'), group: 'system', hint: persian ? 'موتور و تنظیمات پیشرفته' : 'Engine configuration' },
-    { key: '/api-docs', icon: 'apidocs', title: t('menu.apiDocs'), group: 'system', hint: persian ? 'مستندات توسعه‌دهنده' : 'Developer reference' },
-  ], [persian, t]);
+  const tabs = useMemo<NavItem[]>(
+    () => [
+      {
+        key: '/',
+        icon: 'dashboard',
+        title: t('menu.dashboard'),
+        group: 'workspace',
+        hint: persian ? 'نمای کلی و کنترل سریع' : 'Overview and quick control',
+      },
+      {
+        key: '/clients',
+        icon: 'team',
+        title: t('menu.clients'),
+        group: 'workspace',
+        hint: persian ? 'کاربران و اشتراک‌ها' : 'Users and subscriptions',
+      },
+      {
+        key: '/groups',
+        icon: 'groups',
+        title: t('menu.groups'),
+        group: 'workspace',
+        hint: persian ? 'مدیریت دسترسی گروهی' : 'Grouped access control',
+      },
+      {
+        key: '/inbounds',
+        icon: 'inbound',
+        title: t('menu.inbounds'),
+        group: 'network',
+        hint: persian ? 'ورودی‌ها و پروتکل‌ها' : 'Ingress and protocols',
+      },
+      {
+        key: '/hosts',
+        icon: 'hosts',
+        title: t('menu.hosts'),
+        group: 'network',
+        hint: persian ? 'هاست‌های لینک اشتراک' : 'Subscription endpoints',
+      },
+      {
+        key: '/nodes',
+        icon: 'cluster',
+        title: t('menu.nodes'),
+        group: 'network',
+        hint: persian ? 'سرورهای متصل' : 'Connected servers',
+      },
+      {
+        key: '/outbound',
+        icon: 'outbound',
+        title: t('menu.outbounds'),
+        group: 'network',
+        hint: persian ? 'مسیرهای خروجی' : 'Egress paths',
+      },
+      {
+        key: '/routing',
+        icon: 'routing',
+        title: t('menu.routing'),
+        group: 'network',
+        hint: persian ? 'قوانین هدایت ترافیک' : 'Traffic policies',
+      },
+      {
+        key: '/settings',
+        icon: 'setting',
+        title: t('menu.settings'),
+        group: 'system',
+        hint: persian ? 'پنل، امنیت و اشتراک' : 'Panel and security',
+      },
+      {
+        key: '/xray',
+        icon: 'tool',
+        title: t('menu.xray'),
+        group: 'system',
+        hint: persian ? 'موتور و تنظیمات پیشرفته' : 'Engine configuration',
+      },
+      {
+        key: '/api-docs',
+        icon: 'apidocs',
+        title: t('menu.apiDocs'),
+        group: 'system',
+        hint: persian ? 'مستندات توسعه‌دهنده' : 'Developer reference',
+      },
+    ],
+    [persian, t],
+  );
 
   const current = useMemo(() => {
     if (pathname === '/') return tabs[0];
@@ -148,33 +246,39 @@ export default function AppSidebar() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const openLink = useCallback(async (key: string) => {
-    if (key === LOGOUT_KEY) {
-      await HttpUtil.post('/logout');
-      window.location.href = window.X_UI_BASE_PATH || '/';
-      return;
-    }
-    navigate(key);
-    setDrawerOpen(false);
-    setCommandOpen(false);
-    setQuery('');
-  }, [navigate]);
+  const openLink = useCallback(
+    async (key: string) => {
+      if (key === LOGOUT_KEY) {
+        await HttpUtil.post('/logout');
+        window.location.href = window.X_UI_BASE_PATH || '/';
+        return;
+      }
+      navigate(key);
+      setDrawerOpen(false);
+      setCommandOpen(false);
+      setQuery('');
+    },
+    [navigate],
+  );
 
-  const cycleTheme = useCallback((id: string) => {
-    pauseAnimationsUntilLeave(id);
-    if (!isDark) {
-      toggleTheme();
-      if (isUltra) toggleUltra();
-    } else if (!isUltra) {
-      toggleUltra();
-    } else {
-      toggleUltra();
-      toggleTheme();
-    }
-  }, [isDark, isUltra, toggleTheme, toggleUltra]);
+  const cycleTheme = useCallback(
+    (id: string) => {
+      pauseAnimationsUntilLeave(id);
+      if (!isDark) {
+        toggleTheme();
+        if (isUltra) toggleUltra();
+      } else if (!isUltra) {
+        toggleUltra();
+      } else {
+        toggleUltra();
+        toggleTheme();
+      }
+    },
+    [isDark, isUltra, toggleTheme, toggleUltra],
+  );
 
   const groups: { key: NavGroup; label: string }[] = [
-    { key: 'workspace', label: persian ? 'فضای کاری' : 'Workspace' },
+    { key: 'workspace', label: persian ? 'مدیریت' : 'Workspace' },
     { key: 'network', label: persian ? 'شبکه' : 'Network' },
     { key: 'system', label: persian ? 'سیستم' : 'System' },
   ];
@@ -188,78 +292,114 @@ export default function AppSidebar() {
         type="button"
         className={`fx-nav-item${active ? ' is-active' : ''}${compact ? ' is-compact' : ''}`}
         onClick={() => openLink(item.key)}
+        title={compact ? item.title : undefined}
       >
         <span className="fx-nav-icon"><Icon /></span>
-        {!compact && (
-          <span className="fx-nav-copy">
-            <strong>{item.title}</strong>
-            <small>{item.hint}</small>
-          </span>
-        )}
-        {!compact && <ArrowRightOutlined className="fx-nav-arrow" />}
+        <span className="fx-nav-copy">
+          <strong>{item.title}</strong>
+          <small>{item.hint}</small>
+        </span>
+        <ArrowRightOutlined className="fx-nav-arrow" />
       </button>
     );
   };
 
   const mobileItems = tabs.filter((item) => ['/', '/inbounds', '/clients', '/hosts'].includes(item.key));
+  const CurrentIcon = iconByName[current.icon];
 
   return (
     <>
       <aside className="fx-sidebar" aria-label="Primary navigation">
-        <div className="fx-sidebar-brand"><BrandMark /></div>
-
-        <div className="fx-current-card">
-          <span className="fx-current-label">{persian ? 'بخش فعال' : 'ACTIVE SPACE'}</span>
-          <div className="fx-current-row">
-            <span className="fx-current-icon">{(() => { const Icon = iconByName[current.icon]; return <Icon />; })()}</span>
-            <div><strong>{current.title}</strong><small>{current.hint}</small></div>
-          </div>
+        <div className="fx-sidebar-top">
+          <BrandMark />
+          <span className="fx-online-dot" title={persian ? 'پنل فعال است' : 'Panel online'} />
         </div>
+
+        <button type="button" className="fx-search-button" onClick={() => setCommandOpen(true)}>
+          <SearchOutlined />
+          <span>{persian ? 'جست‌وجوی سریع' : 'Quick search'}</span>
+          <kbd>⌘ K</kbd>
+        </button>
 
         <div className="fx-sidebar-scroll">
           {groups.map((group) => (
             <section className="fx-nav-group" key={group.key}>
               <div className="fx-nav-group-title">{group.label}</div>
-              <div className="fx-nav-list">{tabs.filter((item) => item.group === group.key).map((item) => renderNavItem(item))}</div>
+              <div className="fx-nav-list">
+                {tabs.filter((item) => item.group === group.key).map((item) => renderNavItem(item))}
+              </div>
             </section>
           ))}
         </div>
 
         <div className="fx-sidebar-footer">
-          <div className="fx-server-time" title={serverClock.dateTimeText}>
-            <ClockCircleOutlined />
-            <div><strong>{serverClock.clockText}</strong><small>{serverClock.data?.timezoneLabel || ''}</small></div>
+          <div className="fx-server-card" title={serverClock.dateTimeText}>
+            <span className="fx-server-card-icon"><ClockCircleOutlined /></span>
+            <span className="fx-server-card-copy">
+              <strong>{serverClock.clockText}</strong>
+              <small>{serverClock.data?.timezoneLabel || (persian ? 'زمان سرور' : 'Server time')}</small>
+            </span>
           </div>
           <div className="fx-footer-actions">
-            <ThemeCycleButton id="theme-cycle" isDark={isDark} isUltra={isUltra} onCycle={() => cycleTheme('theme-cycle')} ariaLabel={t('menu.theme')} />
-            <a className="fx-version-pill" href={REPO_URL} target="_blank" rel="noopener noreferrer">{formatPanelVersion(panelVersion)}</a>
-            <button className="fx-square-btn is-danger" type="button" title={t('logout')} onClick={() => openLink(LOGOUT_KEY)}><LogoutOutlined /></button>
+            <ThemeCycleButton
+              id="theme-cycle"
+              isDark={isDark}
+              isUltra={isUltra}
+              onCycle={() => cycleTheme('theme-cycle')}
+              ariaLabel={t('menu.theme')}
+            />
+            <a className="fx-version-pill" href={REPO_URL} target="_blank" rel="noopener noreferrer">
+              {formatPanelVersion(panelVersion)}
+            </a>
+            <button
+              className="fx-icon-button is-danger"
+              type="button"
+              title={t('logout')}
+              onClick={() => openLink(LOGOUT_KEY)}
+            >
+              <LogoutOutlined />
+            </button>
           </div>
         </div>
       </aside>
 
-      <header className="fx-workspace-bar">
-        <div className="fx-workspace-title">
-          <span>{persian ? 'فضای کاری' : 'Workspace'}</span>
-          <strong>{current.title}</strong>
+      <header className="fx-desktop-header">
+        <div className="fx-header-page">
+          <span className="fx-header-page-icon"><CurrentIcon /></span>
+          <div>
+            <small>{persian ? 'صفحه فعلی' : 'Current page'}</small>
+            <strong>{current.title}</strong>
+          </div>
         </div>
-        <button type="button" className="fx-command-trigger" onClick={() => setCommandOpen(true)}>
-          <SearchOutlined />
-          <span>{persian ? 'جست‌وجوی بخش‌ها و ابزارها' : 'Search sections and tools'}</span>
-          <kbd>Ctrl K</kbd>
-        </button>
-        <div className="fx-workspace-actions">
+        <div className="fx-header-actions">
           <Tooltip title={serverClock.dateTimeText}>
-            <span className="fx-top-clock"><ClockCircleOutlined />{serverClock.clockText}</span>
+            <span className="fx-header-clock"><ClockCircleOutlined />{serverClock.clockText}</span>
           </Tooltip>
-          <ThemeCycleButton id="theme-cycle-top" isDark={isDark} isUltra={isUltra} onCycle={() => cycleTheme('theme-cycle-top')} ariaLabel={t('menu.theme')} />
+          <button type="button" className="fx-header-search" onClick={() => setCommandOpen(true)}>
+            <SearchOutlined />
+            <span>{persian ? 'جست‌وجو' : 'Search'}</span>
+          </button>
+          <ThemeCycleButton
+            id="theme-cycle-top"
+            isDark={isDark}
+            isUltra={isUltra}
+            onCycle={() => cycleTheme('theme-cycle-top')}
+            ariaLabel={t('menu.theme')}
+          />
         </div>
       </header>
 
       <header className="fx-mobile-bar">
-        <button className="fx-square-btn" type="button" aria-label={t('menu.openMenu')} onClick={() => setDrawerOpen(true)}><MenuOutlined /></button>
-        <BrandMark />
-        <button className="fx-square-btn" type="button" aria-label="Search" onClick={() => setCommandOpen(true)}><SearchOutlined /></button>
+        <button className="fx-icon-button" type="button" aria-label={t('menu.openMenu')} onClick={() => setDrawerOpen(true)}>
+          <MenuOutlined />
+        </button>
+        <div className="fx-mobile-title">
+          <BrandMark compact />
+          <strong>{current.title}</strong>
+        </div>
+        <button className="fx-icon-button" type="button" aria-label="Search" onClick={() => setCommandOpen(true)}>
+          <SearchOutlined />
+        </button>
       </header>
 
       <nav className="fx-mobile-dock" aria-label="Primary">
@@ -268,12 +408,14 @@ export default function AppSidebar() {
           const active = current.key === item.key;
           return (
             <button key={item.key} type="button" className={active ? 'is-active' : ''} onClick={() => openLink(item.key)}>
-              <Icon /><span>{item.title}</span>
+              <span><Icon /></span>
+              <small>{item.title}</small>
             </button>
           );
         })}
         <button type="button" className={drawerOpen ? 'is-active' : ''} onClick={() => setDrawerOpen(true)}>
-          <AppstoreOutlined /><span>{t('more')}</span>
+          <span><AppstoreOutlined /></span>
+          <small>{t('more')}</small>
         </button>
       </nav>
 
@@ -282,20 +424,47 @@ export default function AppSidebar() {
         closable={false}
         open={drawerOpen}
         rootClassName="fx-mobile-drawer"
-        width="min(94vw, 410px)"
+        width="min(92vw, 390px)"
         styles={{ body: { padding: 0 } }}
         onClose={() => setDrawerOpen(false)}
       >
         <div className="fx-drawer-head">
           <BrandMark />
-          <button className="fx-square-btn" type="button" aria-label={t('close')} onClick={() => setDrawerOpen(false)}><CloseOutlined /></button>
+          <button className="fx-icon-button" type="button" aria-label={t('close')} onClick={() => setDrawerOpen(false)}>
+            <CloseOutlined />
+          </button>
         </div>
-        <div className="fx-drawer-time"><ClockCircleOutlined /><strong>{serverClock.clockText}</strong><span>{serverClock.data?.timezoneLabel || ''}</span></div>
-        <div className="fx-drawer-grid">{tabs.map((item) => renderNavItem(item, true))}</div>
+        <div className="fx-drawer-current">
+          <span><CurrentIcon /></span>
+          <div><small>{persian ? 'صفحه فعلی' : 'Current page'}</small><strong>{current.title}</strong></div>
+        </div>
+        <div className="fx-drawer-nav">
+          {groups.map((group) => (
+            <section key={group.key}>
+              <div className="fx-nav-group-title">{group.label}</div>
+              <div className="fx-drawer-grid">
+                {tabs.filter((item) => item.group === group.key).map((item) => renderNavItem(item, true))}
+              </div>
+            </section>
+          ))}
+        </div>
         <div className="fx-drawer-bottom">
-          <ThemeCycleButton id="theme-cycle-mobile" isDark={isDark} isUltra={isUltra} onCycle={() => cycleTheme('theme-cycle-mobile')} ariaLabel={t('menu.theme')} />
-          <a className="fx-version-pill" href={REPO_URL} target="_blank" rel="noopener noreferrer">{formatPanelVersion(panelVersion)}</a>
-          <button className="fx-drawer-logout" type="button" onClick={() => openLink(LOGOUT_KEY)}><LogoutOutlined />{t('logout')}</button>
+          <div className="fx-drawer-time"><ClockCircleOutlined /><strong>{serverClock.clockText}</strong><span>{serverClock.data?.timezoneLabel || ''}</span></div>
+          <div className="fx-drawer-actions">
+            <ThemeCycleButton
+              id="theme-cycle-mobile"
+              isDark={isDark}
+              isUltra={isUltra}
+              onCycle={() => cycleTheme('theme-cycle-mobile')}
+              ariaLabel={t('menu.theme')}
+            />
+            <a className="fx-version-pill" href={REPO_URL} target="_blank" rel="noopener noreferrer">
+              {formatPanelVersion(panelVersion)}
+            </a>
+            <button className="fx-drawer-logout" type="button" onClick={() => openLink(LOGOUT_KEY)}>
+              <LogoutOutlined />{t('logout')}
+            </button>
+          </div>
         </div>
       </Drawer>
 
@@ -303,7 +472,7 @@ export default function AppSidebar() {
         open={commandOpen}
         footer={null}
         closable={false}
-        width={660}
+        width={620}
         rootClassName="fx-command-modal"
         onCancel={() => { setCommandOpen(false); setQuery(''); }}
       >
@@ -330,7 +499,9 @@ export default function AppSidebar() {
               </button>
             );
           })}
-          {filteredTabs.length === 0 && <div className="fx-command-empty">{persian ? 'نتیجه‌ای پیدا نشد' : 'No matching section'}</div>}
+          {filteredTabs.length === 0 && (
+            <div className="fx-command-empty">{persian ? 'نتیجه‌ای پیدا نشد' : 'No matching section'}</div>
+          )}
         </div>
       </Modal>
     </>
