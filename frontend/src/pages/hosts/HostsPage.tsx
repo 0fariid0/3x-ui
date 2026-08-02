@@ -9,6 +9,7 @@ import { useHostsQuery, useSubscriptionDisplayHostQuery, type HostRecord } from 
 import { useHostMutations } from '@/api/queries/useHostMutations';
 import { useInboundOptions } from '@/api/queries/useInboundOptions';
 import AppSidebar from '@/layouts/AppSidebar';
+import FaraPageHeader from '@/components/fara/FaraPageHeader';
 import { setMessageInstance } from '@/utils/messageBus';
 import type { BulkAddHostValues } from '@/schemas/api/host';
 import RemarkTemplateField from '@/components/form/RemarkTemplateField';
@@ -153,7 +154,9 @@ export default function HostsPage() {
                   extra={<Button type="primary" loading={loading} onClick={() => refetch()}>{t('refresh')}</Button>}
                 />
               ) : (
-                <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 12]}>
+                <div className="fx-page-stack">
+                  <FaraPageHeader section="hosts" title={t('menu.hosts')} />
+                  <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 12]}>
                   <Col span={24}>
                     <Card size="small" hoverable className="summary-card">
                       <Row gutter={[16, 12]}>
@@ -234,6 +237,7 @@ export default function HostsPage() {
                     />
                   </Col>
                 </Row>
+                </div>
               )}
             </Spin>
           </Layout.Content>

@@ -1,7 +1,7 @@
 {
   "name": "fara-xray-frontend",
   "private": true,
-  "version": "0.6.1",
+  "version": "0.6.2",
   "type": "module",
   "description": "Fara Xray control panel frontend (React 19 + Ant Design 6 + Vite 8).",
   "engines": {

@@ -37,7 +37,7 @@ export default function TwoFactorModal({
 
   useEffect(() => {
     if (!open) return;
-     
+
     setEnteredCode('');
     totpRef.current = null;
     setQrValue('');
@@ -53,7 +53,7 @@ export default function TwoFactorModal({
       totpRef.current = totp;
       setQrValue(totp.toString());
     }
-     
+
   }, [open, token]);
 
   function close(success: boolean, code = '') {

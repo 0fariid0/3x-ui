@@ -16,6 +16,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useStatusQuery } from '@/api/queries/useStatusQuery';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import AppSidebar from '@/layouts/AppSidebar';
+import FaraPageHeader from '@/components/fara/FaraPageHeader';
 import { LazyMount } from '@/components/utility';
 import { setMessageInstance } from '@/utils/messageBus';
 import OverviewActionBar from './OverviewActionBar';
@@ -178,6 +179,7 @@ export default function IndexPage() {
                 />
               ) : (
                 <div className="ov-page">
+                  <FaraPageHeader section="dashboard" title={t('menu.dashboard')} />
                   <OverviewActionBar
                     status={status}
                     isMobile={isMobile}

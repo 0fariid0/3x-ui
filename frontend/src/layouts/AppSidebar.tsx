@@ -1,30 +1,24 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ComponentType } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { Drawer, Layout, Menu } from 'antd';
-import type { MenuProps } from 'antd';
+import { Drawer, Input, Modal, Tooltip } from 'antd';
 import {
   ApiOutlined,
   AppstoreOutlined,
-  CloseOutlined,
-  CloudServerOutlined,
+  ArrowRightOutlined,
   ClockCircleOutlined,
+  CloseOutlined,
   ClusterOutlined,
-  CodeOutlined,
   DashboardOutlined,
-  DatabaseOutlined,
   ExportOutlined,
-  GithubOutlined,
   GlobalOutlined,
   ImportOutlined,
   LogoutOutlined,
-  MailOutlined,
   MenuOutlined,
-  MessageOutlined,
   MoonFilled,
   MoonOutlined,
-  SafetyOutlined,
+  SearchOutlined,
   SettingOutlined,
   SunOutlined,
   SwapOutlined,
@@ -36,7 +30,6 @@ import {
 import { HttpUtil } from '@/utils';
 import { formatPanelVersion } from '@/lib/panel-version';
 import { pauseAnimationsUntilLeave, useTheme } from '@/hooks/useTheme';
-import { useAllSettings } from '@/api/queries/useAllSettings';
 import { useServerClock } from '@/hooks/useServerClock';
 import './AppSidebar.css';
 
@@ -44,6 +37,15 @@ const REPO_URL = 'https://github.com/0fariid0/3x-ui';
 const LOGOUT_KEY = '__logout__';
 
 type IconName = 'dashboard' | 'inbound' | 'team' | 'groups' | 'setting' | 'tool' | 'cluster' | 'hosts' | 'logout' | 'apidocs' | 'outbound' | 'routing';
+type NavGroup = 'workspace' | 'network' | 'system';
+
+interface NavItem {
+  key: string;
+  icon: IconName;
+  title: string;
+  group: NavGroup;
+  hint: string;
+}
 
 const iconByName: Record<IconName, ComponentType> = {
   dashboard: DashboardOutlined,
@@ -60,28 +62,22 @@ const iconByName: Record<IconName, ComponentType> = {
   routing: SwapOutlined,
 };
 
+function isFa(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.dir === 'rtl' || (document.documentElement.lang || '').startsWith('fa');
+}
+
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`fara-brand ${compact ? 'is-compact' : ''}`}>
-      <span className="fara-brand-mark">F</span>
+    <div className={`fx-brand ${compact ? 'is-compact' : ''}`}>
+      <span className="fx-brand-symbol" aria-hidden="true"><i /><i /><i /></span>
       {!compact && (
-        <span className="fara-brand-copy">
+        <span className="fx-brand-copy">
           <strong>Fara Xray</strong>
           <small>فرا ایکس‌ری</small>
         </span>
       )}
     </div>
-  );
-}
-
-function VersionBadge({ version }: { version: string }) {
-  if (!version) return null;
-  const label = formatPanelVersion(version);
-  return (
-    <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="sider-version" title={label}>
-      <GithubOutlined />
-      <span>{label}</span>
-    </a>
   );
 }
 
@@ -94,7 +90,7 @@ function ThemeCycleButton({ id, isDark, isUltra, onCycle, ariaLabel }: {
 }) {
   const icon = !isDark ? <SunOutlined /> : !isUltra ? <MoonOutlined /> : <MoonFilled />;
   return (
-    <button id={id} type="button" className="fara-icon-btn" aria-label={ariaLabel} title={ariaLabel} onClick={onCycle}>
+    <button id={id} type="button" className="fx-square-btn" aria-label={ariaLabel} title={ariaLabel} onClick={onCycle}>
       {icon}
     </button>
   );
@@ -104,62 +100,53 @@ export default function AppSidebar() {
   const { t } = useTranslation();
   const { isDark, isUltra, toggleTheme, toggleUltra } = useTheme();
   const navigate = useNavigate();
-  const { pathname, hash } = useLocation();
-  const { allSetting } = useAllSettings();
+  const { pathname } = useLocation();
   const serverClock = useServerClock();
-  const showSubFormats = !!(allSetting.subJsonEnable || allSetting.subClashEnable);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [openKeys, setOpenKeys] = useState<string[]>([]);
-
-  const currentTheme: 'light' | 'dark' = isDark ? 'dark' : 'light';
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const panelVersion = window.X_UI_CUR_VER || '';
+  const persian = isFa();
 
-  const tabs = useMemo<{ key: string; icon: IconName; title: string }[]>(() => [
-    { key: '/', icon: 'dashboard', title: t('menu.dashboard') },
-    { key: '/inbounds', icon: 'inbound', title: t('menu.inbounds') },
-    { key: '/clients', icon: 'team', title: t('menu.clients') },
-    { key: '/groups', icon: 'groups', title: t('menu.groups') },
-    { key: '/nodes', icon: 'cluster', title: t('menu.nodes') },
-    { key: '/hosts', icon: 'hosts', title: t('menu.hosts') },
-    { key: '/outbound', icon: 'outbound', title: t('menu.outbounds') },
-    { key: '/routing', icon: 'routing', title: t('menu.routing') },
-    { key: '/settings', icon: 'setting', title: t('menu.settings') },
-    { key: '/xray', icon: 'tool', title: t('menu.xray') },
-    { key: '/api-docs', icon: 'apidocs', title: t('menu.apiDocs') },
-    { key: LOGOUT_KEY, icon: 'logout', title: t('logout') },
-  ], [t]);
+  const tabs = useMemo<NavItem[]>(() => [
+    { key: '/', icon: 'dashboard', title: t('menu.dashboard'), group: 'workspace', hint: persian ? 'نمای کلی و کنترل سریع' : 'Overview and quick control' },
+    { key: '/clients', icon: 'team', title: t('menu.clients'), group: 'workspace', hint: persian ? 'کاربران و اشتراک‌ها' : 'Users and subscriptions' },
+    { key: '/groups', icon: 'groups', title: t('menu.groups'), group: 'workspace', hint: persian ? 'مدیریت دسترسی گروهی' : 'Grouped access control' },
+    { key: '/inbounds', icon: 'inbound', title: t('menu.inbounds'), group: 'network', hint: persian ? 'ورودی‌ها و پروتکل‌ها' : 'Ingress and protocols' },
+    { key: '/hosts', icon: 'hosts', title: t('menu.hosts'), group: 'network', hint: persian ? 'هاست‌های لینک اشتراک' : 'Subscription endpoints' },
+    { key: '/nodes', icon: 'cluster', title: t('menu.nodes'), group: 'network', hint: persian ? 'سرورهای متصل' : 'Connected servers' },
+    { key: '/outbound', icon: 'outbound', title: t('menu.outbounds'), group: 'network', hint: persian ? 'مسیرهای خروجی' : 'Egress paths' },
+    { key: '/routing', icon: 'routing', title: t('menu.routing'), group: 'network', hint: persian ? 'قوانین هدایت ترافیک' : 'Traffic policies' },
+    { key: '/settings', icon: 'setting', title: t('menu.settings'), group: 'system', hint: persian ? 'پنل، امنیت و اشتراک' : 'Panel and security' },
+    { key: '/xray', icon: 'tool', title: t('menu.xray'), group: 'system', hint: persian ? 'موتور و تنظیمات پیشرفته' : 'Engine configuration' },
+    { key: '/api-docs', icon: 'apidocs', title: t('menu.apiDocs'), group: 'system', hint: persian ? 'مستندات توسعه‌دهنده' : 'Developer reference' },
+  ], [persian, t]);
 
-  const settingsChildren = useMemo<NonNullable<MenuProps['items']>>(() => {
-    const children: NonNullable<MenuProps['items']> = [
-      { key: '/settings#general', icon: <SettingOutlined />, label: t('pages.settings.panelSettings') },
-      { key: '/settings#security', icon: <SafetyOutlined />, label: t('pages.settings.securitySettings') },
-      { key: '/settings#telegram', icon: <MessageOutlined />, label: t('pages.settings.TGBotSettings') },
-      { key: '/settings#email', icon: <MailOutlined />, label: t('pages.settings.emailSettings') },
-      { key: '/settings#subscription', icon: <CloudServerOutlined />, label: t('pages.settings.subSettings') },
-    ];
-    if (showSubFormats) children.push({ key: '/settings#subscription-formats', icon: <CodeOutlined />, label: 'Sub Formats' });
-    return children;
-  }, [t, showSubFormats]);
+  const current = useMemo(() => {
+    if (pathname === '/') return tabs[0];
+    return tabs.find((tab) => pathname === tab.key || pathname.startsWith(`${tab.key}/`)) || tabs[0];
+  }, [pathname, tabs]);
 
-  const xrayChildren = useMemo<NonNullable<MenuProps['items']>>(() => [
-    { key: '/xray#basic', icon: <SettingOutlined />, label: t('pages.xray.basicTemplate') },
-    { key: '/xray#balancer', icon: <ClusterOutlined />, label: t('pages.xray.Balancers') },
-    { key: '/xray#dns', icon: <DatabaseOutlined />, label: 'DNS' },
-    { key: '/xray#advanced', icon: <CodeOutlined />, label: t('pages.xray.advancedTemplate') },
-  ], [t]);
+  const filteredTabs = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase();
+    if (!needle) return tabs;
+    return tabs.filter((item) => `${item.title} ${item.hint}`.toLocaleLowerCase().includes(needle));
+  }, [query, tabs]);
 
-  const selectedKey = pathname === '/settings'
-    ? `/settings${hash || '#general'}`
-    : pathname === '/xray'
-      ? `/xray${hash || '#basic'}`
-      : (pathname || '/');
-
-  const toMenuItems = useCallback((items: typeof tabs): MenuProps['items'] => items.map((tab) => {
-    const Icon = iconByName[tab.icon];
-    if (tab.key === '/settings') return { key: tab.key, icon: <Icon />, label: tab.title, children: settingsChildren };
-    if (tab.key === '/xray') return { key: tab.key, icon: <Icon />, label: tab.title, children: xrayChildren };
-    return { key: tab.key, icon: <Icon />, label: tab.title };
-  }), [settingsChildren, xrayChildren]);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setCommandOpen((open) => !open);
+      }
+      if (event.key === 'Escape') {
+        setCommandOpen(false);
+        setQuery('');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const openLink = useCallback(async (key: string) => {
     if (key === LOGOUT_KEY) {
@@ -169,9 +156,9 @@ export default function AppSidebar() {
     }
     navigate(key);
     setDrawerOpen(false);
+    setCommandOpen(false);
+    setQuery('');
   }, [navigate]);
-
-  const onMenuClick = useCallback<NonNullable<MenuProps['onClick']>>(({ key }) => openLink(String(key)), [openLink]);
 
   const cycleTheme = useCallback((id: string) => {
     pauseAnimationsUntilLeave(id);
@@ -186,85 +173,166 @@ export default function AppSidebar() {
     }
   }, [isDark, isUltra, toggleTheme, toggleUltra]);
 
+  const groups: { key: NavGroup; label: string }[] = [
+    { key: 'workspace', label: persian ? 'فضای کاری' : 'Workspace' },
+    { key: 'network', label: persian ? 'شبکه' : 'Network' },
+    { key: 'system', label: persian ? 'سیستم' : 'System' },
+  ];
+
+  const renderNavItem = (item: NavItem, compact = false) => {
+    const Icon = iconByName[item.icon];
+    const active = current.key === item.key;
+    return (
+      <button
+        key={item.key}
+        type="button"
+        className={`fx-nav-item${active ? ' is-active' : ''}${compact ? ' is-compact' : ''}`}
+        onClick={() => openLink(item.key)}
+      >
+        <span className="fx-nav-icon"><Icon /></span>
+        {!compact && (
+          <span className="fx-nav-copy">
+            <strong>{item.title}</strong>
+            <small>{item.hint}</small>
+          </span>
+        )}
+        {!compact && <ArrowRightOutlined className="fx-nav-arrow" />}
+      </button>
+    );
+  };
+
   const mobileItems = tabs.filter((item) => ['/', '/inbounds', '/clients', '/hosts'].includes(item.key));
 
   return (
     <>
-      <div className="fara-desktop-sidebar">
-        <Layout.Sider theme={currentTheme} width={256}>
-          <div className="sider-brand"><BrandMark /></div>
-          <div className="sider-section-label">CONTROL CENTER</div>
-          <Menu
-            theme={currentTheme}
-            mode="inline"
-            selectedKeys={[selectedKey]}
-            openKeys={openKeys}
-            onOpenChange={(keys) => setOpenKeys(keys as string[])}
-            className="sider-nav"
-            items={toMenuItems(tabs.filter((tab) => tab.key !== LOGOUT_KEY))}
-            onClick={onMenuClick}
-          />
-          <div className="sider-bottom">
-            <div className="sider-clock-card" title={serverClock.dateTimeText}>
-              <ClockCircleOutlined />
-              <div><strong>{serverClock.clockText}</strong><small>{serverClock.data?.timezoneLabel || ''}</small></div>
-            </div>
-            <div className="sider-actions-row">
-              <ThemeCycleButton id="theme-cycle" isDark={isDark} isUltra={isUltra} onCycle={() => cycleTheme('theme-cycle')} ariaLabel={t('menu.theme')} />
-              <VersionBadge version={panelVersion} />
-              <button className="fara-icon-btn danger" type="button" title={t('logout')} onClick={() => openLink(LOGOUT_KEY)}><LogoutOutlined /></button>
-            </div>
-          </div>
-        </Layout.Sider>
-      </div>
+      <aside className="fx-sidebar" aria-label="Primary navigation">
+        <div className="fx-sidebar-brand"><BrandMark /></div>
 
-      <header className="fara-mobile-topbar">
-        <button className="fara-icon-btn" type="button" aria-label={t('menu.openMenu')} onClick={() => setDrawerOpen(true)}><MenuOutlined /></button>
-        <BrandMark />
-        <ThemeCycleButton id="theme-cycle-mobile" isDark={isDark} isUltra={isUltra} onCycle={() => cycleTheme('theme-cycle-mobile')} ariaLabel={t('menu.theme')} />
+        <div className="fx-current-card">
+          <span className="fx-current-label">{persian ? 'بخش فعال' : 'ACTIVE SPACE'}</span>
+          <div className="fx-current-row">
+            <span className="fx-current-icon">{(() => { const Icon = iconByName[current.icon]; return <Icon />; })()}</span>
+            <div><strong>{current.title}</strong><small>{current.hint}</small></div>
+          </div>
+        </div>
+
+        <div className="fx-sidebar-scroll">
+          {groups.map((group) => (
+            <section className="fx-nav-group" key={group.key}>
+              <div className="fx-nav-group-title">{group.label}</div>
+              <div className="fx-nav-list">{tabs.filter((item) => item.group === group.key).map((item) => renderNavItem(item))}</div>
+            </section>
+          ))}
+        </div>
+
+        <div className="fx-sidebar-footer">
+          <div className="fx-server-time" title={serverClock.dateTimeText}>
+            <ClockCircleOutlined />
+            <div><strong>{serverClock.clockText}</strong><small>{serverClock.data?.timezoneLabel || ''}</small></div>
+          </div>
+          <div className="fx-footer-actions">
+            <ThemeCycleButton id="theme-cycle" isDark={isDark} isUltra={isUltra} onCycle={() => cycleTheme('theme-cycle')} ariaLabel={t('menu.theme')} />
+            <a className="fx-version-pill" href={REPO_URL} target="_blank" rel="noopener noreferrer">{formatPanelVersion(panelVersion)}</a>
+            <button className="fx-square-btn is-danger" type="button" title={t('logout')} onClick={() => openLink(LOGOUT_KEY)}><LogoutOutlined /></button>
+          </div>
+        </div>
+      </aside>
+
+      <header className="fx-workspace-bar">
+        <div className="fx-workspace-title">
+          <span>{persian ? 'فضای کاری' : 'Workspace'}</span>
+          <strong>{current.title}</strong>
+        </div>
+        <button type="button" className="fx-command-trigger" onClick={() => setCommandOpen(true)}>
+          <SearchOutlined />
+          <span>{persian ? 'جست‌وجوی بخش‌ها و ابزارها' : 'Search sections and tools'}</span>
+          <kbd>Ctrl K</kbd>
+        </button>
+        <div className="fx-workspace-actions">
+          <Tooltip title={serverClock.dateTimeText}>
+            <span className="fx-top-clock"><ClockCircleOutlined />{serverClock.clockText}</span>
+          </Tooltip>
+          <ThemeCycleButton id="theme-cycle-top" isDark={isDark} isUltra={isUltra} onCycle={() => cycleTheme('theme-cycle-top')} ariaLabel={t('menu.theme')} />
+        </div>
       </header>
 
-      <nav className="fara-mobile-bottom-nav" aria-label="Primary">
+      <header className="fx-mobile-bar">
+        <button className="fx-square-btn" type="button" aria-label={t('menu.openMenu')} onClick={() => setDrawerOpen(true)}><MenuOutlined /></button>
+        <BrandMark />
+        <button className="fx-square-btn" type="button" aria-label="Search" onClick={() => setCommandOpen(true)}><SearchOutlined /></button>
+      </header>
+
+      <nav className="fx-mobile-dock" aria-label="Primary">
         {mobileItems.map((item) => {
           const Icon = iconByName[item.icon];
-          const active = pathname === item.key || (item.key === '/' && pathname === '');
+          const active = current.key === item.key;
           return (
-            <button key={item.key} type="button" className={active ? 'active' : ''} onClick={() => openLink(item.key)}>
+            <button key={item.key} type="button" className={active ? 'is-active' : ''} onClick={() => openLink(item.key)}>
               <Icon /><span>{item.title}</span>
             </button>
           );
         })}
-        <button type="button" className={drawerOpen ? 'active' : ''} onClick={() => setDrawerOpen(true)}>
+        <button type="button" className={drawerOpen ? 'is-active' : ''} onClick={() => setDrawerOpen(true)}>
           <AppstoreOutlined /><span>{t('more')}</span>
         </button>
       </nav>
 
       <Drawer
-        placement="left"
+        placement={persian ? 'right' : 'left'}
         closable={false}
         open={drawerOpen}
-        rootClassName={currentTheme}
-        width="min(88vw, 360px)"
-        styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' }, header: { display: 'none' } }}
+        rootClassName="fx-mobile-drawer"
+        width="min(94vw, 410px)"
+        styles={{ body: { padding: 0 } }}
         onClose={() => setDrawerOpen(false)}
       >
-        <div className="drawer-header">
+        <div className="fx-drawer-head">
           <BrandMark />
-          <button className="fara-icon-btn" type="button" aria-label={t('close')} onClick={() => setDrawerOpen(false)}><CloseOutlined /></button>
+          <button className="fx-square-btn" type="button" aria-label={t('close')} onClick={() => setDrawerOpen(false)}><CloseOutlined /></button>
         </div>
-        <div className="drawer-clock"><ClockCircleOutlined /><span>{serverClock.clockText}</span><small>{serverClock.data?.timezoneLabel || ''}</small></div>
-        <Menu
-          theme={currentTheme}
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          openKeys={openKeys}
-          onOpenChange={(keys) => setOpenKeys(keys as string[])}
-          className="drawer-menu"
-          items={toMenuItems(tabs)}
-          onClick={onMenuClick}
-        />
-        <div className="drawer-footer"><VersionBadge version={panelVersion} /></div>
+        <div className="fx-drawer-time"><ClockCircleOutlined /><strong>{serverClock.clockText}</strong><span>{serverClock.data?.timezoneLabel || ''}</span></div>
+        <div className="fx-drawer-grid">{tabs.map((item) => renderNavItem(item, true))}</div>
+        <div className="fx-drawer-bottom">
+          <ThemeCycleButton id="theme-cycle-mobile" isDark={isDark} isUltra={isUltra} onCycle={() => cycleTheme('theme-cycle-mobile')} ariaLabel={t('menu.theme')} />
+          <a className="fx-version-pill" href={REPO_URL} target="_blank" rel="noopener noreferrer">{formatPanelVersion(panelVersion)}</a>
+          <button className="fx-drawer-logout" type="button" onClick={() => openLink(LOGOUT_KEY)}><LogoutOutlined />{t('logout')}</button>
+        </div>
       </Drawer>
+
+      <Modal
+        open={commandOpen}
+        footer={null}
+        closable={false}
+        width={660}
+        rootClassName="fx-command-modal"
+        onCancel={() => { setCommandOpen(false); setQuery(''); }}
+      >
+        <div className="fx-command-head">
+          <SearchOutlined />
+          <Input
+            autoFocus
+            variant="borderless"
+            value={query}
+            placeholder={persian ? 'نام بخش یا ابزار را بنویسید…' : 'Type a section or tool…'}
+            onChange={(event) => setQuery(event.target.value)}
+            onPressEnter={() => filteredTabs[0] && openLink(filteredTabs[0].key)}
+          />
+          <button type="button" onClick={() => { setCommandOpen(false); setQuery(''); }}>ESC</button>
+        </div>
+        <div className="fx-command-results">
+          {filteredTabs.map((item) => {
+            const Icon = iconByName[item.icon];
+            return (
+              <button key={item.key} type="button" onClick={() => openLink(item.key)}>
+                <span className="fx-command-icon"><Icon /></span>
+                <span><strong>{item.title}</strong><small>{item.hint}</small></span>
+                <ArrowRightOutlined />
+              </button>
+            );
+          })}
+          {filteredTabs.length === 0 && <div className="fx-command-empty">{persian ? 'نتیجه‌ای پیدا نشد' : 'No matching section'}</div>}
+        </div>
+      </Modal>
     </>
   );
 }

@@ -2,15 +2,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 import {
+  CloudServerOutlined,
+  CodeOutlined,
+  MailOutlined,
+  MessageOutlined,
+  SafetyOutlined,
+  SettingOutlined,
+} from '@ant-design/icons';
+import {
   Alert,
   Button,
   Card,
-  Col,
   ConfigProvider,
   FloatButton,
   Layout,
   Modal,
-  Row,
   Space,
   Spin,
   message,
@@ -19,10 +25,10 @@ import {
 import { HttpUtil, PromiseUtil } from '@/utils';
 import { setMessageInstance } from '@/utils/messageBus';
 import { useTheme } from '@/hooks/useTheme';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useAllSettings } from '@/api/queries/useAllSettings';
 import { AllSettingSchema } from '@/schemas/setting';
 import AppSidebar from '@/layouts/AppSidebar';
+import FaraPageHeader from '@/components/fara/FaraPageHeader';
 import GeneralTab from './GeneralTab';
 import SecurityTab from './SecurityTab';
 import TelegramTab from './TelegramTab';
@@ -60,7 +66,6 @@ function scrollTarget() {
 export default function SettingsPage() {
   const { t } = useTranslation();
   const { isDark, isUltra, antdThemeConfig } = useTheme();
-  const { isMobile } = useMediaQuery();
   const [modal, modalContextHolder] = Modal.useModal();
   const [messageApi, messageContextHolder] = message.useMessage();
 
@@ -84,12 +89,12 @@ export default function SettingsPage() {
   const [entryIsIP, setEntryIsIP] = useState(false);
 
   useEffect(() => {
-     
+
     const host = window.location.hostname;
     setEntryHost(host);
     setEntryPort(window.location.port);
     setEntryIsIP(isIp(host));
-     
+
   }, []);
 
   const [alertVisible, setAlertVisible] = useState(true);
@@ -219,7 +224,9 @@ export default function SettingsPage() {
               {!fetched ? (
                 <div className="loading-spacer" />
               ) : (
-                <>
+                <div className="fx-page-stack">
+                  <FaraPageHeader section="settings" title={t('menu.settings')} />
+
                   {confAlerts.length > 0 && alertVisible && (
                     <Alert
                       type="error"
@@ -238,35 +245,35 @@ export default function SettingsPage() {
                     />
                   )}
 
-                  <Row gutter={[isMobile ? 8 : 16, isMobile ? 0 : 12]}>
-                    <Col span={24}>
-                      <Card hoverable>
-                        <Row className="header-row">
-                          <Col xs={24} sm={10} className="header-actions">
-                            <Space>
-                              <Button type="primary" disabled={saveDisabled} onClick={onSave}>
-                                {t('pages.settings.save')}
-                              </Button>
-                              <Button type="primary" danger disabled={!saveDisabled} onClick={restartPanel}>
-                                {t('pages.settings.restartPanel')}
-                              </Button>
-                            </Space>
-                          </Col>
-                          <Col xs={24} sm={14} className="header-info">
-                            <FloatButton.BackTop target={scrollTarget} visibilityHeight={200} />
-                            <Alert type="warning" showIcon title={t('pages.settings.infoDesc')} />
-                          </Col>
-                        </Row>
-                      </Card>
-                    </Col>
+                  <div className="fx-section-workspace">
+                    <nav className="fx-section-nav" aria-label={t('menu.settings')}>
+                      <div className="fx-section-nav-title">Fara settings</div>
+                      <a className={activeSlug === 'general' ? 'is-active' : ''} href="#general"><SettingOutlined />{t('pages.settings.panelSettings')}</a>
+                      <a className={activeSlug === 'security' ? 'is-active' : ''} href="#security"><SafetyOutlined />{t('pages.settings.securitySettings')}</a>
+                      <a className={activeSlug === 'telegram' ? 'is-active' : ''} href="#telegram"><MessageOutlined />{t('pages.settings.TGBotSettings')}</a>
+                      <a className={activeSlug === 'email' ? 'is-active' : ''} href="#email"><MailOutlined />{t('pages.settings.emailSettings')}</a>
+                      <a className={activeSlug === 'subscription' ? 'is-active' : ''} href="#subscription"><CloudServerOutlined />{t('pages.settings.subSettings')}</a>
+                      {(allSetting.subJsonEnable || allSetting.subClashEnable) && (
+                        <a className={activeSlug === 'subscription-formats' ? 'is-active' : ''} href="#subscription-formats"><CodeOutlined />Sub formats</a>
+                      )}
+                    </nav>
 
-                    <Col span={24}>
-                      <Card hoverable>
-                        {categoryBody}
-                      </Card>
-                    </Col>
-                  </Row>
-                </>
+                    <div className="fx-section-panel">
+                      <div className="fx-sticky-actions">
+                        <div className="fx-sticky-actions-copy">
+                          <strong>{t('pages.settings.infoDesc')}</strong>
+                          <small>Changes stay in draft until you save them.</small>
+                        </div>
+                        <Space wrap>
+                          <Button type="primary" disabled={saveDisabled} onClick={onSave}>{t('pages.settings.save')}</Button>
+                          <Button danger disabled={!saveDisabled} onClick={restartPanel}>{t('pages.settings.restartPanel')}</Button>
+                        </Space>
+                      </div>
+                      <Card>{categoryBody}</Card>
+                    </div>
+                  </div>
+                  <FloatButton.BackTop target={scrollTarget} visibilityHeight={200} />
+                </div>
               )}
             </Spin>
           </Layout.Content>

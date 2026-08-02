@@ -236,10 +236,7 @@ export default function SubPage() {
   const themeIcon = !isDark ? <SunOutlined /> : !isUltra ? <MoonOutlined /> : <MoonFilled />;
 
   const cardTitle = (
-    <Space>
-      <span>{t('subscription.title')}</span>
-      <Tag>{sId}</Tag>
-    </Space>
+    <div className="sub-brand-title"><span className="sub-brand-mark">F</span><span><strong>Fara Xray</strong><small>{t('subscription.title')}</small></span></div>
   );
 
   const cardExtra = (
@@ -286,29 +283,44 @@ export default function SubPage() {
       <Layout className={pageClass}>
         <Layout.Content className="content">
           <Row justify="center">
-            <Col xs={24} sm={22} md={18} lg={14} xl={12}>
+            <Col xs={24} sm={23} md={22} lg={21} xl={19}>
               <Card hoverable className="subscription-card" title={cardTitle} extra={cardExtra}>
+                <section className="sub-hero">
+                  <div className="sub-hero-copy">
+                    <span className="sub-hero-eyebrow">PERSONAL SUBSCRIPTION</span>
+                    <h1>{subTitle || sId}</h1>
+                    <p>{subEmail || sId}</p>
+                    <div className="sub-hero-tags">
+                      <Tag color={isActive ? 'green' : 'red'}>{isActive ? t('subscription.active') : t('subscription.inactive')}</Tag>
+                      {isUnlimited && <Tag color="purple">{t('subscription.unlimited')}</Tag>}
+                    </div>
+                  </div>
+                  {subUrl && <div className="sub-hero-qr"><QRCode value={subUrl} size={132} type="svg" bordered={false} color="#000000" bgColor="#ffffff" /><small>{t('copy')} / QR</small></div>}
+                </section>
+
                 {announce && (
                   <Alert type="info" showIcon title={announce} style={{ marginBottom: 16 }} />
                 )}
-                <Descriptions
-                  bordered
-                  column={1}
-                  size="small"
-                  className="info-table"
-                  items={descriptionsItems}
-                />
+                <div className="sub-overview-grid">
+                  <Descriptions
+                    bordered
+                    column={1}
+                    size="small"
+                    className="info-table"
+                    items={descriptionsItems}
+                  />
 
-                <SubUsageSummary
-                  usedByte={Number(subData.usedByte || 0)
-                    || (Number(subData.downloadByte || 0) + Number(subData.uploadByte || 0))}
-                  totalByte={totalByte}
-                  usedLabel={used}
-                  totalLabel={total}
-                  remainedLabel={remained}
-                  expireMs={expireMs}
-                  isActive={isActive}
-                />
+                  <SubUsageSummary
+                    usedByte={Number(subData.usedByte || 0)
+                      || (Number(subData.downloadByte || 0) + Number(subData.uploadByte || 0))}
+                    totalByte={totalByte}
+                    usedLabel={used}
+                    totalLabel={total}
+                    remainedLabel={remained}
+                    expireMs={expireMs}
+                    isActive={isActive}
+                  />
+                </div>
 
                 {(subUrl || subJsonUrl || subClashUrl) && (
                   <>

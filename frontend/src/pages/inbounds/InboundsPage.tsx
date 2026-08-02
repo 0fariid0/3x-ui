@@ -33,6 +33,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useNodesQuery } from '@/api/queries/useNodesQuery';
 import AppSidebar from '@/layouts/AppSidebar';
+import FaraPageHeader from '@/components/fara/FaraPageHeader';
 const TextModal = lazy(() => import('@/components/feedback/TextModal'));
 import type { TextModalTab } from '@/components/feedback/TextModal';
 const PromptModal = lazy(() => import('@/components/feedback/PromptModal'));
@@ -579,7 +580,9 @@ export default function InboundsPage() {
                   extra={<Button type="primary" onClick={refresh}>{t('refresh')}</Button>}
                 />
               ) : (
-                <Row gutter={[isMobile ? 8 : 16, 12]}>
+                <div className="fx-page-stack">
+                  <FaraPageHeader section="inbounds" title={t('menu.inbounds')} />
+                  <Row gutter={[isMobile ? 8 : 16, 12]}>
                   <Col span={24}>
                     <Card size="small" hoverable className="summary-card">
                       <Row gutter={[16, 12]}>
@@ -635,6 +638,7 @@ export default function InboundsPage() {
                     />
                   </Col>
                 </Row>
+                </div>
               )}
             </Spin>
           </Layout.Content>

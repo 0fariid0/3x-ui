@@ -136,3 +136,31 @@
 .sub-link-row { min-height: 52px; padding: 10px 12px; border-radius: 14px; background: var(--ant-color-fill-quaternary); border-color: var(--ant-color-border-secondary); }
 .sub-link-row:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--ant-color-primary) 8%, var(--ant-color-fill-quaternary)); border-color: color-mix(in srgb, var(--ant-color-primary) 30%, var(--ant-color-border-secondary)); }
 @media (max-width: 576px) { .subscription-page .content { padding: 14px 9px 28px; } .sub-link-row { align-items: flex-start; flex-wrap: wrap; } .sub-link-actions { width: 100%; justify-content: flex-end; } }
+
+/* Fara Xray 3.6.2 subscription portal */
+.subscription-page { min-height: 100dvh; background: radial-gradient(circle at 10% 0%, color-mix(in srgb,var(--ant-color-primary) 16%,transparent), transparent 30%), radial-gradient(circle at 95% 15%, rgba(139,92,246,.13), transparent 28%), var(--ant-color-bg-layout); }
+.subscription-page .content { padding: 30px 18px 48px; }
+.subscription-card { border-radius: 30px !important; }
+.subscription-card > .ant-card-head { min-height: 76px; }
+.sub-brand-title { display: flex; align-items: center; gap: 11px; direction: ltr; }
+.sub-brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 13px; color: #fff; font-weight: 900; background: linear-gradient(145deg,#06b6d4,#2563eb 52%,#7c3aed); box-shadow: 0 12px 28px rgba(37,99,235,.32); }
+.sub-brand-title > span:last-child { display: flex; flex-direction: column; line-height: 1.08; }
+.sub-brand-title strong { font-size: 14px; }
+.sub-brand-title small { margin-top: 4px; color: var(--ant-color-text-tertiary); font-size: 9px; }
+.sub-hero { position: relative; isolation: isolate; min-height: 220px; display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 18px; padding: 28px 30px; overflow: hidden; border: 1px solid color-mix(in srgb,var(--ant-color-primary) 26%,var(--ant-color-border-secondary)); border-radius: 24px; background: linear-gradient(125deg,color-mix(in srgb,var(--ant-color-primary) 18%,var(--ant-color-bg-container)),var(--ant-color-bg-container) 55%,color-mix(in srgb,#8b5cf6 10%,var(--ant-color-bg-container))); }
+.sub-hero::before { content: ''; position: absolute; z-index: -1; inset: 0; background-image: linear-gradient(color-mix(in srgb,var(--ant-color-border-secondary) 34%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--ant-color-border-secondary) 34%,transparent) 1px,transparent 1px); background-size: 32px 32px; mask-image: linear-gradient(90deg,#000,transparent 76%); }
+.sub-hero-eyebrow { color: var(--ant-color-primary); font-size: 9px; font-weight: 850; letter-spacing: .18em; }
+.sub-hero h1 { max-width: 720px; margin: 10px 0 7px; overflow: hidden; color: var(--ant-color-text); font-size: clamp(26px,3.8vw,46px); line-height: 1.1; letter-spacing: -.045em; text-overflow: ellipsis; }
+.sub-hero p { margin: 0; color: var(--ant-color-text-tertiary); font-size: 12px; }
+.sub-hero-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
+.sub-hero-qr { flex: 0 0 auto; padding: 11px; border: 1px solid var(--ant-color-border-secondary); border-radius: 19px; background: #fff; box-shadow: 0 18px 50px rgba(2,6,23,.18); }
+.sub-hero-qr small { display: block; margin-top: 6px; color: #475569; text-align: center; font-size: 8px; font-weight: 700; }
+.sub-overview-grid { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(320px,.85fr); gap: 14px; align-items: stretch; }
+.sub-overview-grid > * { height: 100%; margin: 0 !important; }
+.info-table .ant-descriptions-view { height: 100%; }
+.links-section { display: grid; gap: 8px; }
+.sub-link-row { min-height: 58px; padding: 9px 11px !important; border: 1px solid var(--ant-color-border-secondary); border-radius: 15px; background: color-mix(in srgb,var(--ant-color-bg-container) 80%,var(--ant-color-fill-quaternary)); }
+.apps-row { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--ant-color-border-secondary); }
+.apps-row .ant-btn { min-height: 50px; border-radius: 15px; }
+@media (max-width: 900px) { .subscription-page .content { padding: 12px 8px 28px; } .subscription-card { border-radius: 22px !important; } .sub-hero { min-height: 0; padding: 20px; } .sub-overview-grid { grid-template-columns: 1fr; } }
+@media (max-width: 580px) { .subscription-card > .ant-card-head { padding-inline: 12px; } .sub-hero { align-items: flex-start; padding: 17px; } .sub-hero-qr { display: none; } .sub-hero h1 { font-size: 27px; } .sub-link-row { min-height: 54px; } }

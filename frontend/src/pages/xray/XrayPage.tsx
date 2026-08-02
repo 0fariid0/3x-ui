@@ -2,17 +2,22 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
 import {
-  Alert,
+  ClusterOutlined,
+  CodeOutlined,
+  DatabaseOutlined,
+  ExportOutlined,
+  SettingOutlined,
+  SwapOutlined,
+} from '@ant-design/icons';
+import {
   Button,
   Card,
-  Col,
   ConfigProvider,
   FloatButton,
   Layout,
   message,
   Radio,
   Result,
-  Row,
   Space,
   Spin,
 } from 'antd';
@@ -22,6 +27,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useXraySetting } from '@/hooks/useXraySetting';
 import type { XraySettingsValue } from '@/hooks/useXraySetting';
 import AppSidebar from '@/layouts/AppSidebar';
+import FaraPageHeader from '@/components/fara/FaraPageHeader';
 import { JsonEditor } from '@/components/form';
 import { setMessageInstance } from '@/utils/messageBus';
 
@@ -363,31 +369,38 @@ export default function XrayPage() {
                   extra={<Button type="primary" onClick={fetchAll}>{t('check')}</Button>}
                 />
               ) : (
-                <Row gutter={[isMobile ? 8 : 16, isMobile ? 0 : 12]}>
-                  <Col span={24}>
-                    <Card hoverable>
-                      <Row className="header-row">
-                        <Col xs={24} sm={14} className="header-actions">
-                          <Space>
-                            <Button type="primary" disabled={saveDisabled} onClick={onSaveAll}>
-                              {t('pages.xray.save')}
-                            </Button>
-                          </Space>
-                        </Col>
-                        <Col xs={24} sm={10} className="header-info">
-                          <FloatButton.BackTop target={scrollTarget} visibilityHeight={200} />
-                          <Alert type="warning" showIcon title={t('pages.settings.infoDesc')} />
-                        </Col>
-                      </Row>
-                    </Card>
-                  </Col>
+                <div className="fx-page-stack">
+                  <FaraPageHeader
+                    section={activeSection === 'outbound' ? 'outbounds' : activeSection === 'routing' ? 'routing' : 'xray'}
+                    title={activeSection === 'outbound' ? t('menu.outbounds') : activeSection === 'routing' ? t('menu.routing') : t('menu.xray')}
+                  />
 
-                  <Col span={24}>
-                    <Card hoverable>
-                      {sectionBody}
-                    </Card>
-                  </Col>
-                </Row>
+                  <div className="fx-section-workspace">
+                    <nav className="fx-section-nav" aria-label={t('menu.xray')}>
+                      <div className="fx-section-nav-title">Xray studio</div>
+                      <button className={activeSection === 'basic' ? 'is-active' : ''} type="button" onClick={() => navigate('/xray#basic')}><SettingOutlined />{t('pages.xray.basicTemplate')}</button>
+                      <button className={activeSection === 'routing' ? 'is-active' : ''} type="button" onClick={() => navigate('/routing')}><SwapOutlined />{t('menu.routing')}</button>
+                      <button className={activeSection === 'outbound' ? 'is-active' : ''} type="button" onClick={() => navigate('/outbound')}><ExportOutlined />{t('menu.outbounds')}</button>
+                      <button className={activeSection === 'balancer' ? 'is-active' : ''} type="button" onClick={() => navigate('/xray#balancer')}><ClusterOutlined />{t('pages.xray.Balancers')}</button>
+                      <button className={activeSection === 'dns' ? 'is-active' : ''} type="button" onClick={() => navigate('/xray#dns')}><DatabaseOutlined />DNS</button>
+                      <button className={activeSection === 'advanced' ? 'is-active' : ''} type="button" onClick={() => navigate('/xray#advanced')}><CodeOutlined />{t('pages.xray.advancedTemplate')}</button>
+                    </nav>
+
+                    <div className="fx-section-panel">
+                      <div className="fx-sticky-actions">
+                        <div className="fx-sticky-actions-copy">
+                          <strong>{t('pages.settings.infoDesc')}</strong>
+                          <small>Review the active section, then save the complete Xray configuration.</small>
+                        </div>
+                        <Space wrap>
+                          <Button type="primary" disabled={saveDisabled} onClick={onSaveAll}>{t('pages.xray.save')}</Button>
+                        </Space>
+                      </div>
+                      <Card>{sectionBody}</Card>
+                    </div>
+                  </div>
+                  <FloatButton.BackTop target={scrollTarget} visibilityHeight={200} />
+                </div>
               )}
             </Spin>
           </Layout.Content>

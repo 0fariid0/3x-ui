@@ -1,5 +1,16 @@
 # Custom changelog
 
+## v3.6.2 — Complete Fara Xray interface rebuild
+
+- Replaced the inherited panel navigation with a custom Fara Xray application shell, grouped workspace navigation, command search, desktop workspace bar, and mobile app drawer.
+- Rebuilt the mobile experience with a compact top bar, thumb-friendly bottom dock, responsive forms, horizontally managed data tables, and touch-sized controls.
+- Reorganized dashboard information into an operational bento layout with new service identity, circular resource gauges, network throughput blocks, and quick actions.
+- Added a consistent section hero and visual identity across Dashboard, Inbounds, Clients, Groups, Nodes, Hosts, Settings, Xray, Outbounds, Routing, and API documentation.
+- Rebuilt Settings and Xray pages around task-oriented local navigation and persistent action areas instead of the inherited long-form page layout.
+- Replaced the login page with a split-screen Fara Xray experience and rebuilt the user subscription page around a status hero, QR area, usage summary, and clearer information hierarchy.
+- Reworked cards, tables, forms, modals, tabs, statistics, alerts, spacing, and dark surfaces throughout the panel instead of applying a color-only theme.
+- Preserved all v3.6.0 official fixes and every previously requested custom host, subscription, restart, clock, health-monitor, and visibility feature.
+
 ## v3.6.0
 
 Based on the official 3x-ui v3.6.0 source while preserving the custom feature set maintained in this repository.
