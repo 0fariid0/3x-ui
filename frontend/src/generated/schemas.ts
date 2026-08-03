@@ -1458,6 +1458,9 @@ export const SCHEMAS: Record<string, unknown> = {
   "ClientDestinationItem": {
     "description": "ClientDestinationItem is an aggregate destination shown in client reports.",
     "properties": {
+      "active": {
+        "type": "boolean"
+      },
       "confidence": {
         "type": "string"
       },
@@ -1496,6 +1499,7 @@ export const SCHEMAS: Record<string, unknown> = {
       }
     },
     "required": [
+      "active",
       "confidence",
       "connections",
       "firstSeen",
@@ -1509,6 +1513,12 @@ export const SCHEMAS: Record<string, unknown> = {
   "ClientDestinationSummary": {
     "description": "ClientDestinationSummary groups destination rows by recognized service.",
     "properties": {
+      "active": {
+        "type": "boolean"
+      },
+      "activeDestinations": {
+        "type": "integer"
+      },
       "connections": {
         "format": "int64",
         "type": "integer"
@@ -1528,6 +1538,8 @@ export const SCHEMAS: Record<string, unknown> = {
       }
     },
     "required": [
+      "active",
+      "activeDestinations",
       "connections",
       "destinations",
       "lastSeen",

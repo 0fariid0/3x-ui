@@ -343,6 +343,7 @@ export interface ClientDailyUsage {
 }
 
 export interface ClientDestinationItem {
+  active: boolean;
   confidence: string;
   connections: number;
   domain?: string;
@@ -357,6 +358,8 @@ export interface ClientDestinationItem {
 }
 
 export interface ClientDestinationSummary {
+  active: boolean;
+  activeDestinations: number;
   connections: number;
   destinations: number;
   lastSeen: number;

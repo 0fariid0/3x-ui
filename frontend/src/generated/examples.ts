@@ -332,6 +332,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "up": 0
   },
   "ClientDestinationItem": {
+    "active": false,
     "confidence": "",
     "connections": 0,
     "domain": "",
@@ -345,6 +346,8 @@ export const EXAMPLES: Record<string, unknown> = {
     "service": ""
   },
   "ClientDestinationSummary": {
+    "active": false,
+    "activeDestinations": 0,
     "connections": 0,
     "destinations": 0,
     "lastSeen": 0,
@@ -428,6 +431,8 @@ export const EXAMPLES: Record<string, unknown> = {
     "days": 0,
     "destinationSummaries": [
       {
+        "active": false,
+        "activeDestinations": 0,
         "connections": 0,
         "destinations": 0,
         "lastSeen": 0,
@@ -438,6 +443,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "destinationTracking": false,
     "destinations": [
       {
+        "active": false,
         "confidence": "",
         "connections": 0,
         "domain": "",

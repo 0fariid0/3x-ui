@@ -1,0 +1,20 @@
+Fara Xray v3.6.13 validation
+================================
+
+Implemented:
+- Neo Smart subscription usage-history API for 24-hour and 30-day ranges.
+- Existing compact hourly/daily client rollups are reused; no duplicate collector or history tables were added.
+- Destination aggregates expire after 10 minutes of inactivity.
+- Destinations seen during the last 2 minutes are marked active and sorted first.
+- Destination reports refresh every 15 seconds while their tab is open.
+- Manual destination clearing remains available.
+
+Static validation:
+- Changed Go sources pass gofmt.
+- Persian and English translation JSON files parse successfully.
+- Generated TypeScript/OpenAPI schemas include active destination fields.
+- OpenAPI JSON documents parse successfully and report version 3.6.13.
+- Whitespace checks pass.
+
+Environment:
+- The final production build requires the repository Go 1.26.5 and Node 24 toolchains and is executed by the tag-triggered GitHub Actions release workflow.

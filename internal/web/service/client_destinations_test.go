@@ -127,3 +127,13 @@ func TestReclassifyDestinationItemRepairsStoredGoogleOther(t *testing.T) {
 		t.Fatalf("stored Google row was not repaired: %#v", item)
 	}
 }
+
+func TestDestinationIsActiveWindow(t *testing.T) {
+	now := time.Date(2026, 8, 4, 1, 40, 0, 0, time.UTC)
+	if !destinationIsActive(now.Add(-90*time.Second).UnixMilli(), now) {
+		t.Fatal("destination seen 90 seconds ago should be active")
+	}
+	if destinationIsActive(now.Add(-3*time.Minute).UnixMilli(), now) {
+		t.Fatal("destination seen three minutes ago must not be active")
+	}
+}

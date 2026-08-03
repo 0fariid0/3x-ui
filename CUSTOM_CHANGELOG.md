@@ -1,5 +1,12 @@
 # Custom changelog
 
+## v3.6.13
+
+- Added the Neo Smart subscription usage-history endpoint for real 24-hour hourly and 30-day daily charts.
+- Reused the panel's existing compact traffic rollups instead of adding duplicate history tables or collectors.
+- Changed destination tracking to short-lived reporting: stale destinations are automatically removed after 10 minutes.
+- Marked destinations seen in the last 2 minutes as active, sorted active rows first, and added background refresh while the destination tab is open.
+
 ## v3.6.12
 
 - Added a dedicated **NordVPN** service-routing selector beside the existing `warp` selector.

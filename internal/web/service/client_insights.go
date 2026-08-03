@@ -1174,7 +1174,7 @@ func (s *ClientInsightService) Cleanup(historyDays int) error {
 		if err := tx.Where("last_seen < ?", dayCutoff).Delete(&model.ClientIPHistory{}).Error; err != nil {
 			return err
 		}
-		if err := tx.Where("bucket_start < ?", now.Add(-destinationRetention).UnixMilli()).Delete(&model.ClientDestinationHour{}).Error; err != nil {
+		if err := tx.Where("last_seen < ?", now.Add(-destinationRetention).UnixMilli()).Delete(&model.ClientDestinationHour{}).Error; err != nil {
 			return err
 		}
 

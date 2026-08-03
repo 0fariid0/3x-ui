@@ -218,3 +218,37 @@
     grid-template-columns: minmax(0, 1fr) auto auto;
   }
 }
+
+.client-destination-service-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.client-destination-live-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 999px;
+  background: var(--ant-color-success);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ant-color-success) 18%, transparent), 0 0 12px color-mix(in srgb, var(--ant-color-success) 60%, transparent);
+  animation: client-destination-live-pulse 1.7s ease-in-out infinite;
+}
+
+.client-destination-summary-card.is-active,
+.client-destination-row.is-active {
+  border-color: color-mix(in srgb, var(--ant-color-success) 45%, var(--ant-color-border-secondary));
+}
+
+.client-destination-row.is-active {
+  background: color-mix(in srgb, var(--ant-color-success) 5%, var(--ant-color-bg-container));
+}
+
+@keyframes client-destination-live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.82); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .client-destination-live-dot { animation: none; }
+}
