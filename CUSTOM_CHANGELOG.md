@@ -1,5 +1,13 @@
 # Custom changelog
 
+## v3.6.11
+
+- Added the complete bundled Google IPv4/IPv6 prefix snapshot from Google's official `goog.json` feed, including `142.250.0.0/15` for addresses such as `142.251.20.113`.
+- Added automatic 12-hour Google prefix refreshes from the official Google JSON feed alongside Telegram and Meta updates.
+- Provider refresh requests now run concurrently with independent timeouts, so one slow source cannot block the others.
+- Bundled Telegram, Meta, and Google ranges are always checked before dynamic data, preventing incomplete refresh responses from removing known classifications.
+- Destination reports normalize stored IP formats and reclassify existing `Other` rows immediately with the latest rules.
+
 ## v3.6.10
 
 - Fixed stale destination rows remaining classified as `Other` after Telegram/Meta rules were added.

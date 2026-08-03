@@ -18,10 +18,11 @@ import (
 
 const (
 	telegramCIDRSourceURL             = "https://core.telegram.org/resources/cidr.txt"
-	ripeAnnouncedPrefixesURL          = "https://stat.ripe.net/data/announced-prefixes/data.json?resource="
+	googleCIDRSourceURL               = "https://www.gstatic.com/ipranges/goog.json"
+	ripeAnnouncedPrefixesURL          = "https://stat.ripe.net/data/announced-prefixes/data.json?sourceapp=fara-xray&resource="
 	destinationNetworkRefreshInterval = 12 * time.Hour
 	destinationNetworkRetryInterval   = time.Hour
-	destinationNetworkHTTPTimeout     = 12 * time.Second
+	destinationNetworkHTTPTimeout     = 15 * time.Second
 )
 
 // Telegram publishes this list at telegramCIDRSourceURL. It is kept here as an
@@ -86,9 +87,19 @@ var metaFallbackCIDRs = []string{
 	"2a03:2880::/32",
 }
 
+// Preparsed immutable fallbacks are checked before the refreshable snapshot.
+// This makes core classifications deterministic even if an online refresh
+// returns an incomplete response or a future feed is temporarily unavailable.
+var (
+	telegramFallbackNetworks = parseCIDRs(telegramFallbackCIDRs)
+	metaFallbackNetworks     = parseCIDRs(metaFallbackCIDRs)
+	googleFallbackNetworks   = parseCIDRs(googleFallbackCIDRs)
+)
+
 type destinationNetworkSnapshot struct {
 	telegram   []*net.IPNet
 	meta       []*net.IPNet
+	google     []*net.IPNet
 	lastUpdate time.Time
 }
 
@@ -104,8 +115,9 @@ var destinationNetworks = newDestinationNetworkRegistry()
 func newDestinationNetworkRegistry() *destinationNetworkRegistry {
 	return &destinationNetworkRegistry{
 		snapshot: destinationNetworkSnapshot{
-			telegram: parseCIDRs(telegramFallbackCIDRs),
-			meta:     parseCIDRs(metaFallbackCIDRs),
+			telegram: telegramFallbackNetworks,
+			meta:     metaFallbackNetworks,
+			google:   googleFallbackNetworks,
 		},
 	}
 }
@@ -150,16 +162,31 @@ func networkContains(networks []*net.IPNet, ip net.IP) bool {
 	return false
 }
 
-// classifyDestinationIP recognizes IP-only destinations using official Telegram
-// ranges and Meta BGP prefixes. Domain-based classification still has priority.
+// classifyDestinationIP recognizes IP-only destinations using bundled ranges
+// first and refreshed provider ranges second. Domain classification still has
+// priority, so googlevideo.com is shown as YouTube while an IP-only Google
+// destination is conservatively shown as Google.
 func classifyDestinationIP(ip net.IP) (service, owner, confidence string, ok bool) {
 	if ip == nil {
 		return "", "", "", false
 	}
+
+	// Never let a failed or partial refresh remove the deterministic fallbacks.
+	if networkContains(telegramFallbackNetworks, ip) {
+		return "Telegram", "Telegram network", "network", true
+	}
+	if networkContains(metaFallbackNetworks, ip) {
+		return "Instagram / Meta", "Meta network", "network", true
+	}
+	if networkContains(googleFallbackNetworks, ip) {
+		return "Google", "Google network", "network", true
+	}
+
 	destinationNetworks.mu.RLock()
 	snapshot := destinationNetworks.snapshot
 	telegramMatch := networkContains(snapshot.telegram, ip)
 	metaMatch := networkContains(snapshot.meta, ip)
+	googleMatch := networkContains(snapshot.google, ip)
 	destinationNetworks.mu.RUnlock()
 
 	if telegramMatch {
@@ -168,12 +195,16 @@ func classifyDestinationIP(ip net.IP) (service, owner, confidence string, ok boo
 	if metaMatch {
 		return "Instagram / Meta", "Meta network", "network", true
 	}
+	if googleMatch {
+		return "Google", "Google network", "network", true
+	}
 	return "", "", "", false
 }
 
-// RefreshDestinationNetworkRulesIfNeeded refreshes network prefixes in the
-// background. It is safe to call from the 10-second destination ingestion job;
-// actual downloads happen at most once every 12 hours, or hourly after failure.
+// RefreshDestinationNetworkRulesIfNeeded refreshes provider prefixes in the
+// background. Downloads happen at most once every 12 hours, or hourly after a
+// partial/complete failure. Requests run concurrently with independent timeouts
+// so one slow source cannot prevent the other provider lists from updating.
 func RefreshDestinationNetworkRulesIfNeeded() {
 	now := time.Now()
 	destinationNetworks.mu.Lock()
@@ -182,8 +213,6 @@ func RefreshDestinationNetworkRulesIfNeeded() {
 		return
 	}
 	destinationNetworks.refreshing = true
-	// Reserve the retry window immediately so repeated cron runs cannot spawn
-	// duplicate refresh goroutines while a slow request is in progress.
 	destinationNetworks.nextRefresh = now.Add(destinationNetworkRetryInterval)
 	destinationNetworks.mu.Unlock()
 
@@ -191,38 +220,78 @@ func RefreshDestinationNetworkRulesIfNeeded() {
 }
 
 func refreshDestinationNetworkRules() {
-	ctx, cancel := context.WithTimeout(context.Background(), destinationNetworkHTTPTimeout)
-	defer cancel()
-
 	client := &http.Client{Timeout: destinationNetworkHTTPTimeout}
-	telegramCIDRs, telegramErr := fetchTelegramCIDRs(ctx, client)
-	meta32934, meta32934Err := fetchRipeAnnouncedPrefixes(ctx, client, "AS32934")
-	meta63293, meta63293Err := fetchRipeAnnouncedPrefixes(ctx, client, "AS63293")
+
+	var telegramCIDRs, googleCIDRs, meta32934, meta63293 []string
+	var telegramErr, googleErr, meta32934Err, meta63293Err error
+
+	var wg sync.WaitGroup
+	wg.Add(4)
+	go func() {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(context.Background(), destinationNetworkHTTPTimeout)
+		defer cancel()
+		telegramCIDRs, telegramErr = fetchTelegramCIDRs(ctx, client)
+	}()
+	go func() {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(context.Background(), destinationNetworkHTTPTimeout)
+		defer cancel()
+		googleCIDRs, googleErr = fetchGoogleCIDRs(ctx, client)
+	}()
+	go func() {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(context.Background(), destinationNetworkHTTPTimeout)
+		defer cancel()
+		meta32934, meta32934Err = fetchRipeAnnouncedPrefixes(ctx, client, "AS32934")
+	}()
+	go func() {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(context.Background(), destinationNetworkHTTPTimeout)
+		defer cancel()
+		meta63293, meta63293Err = fetchRipeAnnouncedPrefixes(ctx, client, "AS63293")
+	}()
+	wg.Wait()
 
 	destinationNetworks.mu.Lock()
 	defer destinationNetworks.mu.Unlock()
 	destinationNetworks.refreshing = false
 
 	updated := false
-	if telegramErr == nil && len(telegramCIDRs) >= len(telegramFallbackCIDRs) {
+	allHealthy := true
+	if telegramErr == nil && len(telegramCIDRs) > 0 {
 		destinationNetworks.snapshot.telegram = mergeCIDRs(telegramFallbackCIDRs, telegramCIDRs)
 		updated = true
+	} else {
+		allHealthy = false
 	}
-	metaDynamic := append(meta32934, meta63293...)
+	if googleErr == nil && len(googleCIDRs) > 0 {
+		destinationNetworks.snapshot.google = mergeCIDRs(googleFallbackCIDRs, googleCIDRs)
+		updated = true
+	} else {
+		allHealthy = false
+	}
+	metaDynamic := append(append([]string{}, meta32934...), meta63293...)
 	if len(metaDynamic) > 0 && (meta32934Err == nil || meta63293Err == nil) {
 		destinationNetworks.snapshot.meta = mergeCIDRs(metaFallbackCIDRs, metaDynamic)
 		updated = true
 	}
+	if meta32934Err != nil || meta63293Err != nil {
+		allHealthy = false
+	}
 
 	if updated {
 		destinationNetworks.snapshot.lastUpdate = time.Now()
+	}
+	if updated && allHealthy {
 		destinationNetworks.nextRefresh = time.Now().Add(destinationNetworkRefreshInterval)
-		logger.Debugf("[ClientDestinations] destination prefix rules refreshed: telegram=%d meta=%d", len(destinationNetworks.snapshot.telegram), len(destinationNetworks.snapshot.meta))
+		logger.Debugf("[ClientDestinations] provider prefixes refreshed: telegram=%d meta=%d google=%d", len(destinationNetworks.snapshot.telegram), len(destinationNetworks.snapshot.meta), len(destinationNetworks.snapshot.google))
 		return
 	}
 
+	// Keep successful partial updates but retry failed sources sooner.
 	destinationNetworks.nextRefresh = time.Now().Add(destinationNetworkRetryInterval)
-	logger.Debugf("[ClientDestinations] prefix refresh failed; using bundled ranges (telegram=%v, meta32934=%v, meta63293=%v)", telegramErr, meta32934Err, meta63293Err)
+	logger.Debugf("[ClientDestinations] provider prefix refresh partial/failed; bundled ranges remain active (telegram=%v google=%v meta32934=%v meta63293=%v)", telegramErr, googleErr, meta32934Err, meta63293Err)
 }
 
 func newDestinationRequest(ctx context.Context, url string) (*http.Request, error) {
@@ -230,7 +299,7 @@ func newDestinationRequest(ctx context.Context, url string) (*http.Request, erro
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "Fara-Xray/3.6.10 destination-prefix-updater")
+	req.Header.Set("User-Agent", "Fara-Xray/3.6.11 destination-prefix-updater")
 	req.Header.Set("Accept", "text/plain, application/json")
 	return req, nil
 }
@@ -265,6 +334,50 @@ func fetchTelegramCIDRs(ctx context.Context, client *http.Client) ([]string, err
 	}
 	if len(values) == 0 {
 		return nil, fmt.Errorf("telegram CIDR source returned no valid prefixes")
+	}
+	return values, nil
+}
+
+type googleIPRangesResponse struct {
+	Prefixes []struct {
+		IPv4Prefix string `json:"ipv4Prefix"`
+		IPv6Prefix string `json:"ipv6Prefix"`
+	} `json:"prefixes"`
+}
+
+func fetchGoogleCIDRs(ctx context.Context, client *http.Client) ([]string, error) {
+	req, err := newDestinationRequest(ctx, googleCIDRSourceURL)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Google IP range source returned HTTP %d", resp.StatusCode)
+	}
+
+	var payload googleIPRangesResponse
+	decoder := json.NewDecoder(io.LimitReader(resp.Body, 2*1024*1024))
+	if err := decoder.Decode(&payload); err != nil {
+		return nil, err
+	}
+	values := make([]string, 0, len(payload.Prefixes))
+	for _, item := range payload.Prefixes {
+		for _, prefix := range []string{item.IPv4Prefix, item.IPv6Prefix} {
+			prefix = strings.TrimSpace(prefix)
+			if prefix == "" {
+				continue
+			}
+			if _, _, err := net.ParseCIDR(prefix); err == nil {
+				values = append(values, prefix)
+			}
+		}
+	}
+	if len(values) == 0 {
+		return nil, fmt.Errorf("Google IP range source returned no valid prefixes")
 	}
 	return values, nil
 }

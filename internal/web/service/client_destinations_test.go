@@ -58,6 +58,46 @@ func TestClassifyDestinationMetaRangeIsNotOverstated(t *testing.T) {
 		t.Fatalf("unexpected Meta IP classification: %q %q %q", service, owner, confidence)
 	}
 }
+
+func TestClassifyDestinationGoogleOfficialRange(t *testing.T) {
+	service, owner, confidence := classifyDestination("", "142.251.20.113")
+	if service != "Google" || owner != "Google network" || confidence != "network" {
+		t.Fatalf("unexpected Google IP classification: %q %q %q", service, owner, confidence)
+	}
+
+	service, owner, confidence = classifyDestination("", "2607:f8b0:4005:805::200e")
+	if service != "Google" || owner != "Google network" || confidence != "network" {
+		t.Fatalf("unexpected Google IPv6 classification: %q %q %q", service, owner, confidence)
+	}
+}
+
+func TestBundledProviderRangesSurviveEmptyRefreshSnapshot(t *testing.T) {
+	destinationNetworks.mu.Lock()
+	old := destinationNetworks.snapshot
+	destinationNetworks.snapshot = destinationNetworkSnapshot{}
+	destinationNetworks.mu.Unlock()
+	defer func() {
+		destinationNetworks.mu.Lock()
+		destinationNetworks.snapshot = old
+		destinationNetworks.mu.Unlock()
+	}()
+
+	checks := []struct {
+		ip      string
+		service string
+	}{
+		{"149.154.167.91", "Telegram"},
+		{"157.240.10.35", "Instagram / Meta"},
+		{"142.251.20.113", "Google"},
+	}
+	for _, check := range checks {
+		service, _, _ := classifyDestination("", check.ip)
+		if service != check.service {
+			t.Fatalf("classifyDestination(%s)=%q, want %q", check.ip, service, check.service)
+		}
+	}
+}
+
 func TestReclassifyDestinationItemRepairsStoredOther(t *testing.T) {
 	item := ClientDestinationItem{
 		Key:        ":149.154.167.91:443",
@@ -77,5 +117,13 @@ func TestReclassifyDestinationItemRepairsStoredMetaOther(t *testing.T) {
 	reclassifyDestinationItem(&item)
 	if item.Service != "Instagram / Meta" || item.Owner != "Meta network" || item.Confidence != "network" {
 		t.Fatalf("stored Meta row was not repaired: %#v", item)
+	}
+}
+
+func TestReclassifyDestinationItemRepairsStoredGoogleOther(t *testing.T) {
+	item := ClientDestinationItem{Service: "Other", IP: "142.251.20.113:443", Port: 443, Confidence: "ip"}
+	reclassifyDestinationItem(&item)
+	if item.Service != "Google" || item.Owner != "Google network" || item.Confidence != "network" {
+		t.Fatalf("stored Google row was not repaired: %#v", item)
 	}
 }

@@ -82,7 +82,7 @@ var destinationServiceRules = []serviceRule{
 	{Service: "WhatsApp", Owner: "Meta", Domains: []string{"whatsapp.com", "whatsapp.net"}},
 	{Service: "Telegram", Owner: "Telegram", Domains: []string{"telegram.org", "telegram.me", "t.me", "telesco.pe"}},
 	{Service: "YouTube", Owner: "Google", Domains: []string{"youtube.com", "youtu.be", "googlevideo.com", "ytimg.com"}},
-	{Service: "Google", Owner: "Google", Domains: []string{"google.com", "googleapis.com", "gstatic.com", "googleusercontent.com"}},
+	{Service: "Google", Owner: "Google", Domains: []string{"google.com", "googleapis.com", "gstatic.com", "googleusercontent.com", "1e100.net"}},
 	{Service: "TikTok", Owner: "ByteDance", Domains: []string{"tiktok.com", "tiktokcdn.com", "byteoversea.com", "ibytedtos.com"}},
 	{Service: "X / Twitter", Owner: "X Corp", Domains: []string{"x.com", "twitter.com", "twimg.com", "t.co"}},
 	{Service: "Discord", Owner: "Discord", Domains: []string{"discord.com", "discord.gg", "discordapp.com", "discordapp.net"}},
@@ -119,6 +119,8 @@ func compactDomain(host string) string {
 }
 
 func classifyDestination(domain, ip string) (service, owner, confidence string) {
+	domain = strings.TrimSpace(strings.ToLower(domain))
+	ip = strings.TrimSpace(ip)
 	if domain != "" {
 		for _, rule := range destinationServiceRules {
 			for _, suffix := range rule.Domains {
@@ -129,7 +131,7 @@ func classifyDestination(domain, ip string) (service, owner, confidence string) 
 		}
 		return "Other", "", "domain"
 	}
-	parsed := net.ParseIP(ip)
+	parsed := parseDestinationIP(ip)
 	if parsed != nil {
 		if parsed.IsPrivate() || parsed.IsLoopback() || parsed.IsLinkLocalUnicast() {
 			return "Private network", "Local", "ip"
@@ -139,6 +141,21 @@ func classifyDestination(domain, ip string) (service, owner, confidence string) 
 		}
 	}
 	return "Other", "", "ip"
+}
+
+func parseDestinationIP(raw string) net.IP {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	if host, _, err := net.SplitHostPort(raw); err == nil {
+		raw = host
+	}
+	raw = strings.Trim(raw, "[]")
+	if zone := strings.LastIndexByte(raw, '%'); zone > 0 {
+		raw = raw[:zone]
+	}
+	return net.ParseIP(strings.TrimSpace(raw))
 }
 
 func splitDestination(raw string) (protocol, host string, port int) {
@@ -430,6 +447,9 @@ func (s *ClientInsightService) ClearDestinations(email string) error {
 }
 
 func (s *ClientInsightService) destinationReport(email string, start, end int64) ([]ClientDestinationItem, []ClientDestinationSummary, error) {
+	// Opening a report also schedules a provider-rule refresh. Bundled ranges
+	// classify immediately; refreshed ranges are used by subsequent reports.
+	RefreshDestinationNetworkRulesIfNeeded()
 	items := make([]ClientDestinationItem, 0)
 	err := database.GetDB().Model(&model.ClientDestinationHour{}).
 		// Do not group by the stored classification. Older rows may have been
