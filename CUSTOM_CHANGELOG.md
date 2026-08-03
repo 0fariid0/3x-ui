@@ -1,5 +1,11 @@
 # Custom changelog
 
+## v3.6.7
+
+- Fixed the backend build failure in `ClientInsightService.GetReportForRange` by initializing the panel location before rollup migration uses it.
+- Made OpenAPI generation read `internal/config/version`, preventing the CI codegen job from rewriting the committed API version to `3.x`.
+- Regenerated the public OpenAPI document for v3.6.7.
+
 ## v3.6.6
 
 - Unified all report, history, log, and chart timestamps with the panel-selected calendar and server/Tehran clock offset.

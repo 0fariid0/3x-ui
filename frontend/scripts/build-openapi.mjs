@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -10,7 +10,20 @@ import { SCHEMAS } from '../src/generated/schemas.ts';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const outPath = join(__dirname, '..', 'public', 'openapi.json');
 
-const PANEL_VERSION = process.env.X_UI_VERSION || '3.x';
+function resolvePanelVersion() {
+  const override = String(process.env.X_UI_VERSION || '').trim();
+  if (override) return override;
+
+  try {
+    const versionPath = join(__dirname, '..', '..', 'internal', 'config', 'version');
+    const sourceVersion = readFileSync(versionPath, 'utf8').trim();
+    return sourceVersion || '3.x';
+  } catch {
+    return '3.x';
+  }
+}
+
+const PANEL_VERSION = resolvePanelVersion();
 
 const SECURITY_SCHEMES = {
   bearerAuth: {

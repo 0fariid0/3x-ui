@@ -1,0 +1,31 @@
+Fara Xray v3.6.7 validation report
+==================================
+
+Base
+----
+- Built from the complete custom v3.6.6 source tree.
+- internal/config/version is 3.6.7.
+
+Build fixes
+-----------
+- Fixed undefined `loc` in internal/web/service/client_insights.go.
+- The panel location is initialized before ensureInsightRollups uses it.
+- OpenAPI generation now reads internal/config/version when X_UI_VERSION is not set.
+- frontend/public/openapi.json is aligned with version 3.6.7.
+
+Validation completed
+--------------------
+- All Go source files parse successfully with go/parser.
+- All Go files are gofmt-clean.
+- All strict JSON files parse successfully; .vscode/launch.json is JSONC and was excluded from strict JSON parsing.
+- TypeScript and TSX files pass isolated TypeScript syntax transpilation.
+- install.sh, update.sh and x-ui.sh pass bash syntax validation.
+- frontend/scripts/build-openapi.mjs executes successfully with Node type-stripping enabled and reproduces the committed OpenAPI file without a diff.
+- Generated TypeScript/Zod/schema/example files were reproduced with the same openapigen logic in an isolated Go 1.23 compatibility harness and matched byte-for-byte.
+- git diff --cached --check passes in a clean temporary repository.
+- A regression source check confirms that `loc := insightPanelLocation()` appears before ensureInsightRollups(db, loc).
+
+Environment limitation
+----------------------
+- A complete dependency-aware Go build cannot run in this offline container because the repository requires Go 1.26.5 and external modules/toolchains are not locally available.
+- GitHub Actions remains the final multi-architecture build check after pushing tag v3.6.7.

@@ -430,6 +430,7 @@ func (s *ClientInsightService) GetReportForRange(email string, days, hours int) 
 		days = insightMaxDailyRetentionDays
 	}
 
+	loc := insightPanelLocation()
 	db := database.GetDB()
 	if err := ensureInsightRollups(db, loc); err != nil {
 		return nil, err
@@ -439,7 +440,6 @@ func (s *ClientInsightService) GetReportForRange(email string, days, hours int) 
 		return nil, err
 	}
 
-	loc := insightPanelLocation()
 	now := time.Now().In(loc)
 	currentHour := insightHourStart(now, loc)
 	localMidnight := insightDayStart(now, loc)
