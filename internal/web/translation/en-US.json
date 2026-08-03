@@ -919,7 +919,20 @@
       "firstSeen": "First seen",
       "lastSeen": "Last seen",
       "seenCount": "Seen count",
-      "usageChartHours": "Last {{hours}} hours"
+      "usageChartHours": "Last {{hours}} hours",
+      "destinationTracking": "Destination tracking",
+      "destinationTrackingDesc": "Off by default. When enabled, only hourly domain/IP and service connection counts are retained for 14 days; URLs and content are never stored.",
+      "destinationsTab": "Destinations",
+      "destinationTrackingDisabled": "Destination tracking is disabled for this client.",
+      "destinationTrackingEmpty": "No destination has been recorded in this range yet.",
+      "destinationPrivacyNote": "Privacy mode: only compact domain/IP aggregates and connection counts are stored.",
+      "destinationConnections": "Connections",
+      "destinationCount": "Destinations",
+      "destinationOwner": "Network / owner",
+      "destinationLastSeen": "Last seen",
+      "destinationConfidenceDomain": "Detected by domain",
+      "destinationConfidenceIp": "IP only",
+      "destinationServiceOther": "Other"
     },
     "groups": {
       "name": "Name",

@@ -239,7 +239,8 @@ func (a *ClientController) update(c *gin.Context) {
 		return
 	}
 	jsonMsgObj(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), pendingNodeObj(a.clientService.HasPendingNode(&a.inboundService, email)), nil)
-	if needRestart {
+	destinationTrackingChanged := previous != nil && previous.DestinationTracking != updated.DestinationTracking
+	if needRestart || destinationTrackingChanged {
 		a.xrayService.SetToNeedRestart()
 	}
 	if updated.Email != email {

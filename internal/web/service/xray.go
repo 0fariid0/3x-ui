@@ -152,6 +152,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		return nil, err
 	}
 	xrayConfig.LogConfig = resolveXrayLogPaths(xrayConfig.LogConfig)
+	xrayConfig.LogConfig = ensureDestinationTrackingAccessLog(xrayConfig.LogConfig)
 	xrayConfig.API = ensureAPIServices(xrayConfig.API)
 	xrayConfig.Policy = ensureStatsPolicy(xrayConfig.Policy)
 	xrayConfig.RouterConfig = stripDisabledRules(xrayConfig.RouterConfig)
@@ -774,6 +775,32 @@ func ensureStatsPolicy(policy json_util.RawMessage) json_util.RawMessage {
 	out, err := json.Marshal(parsed)
 	if err != nil {
 		return policy
+	}
+	return out
+}
+
+// ensureDestinationTrackingAccessLog enables a bounded access log only while at
+// least one client explicitly opts into destination aggregation. Existing admin
+// access-log settings are preserved; the generated runtime config is changed,
+// never the stored template.
+func ensureDestinationTrackingAccessLog(logCfg json_util.RawMessage) json_util.RawMessage {
+	if !AnyDestinationTrackingEnabled() {
+		return logCfg
+	}
+	parsed := map[string]any{}
+	if len(logCfg) > 0 {
+		if err := json.Unmarshal(logCfg, &parsed); err != nil {
+			return logCfg
+		}
+	}
+	current, _ := parsed["access"].(string)
+	if strings.TrimSpace(current) != "" && !strings.EqualFold(strings.TrimSpace(current), "none") {
+		return logCfg
+	}
+	parsed["access"] = filepath.Join(config.GetLogFolder(), "client-destinations-access.log")
+	out, err := json.Marshal(parsed)
+	if err != nil {
+		return logCfg
 	}
 	return out
 }

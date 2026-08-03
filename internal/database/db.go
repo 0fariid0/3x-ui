@@ -92,6 +92,8 @@ func allModels() []any {
 		&model.ClientIPHistory{},
 		&model.ClientEvent{},
 		&model.ClientAnomaly{},
+		&model.ClientDestinationHour{},
+		&model.ClientDestinationCursor{},
 	}
 }
 

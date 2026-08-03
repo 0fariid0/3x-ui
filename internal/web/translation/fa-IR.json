@@ -919,7 +919,20 @@
       "firstSeen": "اولین مشاهده",
       "lastSeen": "آخرین مشاهده",
       "seenCount": "تعداد مشاهده",
-      "usageChartHours": "گزارش {{hours}} ساعت گذشته"
+      "usageChartHours": "گزارش {{hours}} ساعت گذشته",
+      "destinationTracking": "ثبت مقصدهای اتصال",
+      "destinationTrackingDesc": "به‌صورت پیش‌فرض خاموش است. با فعال‌سازی، فقط دامنه/IP و تعداد اتصال‌های تجمیعی ساعتی تا ۱۴ روز نگهداری می‌شود؛ URL و محتوای ارتباط ذخیره نمی‌شود.",
+      "destinationsTab": "مقصدها",
+      "destinationTrackingDisabled": "ثبت مقصدها برای این کاربر خاموش است.",
+      "destinationTrackingEmpty": "در این بازه هنوز مقصدی ثبت نشده است.",
+      "destinationPrivacyNote": "حالت حریم خصوصی: فقط دامنه/IP خلاصه‌شده و تعداد اتصال نگهداری می‌شود.",
+      "destinationConnections": "تعداد اتصال",
+      "destinationCount": "تعداد مقصد",
+      "destinationOwner": "شبکه / مالک",
+      "destinationLastSeen": "آخرین اتصال",
+      "destinationConfidenceDomain": "شناسایی از دامنه",
+      "destinationConfidenceIp": "فقط IP",
+      "destinationServiceOther": "سایر"
     },
     "groups": {
       "name": "نام",

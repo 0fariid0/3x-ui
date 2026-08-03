@@ -29,6 +29,7 @@ export const ClientRecordSchema = z.object({
   comment: z.string().optional(),
   enable: z.boolean().optional(),
   reset: z.number().optional(),
+  destinationTracking: z.boolean().optional(),
   inboundIds: nullableNumberArray.optional(),
   traffic: ClientTrafficSchema.nullable().optional(),
   reverse: z.object({ tag: z.string().optional() }).loose().nullable().optional(),
@@ -208,6 +209,7 @@ export const ClientFormSchema = z.object({
   group: z.string(),
   comment: z.string(),
   enable: z.boolean(),
+  destinationTracking: z.boolean(),
   inboundIds: z.array(z.number()),
 });
 

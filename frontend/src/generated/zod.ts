@@ -309,6 +309,7 @@ export const ClientSchema = z.object({
   auth: z.string().optional(),
   comment: z.string(),
   created_at: z.number().int().optional(),
+  destinationTracking: z.boolean(),
   email: z.string(),
   enable: z.boolean(),
   expiryTime: z.number().int(),
@@ -360,6 +361,30 @@ export const ClientDailyUsageSchema = z.object({
 });
 export type ClientDailyUsage = z.infer<typeof ClientDailyUsageSchema>;
 
+export const ClientDestinationItemSchema = z.object({
+  confidence: z.string(),
+  connections: z.number().int(),
+  domain: z.string().optional(),
+  firstSeen: z.number().int(),
+  ip: z.string().optional(),
+  key: z.string(),
+  lastSeen: z.number().int(),
+  owner: z.string(),
+  port: z.number().int().optional(),
+  protocol: z.string().optional(),
+  service: z.string(),
+});
+export type ClientDestinationItem = z.infer<typeof ClientDestinationItemSchema>;
+
+export const ClientDestinationSummarySchema = z.object({
+  connections: z.number().int(),
+  destinations: z.number().int(),
+  lastSeen: z.number().int(),
+  owner: z.string(),
+  service: z.string(),
+});
+export type ClientDestinationSummary = z.infer<typeof ClientDestinationSummarySchema>;
+
 export const ClientEventSchema = z.object({
   createdAt: z.number().int(),
   details: z.string(),
@@ -405,6 +430,9 @@ export const ClientInsightReportSchema = z.object({
   averageDaily: z.number().int(),
   dailyUsage: z.array(z.lazy(() => ClientDailyUsageSchema)),
   days: z.number().int(),
+  destinationSummaries: z.array(z.lazy(() => ClientDestinationSummarySchema)),
+  destinationTracking: z.boolean(),
+  destinations: z.array(z.lazy(() => ClientDestinationItemSchema)),
   email: z.string(),
   events: z.array(z.lazy(() => ClientEventSchema)),
   firstDataAt: z.number().int(),
@@ -436,6 +464,7 @@ export const ClientRecordSchema = z.object({
   auth: z.string(),
   comment: z.string(),
   createdAt: z.number().int(),
+  destinationTracking: z.boolean(),
   email: z.string(),
   enable: z.boolean(),
   expiryTime: z.number().int(),

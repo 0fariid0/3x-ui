@@ -97,6 +97,8 @@ func run(root, outDir string) error {
 				"ClientInsightReport",
 				"ClientUsageAlert",
 				"ClientUsageAlerts",
+				"ClientDestinationItem",
+				"ClientDestinationSummary",
 			),
 		},
 		{

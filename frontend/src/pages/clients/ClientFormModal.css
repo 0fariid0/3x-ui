@@ -1,0 +1,23 @@
+
+.client-destination-tracking-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 10px;
+  background: var(--ant-color-fill-quaternary);
+}
+
+.client-destination-tracking-field > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.client-destination-tracking-field small {
+  color: var(--ant-color-text-secondary);
+  line-height: 1.55;
+}

@@ -74,35 +74,38 @@ type ClientReportHost struct {
 }
 
 type ClientInsightReport struct {
-	Email             string                  `json:"email"`
-	Days              int                     `json:"days"`
-	Hours             int                     `json:"hours"`
-	RangeStart        int64                   `json:"rangeStart"`
-	RangeEnd          int64                   `json:"rangeEnd"`
-	LastOnline        int64                   `json:"lastOnline"`
-	RecentIPCount     int                     `json:"recentIpCount"`
-	RecentIPs         []model.ClientIPHistory `json:"recentIps"`
-	Apps              []ClientReportApp       `json:"apps"`
-	Hosts             []ClientReportHost      `json:"hosts"`
-	DailyUsage        []ClientDailyUsage      `json:"dailyUsage"`
-	HourlyUsage       []ClientHourlyUsage     `json:"hourlyUsage"`
-	TimelineUsage     []ClientTimelineUsage   `json:"timelineUsage"`
-	TotalUp           int64                   `json:"totalUp"`
-	TotalDown         int64                   `json:"totalDown"`
-	TotalUsage        int64                   `json:"totalUsage"`
-	AverageDaily      int64                   `json:"averageDaily"`
-	PeakDay           string                  `json:"peakDay"`
-	PeakDayBytes      int64                   `json:"peakDayBytes"`
-	PeakHour          int                     `json:"peakHour"`
-	PeakHourBytes     int64                   `json:"peakHourBytes"`
-	PeakMinuteBytes   int64                   `json:"peakMinuteBytes"`
-	LatestMinuteBytes int64                   `json:"latestMinuteBytes"`
-	ActiveDays        int                     `json:"activeDays"`
-	ActiveMinutes     int                     `json:"activeMinutes"`
-	FirstDataAt       int64                   `json:"firstDataAt"`
-	LastDataAt        int64                   `json:"lastDataAt"`
-	Events            []model.ClientEvent     `json:"events"`
-	Anomalies         []model.ClientAnomaly   `json:"anomalies"`
+	Email                string                     `json:"email"`
+	Days                 int                        `json:"days"`
+	Hours                int                        `json:"hours"`
+	RangeStart           int64                      `json:"rangeStart"`
+	RangeEnd             int64                      `json:"rangeEnd"`
+	LastOnline           int64                      `json:"lastOnline"`
+	RecentIPCount        int                        `json:"recentIpCount"`
+	RecentIPs            []model.ClientIPHistory    `json:"recentIps"`
+	Apps                 []ClientReportApp          `json:"apps"`
+	Hosts                []ClientReportHost         `json:"hosts"`
+	DailyUsage           []ClientDailyUsage         `json:"dailyUsage"`
+	HourlyUsage          []ClientHourlyUsage        `json:"hourlyUsage"`
+	TimelineUsage        []ClientTimelineUsage      `json:"timelineUsage"`
+	TotalUp              int64                      `json:"totalUp"`
+	TotalDown            int64                      `json:"totalDown"`
+	TotalUsage           int64                      `json:"totalUsage"`
+	AverageDaily         int64                      `json:"averageDaily"`
+	PeakDay              string                     `json:"peakDay"`
+	PeakDayBytes         int64                      `json:"peakDayBytes"`
+	PeakHour             int                        `json:"peakHour"`
+	PeakHourBytes        int64                      `json:"peakHourBytes"`
+	PeakMinuteBytes      int64                      `json:"peakMinuteBytes"`
+	LatestMinuteBytes    int64                      `json:"latestMinuteBytes"`
+	ActiveDays           int                        `json:"activeDays"`
+	ActiveMinutes        int                        `json:"activeMinutes"`
+	FirstDataAt          int64                      `json:"firstDataAt"`
+	LastDataAt           int64                      `json:"lastDataAt"`
+	Events               []model.ClientEvent        `json:"events"`
+	Anomalies            []model.ClientAnomaly      `json:"anomalies"`
+	DestinationTracking  bool                       `json:"destinationTracking"`
+	DestinationSummaries []ClientDestinationSummary `json:"destinationSummaries"`
+	Destinations         []ClientDestinationItem    `json:"destinations"`
 }
 
 type ClientUsageAlert struct {
@@ -387,6 +390,28 @@ func (s *ClientInsightService) RenameClientHistory(oldEmail, newEmail string) er
 		if err := tx.Where("email = ?", oldEmail).Delete(&model.ClientIPHistory{}).Error; err != nil {
 			return err
 		}
+		var destinations []model.ClientDestinationHour
+		if err := tx.Where("email = ?", oldEmail).Find(&destinations).Error; err != nil {
+			return err
+		}
+		for _, destination := range destinations {
+			row := destination
+			row.Id = 0
+			row.Email = newEmail
+			if err := tx.Clauses(clause.OnConflict{
+				Columns: []clause.Column{{Name: "email"}, {Name: "bucket_start"}, {Name: "key"}},
+				DoUpdates: clause.Assignments(map[string]any{
+					"connections": gorm.Expr("connections + ?", destination.Connections),
+					"first_seen":  gorm.Expr("CASE WHEN first_seen < ? THEN first_seen ELSE ? END", destination.FirstSeen, destination.FirstSeen),
+					"last_seen":   gorm.Expr("CASE WHEN last_seen > ? THEN last_seen ELSE ? END", destination.LastSeen, destination.LastSeen),
+				}),
+			}).Create(&row).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("email = ?", oldEmail).Delete(&model.ClientDestinationHour{}).Error; err != nil {
+			return err
+		}
 		if err := tx.Model(&model.ClientEvent{}).Where("email = ?", oldEmail).Update("email", newEmail).Error; err != nil {
 			return err
 		}
@@ -653,6 +678,10 @@ func (s *ClientInsightService) GetReportForRange(email string, days, hours int) 
 	_ = db.Where("email = ? AND created_at >= ?", email, rangeStart).Order("created_at DESC, id DESC").Limit(100).Find(&events).Error
 	var anomalies []model.ClientAnomaly
 	_ = db.Where("email = ? AND created_at >= ?", email, rangeStart).Order("created_at DESC, id DESC").Limit(50).Find(&anomalies).Error
+	destinations, destinationSummaries, destinationErr := s.destinationReport(email, rangeStart, rangeEnd)
+	if destinationErr != nil {
+		return nil, destinationErr
+	}
 
 	return &ClientInsightReport{
 		Email: email, Days: days, Hours: hours, RangeStart: rangeStart, RangeEnd: rangeEnd,
@@ -662,7 +691,8 @@ func (s *ClientInsightService) GetReportForRange(email string, days, hours int) 
 		PeakDay: peakDay, PeakDayBytes: peakDayBytes, PeakHour: peakHour, PeakHourBytes: peakHourBytes,
 		PeakMinuteBytes: peakMinuteBytes, LatestMinuteBytes: latestMinuteBytes,
 		ActiveDays: activeDays, ActiveMinutes: activeMinutes, FirstDataAt: firstDataAt, LastDataAt: lastDataAt,
-		Events: events, Anomalies: anomalies,
+		Events: events, Anomalies: anomalies, DestinationTracking: rec.DestinationTracking,
+		DestinationSummaries: destinationSummaries, Destinations: destinations,
 	}, nil
 }
 
@@ -1142,6 +1172,9 @@ func (s *ClientInsightService) Cleanup(historyDays int) error {
 			return err
 		}
 		if err := tx.Where("last_seen < ?", dayCutoff).Delete(&model.ClientIPHistory{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("bucket_start < ?", now.Add(-destinationRetention).UnixMilli()).Delete(&model.ClientDestinationHour{}).Error; err != nil {
 			return err
 		}
 

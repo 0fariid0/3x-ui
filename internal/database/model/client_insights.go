@@ -103,3 +103,38 @@ type ClientTrafficDayBucket struct {
 }
 
 func (ClientTrafficDayBucket) TableName() string { return "client_traffic_day_buckets" }
+
+// ClientDestinationHour stores privacy-preserving hourly destination aggregates.
+// No URL path, payload, message content, or DNS query body is retained.
+type ClientDestinationHour struct {
+	Id          int    `json:"id" gorm:"primaryKey;autoIncrement"`
+	Email       string `json:"email" gorm:"uniqueIndex:idx_client_destination_hour,priority:1;index:idx_client_destination_email;size:255;not null"`
+	BucketStart int64  `json:"bucketStart" gorm:"uniqueIndex:idx_client_destination_hour,priority:2;index:idx_client_destination_time;not null"`
+	Key         string `json:"key" gorm:"uniqueIndex:idx_client_destination_hour,priority:3;size:320;not null"`
+	Service     string `json:"service" gorm:"index;size:64"`
+	Owner       string `json:"owner" gorm:"size:96"`
+	Domain      string `json:"domain" gorm:"size:255"`
+	IP          string `json:"ip" gorm:"size:128"`
+	Port        int    `json:"port"`
+	Protocol    string `json:"protocol" gorm:"size:12"`
+	Confidence  string `json:"confidence" gorm:"size:16"`
+	Connections int64  `json:"connections" gorm:"default:1"`
+	FirstSeen   int64  `json:"firstSeen" gorm:"index"`
+	LastSeen    int64  `json:"lastSeen" gorm:"index"`
+	CreatedAt   int64  `json:"createdAt" gorm:"autoCreateTime:milli"`
+	UpdatedAt   int64  `json:"updatedAt" gorm:"autoUpdateTime:milli"`
+}
+
+func (ClientDestinationHour) TableName() string { return "client_destination_hours" }
+
+// ClientDestinationCursor persists the access-log tail offset across panel restarts.
+type ClientDestinationCursor struct {
+	Id            int    `json:"id" gorm:"primaryKey"`
+	Path          string `json:"path" gorm:"size:1024"`
+	Offset        int64  `json:"offset"`
+	ObservedSize  int64  `json:"observedSize"`
+	LastCleanupAt int64  `json:"lastCleanupAt"`
+	UpdatedAt     int64  `json:"updatedAt" gorm:"autoUpdateTime:milli"`
+}
+
+func (ClientDestinationCursor) TableName() string { return "client_destination_cursor" }

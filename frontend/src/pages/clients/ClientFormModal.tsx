@@ -35,6 +35,7 @@ import { TLS_FLOW_CONTROL } from '@/schemas/primitives';
 import type { ClientRecord, InboundOption, ExternalLink, ExternalLinkInput } from '@/hooks/useClients';
 import { useFail2banStatusQuery, getLimitIpNotice } from '@/api/queries/useFail2banStatusQuery';
 import { ClientFormSchema, ClientCreateFormSchema, type ClientFormValues } from '@/schemas/client';
+import './ClientFormModal.css';
 
 const FLOW_OPTIONS = Object.values(TLS_FLOW_CONTROL);
 const VMESS_SECURITY_OPTIONS = ['auto', 'aes-128-gcm', 'chacha20-poly1305'] as const;
@@ -142,6 +143,7 @@ const EMPTY: Values = {
   group: '',
   comment: '',
   enable: true,
+  destinationTracking: false,
   inboundIds: [],
   externalLinks: [],
   wgPrivateKey: '',
@@ -257,6 +259,7 @@ export default function ClientFormModal({
         group: client.group || '',
         comment: client.comment || '',
         enable: !!client.enable,
+        destinationTracking: !!client.destinationTracking,
         inboundIds: Array.isArray(attachedIds) ? [...attachedIds] : [],
         externalLinks: toExternalLinkRows(attachedExternalLinks),
         wgPrivateKey: client.privateKey || '',
@@ -553,6 +556,7 @@ export default function ClientFormModal({
       group: values.group,
       comment: values.comment,
       enable: values.enable,
+      destinationTracking: values.destinationTracking,
       inboundIds: values.inboundIds,
     });
     if (!validated.success) {
@@ -580,6 +584,7 @@ export default function ClientFormModal({
       group: values.group,
       comment: values.comment,
       enable: !!values.enable,
+      destinationTracking: !!values.destinationTracking,
     };
     const reverseTagValue = showReverseTag ? (values.reverseTag || '').trim() : '';
     if (reverseTagValue) {
@@ -805,6 +810,20 @@ export default function ClientFormModal({
                               allowClear
                             />
                           </FormField>
+                        </Col>
+                      </Row>
+
+                      <Row gutter={16}>
+                        <Col span={24}>
+                          <div className="client-destination-tracking-field">
+                            <div>
+                              <strong>{t('pages.clients.destinationTracking')}</strong>
+                              <small>{t('pages.clients.destinationTrackingDesc')}</small>
+                            </div>
+                            <FormField name="destinationTracking" valueProp="checked" noStyle>
+                              <Switch />
+                            </FormField>
+                          </div>
                         </Col>
                       </Row>
 

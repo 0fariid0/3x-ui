@@ -293,6 +293,7 @@ export interface Client {
   auth?: string;
   comment: string;
   created_at?: number;
+  destinationTracking: boolean;
   email: string;
   enable: boolean;
   expiryTime: number;
@@ -341,6 +342,28 @@ export interface ClientDailyUsage {
   up: number;
 }
 
+export interface ClientDestinationItem {
+  confidence: string;
+  connections: number;
+  domain?: string;
+  firstSeen: number;
+  ip?: string;
+  key: string;
+  lastSeen: number;
+  owner: string;
+  port?: number;
+  protocol?: string;
+  service: string;
+}
+
+export interface ClientDestinationSummary {
+  connections: number;
+  destinations: number;
+  lastSeen: number;
+  owner: string;
+  service: string;
+}
+
 export interface ClientEvent {
   createdAt: number;
   details: string;
@@ -382,6 +405,9 @@ export interface ClientInsightReport {
   averageDaily: number;
   dailyUsage: ClientDailyUsage[];
   days: number;
+  destinationSummaries: ClientDestinationSummary[];
+  destinationTracking: boolean;
+  destinations: ClientDestinationItem[];
   email: string;
   events: ClientEvent[];
   firstDataAt: number;
@@ -412,6 +438,7 @@ export interface ClientRecord {
   auth: string;
   comment: string;
   createdAt: number;
+  destinationTracking: boolean;
   email: string;
   enable: boolean;
   expiryTime: number;

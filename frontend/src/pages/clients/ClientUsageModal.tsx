@@ -22,6 +22,8 @@ interface TimelineUsage { bucketStart: number; up: number; down: number; total: 
 interface ReportIP { id: number; ip: string; firstSeen: number; lastSeen: number; seenCount: number; }
 interface ReportApp { id: number; appName: string; version?: string; os?: string; userAgent?: string; format?: string; requestCount?: number; firstSeen?: number; lastSeen?: number; }
 interface ReportHost { id: number; inboundId: number; remark?: string; address?: string; port?: number; lastSeen?: number; }
+interface DestinationSummary { service: string; owner?: string; connections: number; destinations: number; lastSeen: number; }
+interface DestinationItem { key: string; service: string; owner?: string; domain?: string; ip?: string; port?: number; protocol?: string; confidence: string; connections: number; firstSeen: number; lastSeen: number; }
 interface ReportEvent { id: number; kind: string; summary: string; details?: string; createdAt: number; }
 interface ReportAnomaly {
   id: number;
@@ -66,6 +68,9 @@ export interface ClientInsightReport {
   lastDataAt: number;
   events: ReportEvent[];
   anomalies: ReportAnomaly[];
+  destinationTracking: boolean;
+  destinationSummaries: DestinationSummary[];
+  destinations: DestinationItem[];
 }
 
 interface ClientUsageModalProps {
@@ -290,6 +295,45 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
               <div><code>{host.address || '—'}{host.port ? `:${host.port}` : ''}</code><small>{dateLabel(host.lastSeen)}</small></div>
             </div>
           ))}
+        </div>
+      ),
+    },
+    {
+      key: 'destinations', label: <span><GlobalOutlined /> {t('pages.clients.destinationsTab')}</span>, children: (
+        <div className="client-destination-panel">
+          {!report.destinationTracking ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('pages.clients.destinationTrackingDisabled')} />
+          ) : report.destinations.length === 0 ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('pages.clients.destinationTrackingEmpty')} />
+          ) : (
+            <>
+              <div className="client-destination-privacy-note">{t('pages.clients.destinationPrivacyNote')}</div>
+              <div className="client-destination-summary-grid">
+                {report.destinationSummaries.map((item) => (
+                  <div className="client-destination-summary-card" key={item.service}>
+                    <div><strong>{item.service || t('pages.clients.destinationServiceOther')}</strong><small>{item.owner || '—'}</small></div>
+                    <div><b>{item.connections.toLocaleString()}</b><small>{t('pages.clients.destinationConnections')}</small></div>
+                    <div><b>{item.destinations}</b><small>{t('pages.clients.destinationCount')}</small></div>
+                    <div><small>{t('pages.clients.destinationLastSeen')}</small><span>{dateLabel(item.lastSeen)}</span></div>
+                  </div>
+                ))}
+              </div>
+              <div className="client-usage-list">
+                {report.destinations.map((item) => (
+                  <div className="client-usage-list-row" key={item.key}>
+                    <div>
+                      <strong>{item.service || t('pages.clients.destinationServiceOther')}</strong>
+                      <small className="client-usage-mono">{item.domain || item.ip || '—'}{item.port ? `:${item.port}` : ''}</small>
+                    </div>
+                    <div>
+                      <span>{item.connections.toLocaleString()} {t('pages.clients.destinationConnections')}</span>
+                      <small>{item.owner || '—'} · {item.confidence === 'domain' ? t('pages.clients.destinationConfidenceDomain') : t('pages.clients.destinationConfidenceIp')} · {dateLabel(item.lastSeen)}</small>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       ),
     },

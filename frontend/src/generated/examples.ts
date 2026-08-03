@@ -285,6 +285,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "auth": "",
     "comment": "",
     "created_at": 0,
+    "destinationTracking": false,
     "email": "",
     "enable": false,
     "expiryTime": 0,
@@ -329,6 +330,26 @@ export const EXAMPLES: Record<string, unknown> = {
     "down": 0,
     "total": 0,
     "up": 0
+  },
+  "ClientDestinationItem": {
+    "confidence": "",
+    "connections": 0,
+    "domain": "",
+    "firstSeen": 0,
+    "ip": "",
+    "key": "",
+    "lastSeen": 0,
+    "owner": "",
+    "port": 0,
+    "protocol": "",
+    "service": ""
+  },
+  "ClientDestinationSummary": {
+    "connections": 0,
+    "destinations": 0,
+    "lastSeen": 0,
+    "owner": "",
+    "service": ""
   },
   "ClientEvent": {
     "createdAt": 0,
@@ -405,6 +426,31 @@ export const EXAMPLES: Record<string, unknown> = {
       }
     ],
     "days": 0,
+    "destinationSummaries": [
+      {
+        "connections": 0,
+        "destinations": 0,
+        "lastSeen": 0,
+        "owner": "",
+        "service": ""
+      }
+    ],
+    "destinationTracking": false,
+    "destinations": [
+      {
+        "confidence": "",
+        "connections": 0,
+        "domain": "",
+        "firstSeen": 0,
+        "ip": "",
+        "key": "",
+        "lastSeen": 0,
+        "owner": "",
+        "port": 0,
+        "protocol": "",
+        "service": ""
+      }
+    ],
     "email": "",
     "events": [
       {
@@ -476,6 +522,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "auth": "",
     "comment": "",
     "createdAt": 0,
+    "destinationTracking": false,
     "email": "",
     "enable": false,
     "expiryTime": 0,

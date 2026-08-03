@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.6.7",
+    "version": "3.6.8",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -1273,6 +1273,10 @@
             "format": "int64",
             "type": "integer"
           },
+          "destinationTracking": {
+            "description": "Per-client destination aggregation",
+            "type": "boolean"
+          },
           "email": {
             "description": "Client email identifier",
             "type": "string"
@@ -1361,6 +1365,7 @@
         },
         "required": [
           "comment",
+          "destinationTracking",
           "email",
           "enable",
           "expiryTime",
@@ -1473,6 +1478,87 @@
           "down",
           "total",
           "up"
+        ],
+        "type": "object"
+      },
+      "ClientDestinationItem": {
+        "description": "ClientDestinationItem is an aggregate destination shown in client reports.",
+        "properties": {
+          "confidence": {
+            "type": "string"
+          },
+          "connections": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "firstSeen": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "lastSeen": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "confidence",
+          "connections",
+          "firstSeen",
+          "key",
+          "lastSeen",
+          "owner",
+          "service"
+        ],
+        "type": "object"
+      },
+      "ClientDestinationSummary": {
+        "description": "ClientDestinationSummary groups destination rows by recognized service.",
+        "properties": {
+          "connections": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "destinations": {
+            "type": "integer"
+          },
+          "lastSeen": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "connections",
+          "destinations",
+          "lastSeen",
+          "owner",
+          "service"
         ],
         "type": "object"
       },
@@ -1633,6 +1719,21 @@
           "days": {
             "type": "integer"
           },
+          "destinationSummaries": {
+            "items": {
+              "$ref": "#/components/schemas/ClientDestinationSummary"
+            },
+            "type": "array"
+          },
+          "destinationTracking": {
+            "type": "boolean"
+          },
+          "destinations": {
+            "items": {
+              "$ref": "#/components/schemas/ClientDestinationItem"
+            },
+            "type": "array"
+          },
           "email": {
             "type": "string"
           },
@@ -1735,6 +1836,9 @@
           "averageDaily",
           "dailyUsage",
           "days",
+          "destinationSummaries",
+          "destinationTracking",
+          "destinations",
           "email",
           "events",
           "firstDataAt",
@@ -1777,6 +1881,9 @@
           "createdAt": {
             "format": "int64",
             "type": "integer"
+          },
+          "destinationTracking": {
+            "type": "boolean"
           },
           "email": {
             "type": "string"
@@ -1850,6 +1957,7 @@
           "auth",
           "comment",
           "createdAt",
+          "destinationTracking",
           "email",
           "enable",
           "expiryTime",
@@ -6943,6 +7051,31 @@
                       }
                     ],
                     "days": 0,
+                    "destinationSummaries": [
+                      {
+                        "connections": 0,
+                        "destinations": 0,
+                        "lastSeen": 0,
+                        "owner": "",
+                        "service": ""
+                      }
+                    ],
+                    "destinationTracking": false,
+                    "destinations": [
+                      {
+                        "confidence": "",
+                        "connections": 0,
+                        "domain": "",
+                        "firstSeen": 0,
+                        "ip": "",
+                        "key": "",
+                        "lastSeen": 0,
+                        "owner": "",
+                        "port": 0,
+                        "protocol": "",
+                        "service": ""
+                      }
+                    ],
                     "email": "",
                     "events": [
                       {

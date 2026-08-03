@@ -1247,6 +1247,10 @@ export const SCHEMAS: Record<string, unknown> = {
         "format": "int64",
         "type": "integer"
       },
+      "destinationTracking": {
+        "description": "Per-client destination aggregation",
+        "type": "boolean"
+      },
       "email": {
         "description": "Client email identifier",
         "type": "string"
@@ -1335,6 +1339,7 @@ export const SCHEMAS: Record<string, unknown> = {
     },
     "required": [
       "comment",
+      "destinationTracking",
       "email",
       "enable",
       "expiryTime",
@@ -1447,6 +1452,87 @@ export const SCHEMAS: Record<string, unknown> = {
       "down",
       "total",
       "up"
+    ],
+    "type": "object"
+  },
+  "ClientDestinationItem": {
+    "description": "ClientDestinationItem is an aggregate destination shown in client reports.",
+    "properties": {
+      "confidence": {
+        "type": "string"
+      },
+      "connections": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "domain": {
+        "type": "string"
+      },
+      "firstSeen": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "ip": {
+        "type": "string"
+      },
+      "key": {
+        "type": "string"
+      },
+      "lastSeen": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "owner": {
+        "type": "string"
+      },
+      "port": {
+        "type": "integer"
+      },
+      "protocol": {
+        "type": "string"
+      },
+      "service": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "confidence",
+      "connections",
+      "firstSeen",
+      "key",
+      "lastSeen",
+      "owner",
+      "service"
+    ],
+    "type": "object"
+  },
+  "ClientDestinationSummary": {
+    "description": "ClientDestinationSummary groups destination rows by recognized service.",
+    "properties": {
+      "connections": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "destinations": {
+        "type": "integer"
+      },
+      "lastSeen": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "owner": {
+        "type": "string"
+      },
+      "service": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "connections",
+      "destinations",
+      "lastSeen",
+      "owner",
+      "service"
     ],
     "type": "object"
   },
@@ -1607,6 +1693,21 @@ export const SCHEMAS: Record<string, unknown> = {
       "days": {
         "type": "integer"
       },
+      "destinationSummaries": {
+        "items": {
+          "$ref": "#/components/schemas/ClientDestinationSummary"
+        },
+        "type": "array"
+      },
+      "destinationTracking": {
+        "type": "boolean"
+      },
+      "destinations": {
+        "items": {
+          "$ref": "#/components/schemas/ClientDestinationItem"
+        },
+        "type": "array"
+      },
       "email": {
         "type": "string"
       },
@@ -1709,6 +1810,9 @@ export const SCHEMAS: Record<string, unknown> = {
       "averageDaily",
       "dailyUsage",
       "days",
+      "destinationSummaries",
+      "destinationTracking",
+      "destinations",
       "email",
       "events",
       "firstDataAt",
@@ -1751,6 +1855,9 @@ export const SCHEMAS: Record<string, unknown> = {
       "createdAt": {
         "format": "int64",
         "type": "integer"
+      },
+      "destinationTracking": {
+        "type": "boolean"
       },
       "email": {
         "type": "string"
@@ -1824,6 +1931,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "auth",
       "comment",
       "createdAt",
+      "destinationTracking",
       "email",
       "enable",
       "expiryTime",
