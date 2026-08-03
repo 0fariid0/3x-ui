@@ -13,7 +13,14 @@ import {
   directSettings,
   ipv4Settings,
 } from '../basics/constants';
-import { getDefaultOutboundTag, ruleGetter, ruleSetter, setDefaultOutboundTag, syncOutbound } from '../basics/helpers';
+import {
+  getDefaultOutboundTag,
+  getNordOutboundTag,
+  ruleGetter,
+  ruleSetter,
+  setDefaultOutboundTag,
+  syncOutbound,
+} from '../basics/helpers';
 
 interface RoutingBasicProps {
   templateSettings: XraySettingsValue | null;
@@ -42,6 +49,8 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings }: 
   const directDomains = ruleGetter(templateSettings, 'direct', 'domain');
   const ipv4Domains = ruleGetter(templateSettings, 'IPv4', 'domain');
   const warpDomains = ruleGetter(templateSettings, 'warp', 'domain');
+  const nordOutboundTag = getNordOutboundTag(templateSettings);
+  const nordDomains = nordOutboundTag ? ruleGetter(templateSettings, nordOutboundTag, 'domain') : [];
 
   const torrentActive = BITTORRENT_PROTOCOLS.every((p) => blockedProtocols.includes(p));
   const defaultOutboundTag = getDefaultOutboundTag(templateSettings);
@@ -180,8 +189,8 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings }: 
       />
 
       <SettingListItem
-        title={t('pages.xray.warpRouting')}
-        description={t('pages.xray.warpRoutingDesc')}
+        title="warp"
+        description={t('pages.xray.warpRoutingDesc', 'Route selected services through warp.')}
         paddings="small"
         control={
           <Select
@@ -190,6 +199,31 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings }: 
             style={{ width: '100%' }}
             options={SERVICES_OPTIONS}
             onChange={(v) => mutate((tt) => ruleSetter(tt, 'warp', 'domain', v))}
+          />
+        }
+      />
+
+      <SettingListItem
+        title="NordVPN"
+        description={t(
+          'pages.xray.nordRoutingDesc',
+          nordOutboundTag
+            ? 'Route selected services through NordVPN NordLynx.'
+            : 'Create the NordVPN NordLynx outbound first, then select services here.',
+        )}
+        paddings="small"
+        control={
+          <Select
+            mode="tags"
+            value={nordDomains}
+            disabled={!nordOutboundTag}
+            placeholder={t('pages.xray.nordRoutingUnavailable', 'Create NordVPN outbound first')}
+            style={{ width: '100%' }}
+            options={SERVICES_OPTIONS}
+            onChange={(v) => {
+              if (!nordOutboundTag) return;
+              mutate((tt) => ruleSetter(tt, nordOutboundTag, 'domain', v));
+            }}
           />
         }
       />

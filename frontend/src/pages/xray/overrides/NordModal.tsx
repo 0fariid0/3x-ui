@@ -4,13 +4,15 @@ import { Button, Divider, Form, Input, message, Modal, Select, Tabs, Tag } from 
 import { LoginOutlined, SaveOutlined } from '@ant-design/icons';
 import { FormProvider, useForm, useWatch } from 'react-hook-form';
 
-import { HttpUtil } from '@/utils';
 import { FormField } from '@/components/form/rhf';
+import type { XraySettingsValue } from '@/hooks/useXraySetting';
+import { HttpUtil } from '@/utils';
+import { getNordOutboundIndex, NORDVPN_OUTBOUND_TAG } from '../basics/helpers';
 import './NordModal.css';
 
 interface NordModalProps {
   open: boolean;
-  templateSettings: { outbounds?: { tag?: string }[] } | null;
+  templateSettings: XraySettingsValue | null;
   onClose: () => void;
   onAddOutbound: (outbound: Record<string, unknown>) => void;
   onResetOutbound: (payload: { index: number; outbound: Record<string, unknown>; oldTag?: string; newTag: string }) => void;
@@ -88,11 +90,10 @@ export default function NordModal({
   const cityId = useWatch({ control: methods.control, name: 'cityId' });
   const serverId = useWatch({ control: methods.control, name: 'serverId' });
 
-  const nordOutboundIndex = useMemo(() => {
-    const list = templateSettings?.outbounds;
-    if (!list) return -1;
-    return list.findIndex((o) => o?.tag?.startsWith?.('nord-'));
-  }, [templateSettings?.outbounds]);
+  const nordOutboundIndex = useMemo(
+    () => getNordOutboundIndex(templateSettings),
+    [templateSettings],
+  );
 
   const filteredServers = useMemo(() => {
     if (!cityId) return servers;
@@ -159,6 +160,7 @@ export default function NordModal({
       if (msg?.success) {
         onRemoveOutbound(nordOutboundIndex);
         onRemoveRoutingRules({ prefix: 'nord-' });
+        onRemoveRoutingRules({ prefix: NORDVPN_OUTBOUND_TAG });
         setNordData(null);
         methods.reset(EMPTY);
         setCountries([]);
@@ -215,7 +217,7 @@ export default function NordModal({
       return null;
     }
     return {
-      tag: `nord-${server.hostname}`,
+      tag: NORDVPN_OUTBOUND_TAG,
       protocol: 'wireguard',
       settings: {
         secretKey: nordData?.private_key,

@@ -1,6 +1,21 @@
 import type { XraySettingsValue } from '@/hooks/useXraySetting';
 import { blockedSettings, directSettings } from './constants';
 
+export const NORDVPN_OUTBOUND_TAG = 'NordVPN';
+
+export function getNordOutboundIndex(t: XraySettingsValue | null): number {
+  const outbounds = t?.outbounds ?? [];
+  const exact = outbounds.findIndex((o) => o?.tag === NORDVPN_OUTBOUND_TAG);
+  if (exact >= 0) return exact;
+  return outbounds.findIndex((o) => o?.tag?.startsWith?.('nord-'));
+}
+
+export function getNordOutboundTag(t: XraySettingsValue | null): string | null {
+  const index = getNordOutboundIndex(t);
+  if (index < 0) return null;
+  return t?.outbounds?.[index]?.tag ?? null;
+}
+
 export function ruleGetter(t: XraySettingsValue | null, outboundTag: string, property: string): string[] {
   if (!t?.routing?.rules) return [];
   const out: string[] = [];

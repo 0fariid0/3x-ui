@@ -1,5 +1,13 @@
 # Custom changelog
 
+## v3.6.12
+
+- Added a dedicated **NordVPN** service-routing selector beside the existing `warp` selector.
+- NordVPN NordLynx outbounds now use the stable tag `NordVPN` instead of a server-dependent `nord-*` tag.
+- Existing legacy `nord-*` outbounds are detected and migrate their routing rules when the NordVPN outbound is reset.
+- Renamed the basic WARP routing label to the exact lowercase name `warp`.
+- Kept only the tag-triggered release workflow to avoid unrelated failing checks on normal pushes.
+
 ## v3.6.11
 
 - Added the complete bundled Google IPv4/IPv6 prefix snapshot from Google's official `goog.json` feed, including `142.250.0.0/15` for addresses such as `142.251.20.113`.
