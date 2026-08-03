@@ -339,6 +339,16 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 					if err := tx.Clauses(clause.OnConflict{
 						Columns: []clause.Column{{Name: "email"}, {Name: "bucket_start"}, {Name: "key"}},
 						DoUpdates: clause.Assignments(map[string]any{
+							// Classification rules can improve between releases. Refresh all
+							// descriptive fields when an existing hourly row is hit so a row
+							// previously stored as Other is repaired by the next connection.
+							"service":     event.Service,
+							"owner":       event.Owner,
+							"domain":      event.Domain,
+							"ip":          event.IP,
+							"port":        event.Port,
+							"protocol":    event.Protocol,
+							"confidence":  event.Confidence,
 							"connections": gorm.Expr("connections + ?", event.Count),
 							"first_seen":  gorm.Expr("CASE WHEN first_seen = 0 OR first_seen > ? THEN ? ELSE first_seen END", event.FirstAt, event.FirstAt),
 							"last_seen":   gorm.Expr("CASE WHEN last_seen < ? THEN ? ELSE last_seen END", event.LastAt, event.LastAt),
@@ -398,17 +408,45 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 	return db.Save(&cursor).Error
 }
 
+func reclassifyDestinationItem(item *ClientDestinationItem) {
+	if item == nil {
+		return
+	}
+	item.Service, item.Owner, item.Confidence = classifyDestination(item.Domain, item.IP)
+}
+
+// ClearDestinations removes all stored destination aggregates for one client.
+// Pending complete access-log lines are ingested first so data generated before
+// the administrator pressed reset cannot reappear on the next ingestion run.
+func (s *ClientInsightService) ClearDestinations(email string) error {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return errors.New("client email is required")
+	}
+	if err := s.IngestDestinationAccessLog(); err != nil {
+		return err
+	}
+	return database.GetDB().Where("email = ?", email).Delete(&model.ClientDestinationHour{}).Error
+}
+
 func (s *ClientInsightService) destinationReport(email string, start, end int64) ([]ClientDestinationItem, []ClientDestinationSummary, error) {
 	items := make([]ClientDestinationItem, 0)
 	err := database.GetDB().Model(&model.ClientDestinationHour{}).
-		Select("key, service, owner, domain, ip, port, protocol, confidence, SUM(connections) AS connections, MIN(first_seen) AS first_seen, MAX(last_seen) AS last_seen").
+		// Do not group by the stored classification. Older rows may have been
+		// saved as Other before a CIDR/domain rule was added. Aggregate by the
+		// actual destination and classify every returned item with the current
+		// rules, so upgrades repair historical reports immediately.
+		Select("key, domain, ip, port, protocol, SUM(connections) AS connections, MIN(first_seen) AS first_seen, MAX(last_seen) AS last_seen").
 		Where("email = ? AND bucket_start >= ? AND bucket_start <= ?", email, start, end).
-		Group("key, service, owner, domain, ip, port, protocol, confidence").
+		Group("key, domain, ip, port, protocol").
 		Order("connections DESC, last_seen DESC").
 		Limit(destinationMaxReportItems).
 		Scan(&items).Error
 	if err != nil {
 		return nil, nil, err
+	}
+	for i := range items {
+		reclassifyDestinationItem(&items[i])
 	}
 	type summaryAccumulator struct {
 		ClientDestinationSummary

@@ -148,6 +148,17 @@
   gap: 12px;
 }
 
+.client-destination-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.client-destination-toolbar .client-destination-privacy-note {
+  flex: 1;
+  min-width: 0;
+}
+
 .client-destination-privacy-note {
   padding: 9px 12px;
   border: 1px solid var(--ant-color-border-secondary);
@@ -194,6 +205,15 @@
 }
 
 @media (max-width: 640px) {
+  .client-destination-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .client-destination-toolbar .ant-btn {
+    width: 100%;
+  }
+
   .client-destination-summary-card {
     grid-template-columns: minmax(0, 1fr) auto auto;
   }

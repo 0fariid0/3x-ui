@@ -1,5 +1,11 @@
 # Custom changelog
 
+## v3.6.10
+
+- Fixed stale destination rows remaining classified as `Other` after Telegram/Meta rules were added.
+- Destination reports now reclassify stored rows using current domain/CIDR rules.
+- Hourly destination upserts now refresh classification metadata.
+
 ## v3.6.9
 
 - Added official Telegram IPv4/IPv6 CIDR recognition, including `149.154.160.0/20`.

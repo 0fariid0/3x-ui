@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.6.9",
+    "version": "3.6.10",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -7141,6 +7141,51 @@
                     "totalUp": 0,
                     "totalUsage": 0
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/clients/clearDestinations/{email}": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Delete all privacy-preserving destination aggregates stored for one client. Complete pending access-log lines are ingested first, so pre-reset data does not reappear on the next collector run.",
+        "operationId": "post_panel_api_clients_clearDestinations_email",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "description": "Client email (unique identifier).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "msg": "Destination history cleared."
                 }
               }
             }

@@ -933,7 +933,12 @@
       "destinationConfidenceDomain": "شناسایی از دامنه",
       "destinationConfidenceNetwork": "شناسایی از رنج شبکه",
       "destinationConfidenceIp": "فقط IP",
-      "destinationServiceOther": "سایر"
+      "destinationServiceOther": "سایر",
+      "destinationReset": "پاک‌کردن مقصدها",
+      "destinationResetConfirmTitle": "تاریخچه مقصدهای این کاربر پاک شود؟",
+      "destinationResetConfirmDesc": "همه مقصدهای ذخیره‌شده این کاربر حذف می‌شوند. تا وقتی ثبت مقصد فعال باشد، اتصال‌های جدید دوباره ثبت خواهند شد.",
+      "destinationResetSuccess": "تاریخچه مقصدهای کاربر پاک شد.",
+      "destinationResetFailed": "پاک‌کردن تاریخچه مقصدها ناموفق بود."
     },
     "groups": {
       "name": "نام",

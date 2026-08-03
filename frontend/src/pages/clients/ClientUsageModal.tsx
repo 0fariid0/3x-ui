@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Empty, Modal, Select, Spin, Tabs, Tag, theme } from 'antd';
+import { Button, Empty, message, Modal, Popconfirm, Select, Spin, Tabs, Tag, theme } from 'antd';
 import {
   AlertOutlined,
   AppstoreOutlined,
   AreaChartOutlined,
   GlobalOutlined,
+  DeleteOutlined,
   HistoryOutlined,
 } from '@ant-design/icons';
 
@@ -15,7 +16,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { usePanelDateTime } from '@/hooks/usePanelDateTime';
 import './ClientUsageModal.css';
 
-interface ApiMsg<T> { success?: boolean; obj?: T; }
+interface ApiMsg<T> { success?: boolean; msg?: string; obj?: T; }
 interface DailyUsage { day: string; up: number; down: number; total: number; }
 interface HourlyUsage { hour: number; up: number; down: number; total: number; bytes: number; }
 interface TimelineUsage { bucketStart: number; up: number; down: number; total: number; }
@@ -115,6 +116,7 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
   const [activeTab, setActiveTab] = useState('usage');
   const [report, setReport] = useState<ClientInsightReport | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resettingDestinations, setResettingDestinations] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -141,6 +143,27 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
   }, [open, email, range]);
 
   useEffect(() => { void load(); }, [load]);
+
+  const clearDestinations = useCallback(async () => {
+    if (!email || resettingDestinations) return;
+    setResettingDestinations(true);
+    try {
+      const msg = await HttpUtil.post(
+        `/panel/api/clients/clearDestinations/${encodeURIComponent(email)}`,
+        undefined,
+        { silent: true },
+      ) as ApiMsg<unknown>;
+      if (!msg?.success) {
+        throw new Error(msg?.msg || t('pages.clients.destinationResetFailed'));
+      }
+      message.success(msg.msg || t('pages.clients.destinationResetSuccess'));
+      await load();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : t('pages.clients.destinationResetFailed'));
+    } finally {
+      setResettingDestinations(false);
+    }
+  }, [email, load, resettingDestinations, t]);
 
   const dateLabel = (ts?: number) => (!ts || ts <= 0 ? '—' : panelDateTime.formatDateTime(ts));
   const daily = report?.dailyUsage ?? [];
@@ -301,13 +324,33 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
     {
       key: 'destinations', label: <span><GlobalOutlined /> {t('pages.clients.destinationsTab')}</span>, children: (
         <div className="client-destination-panel">
+          <div className="client-destination-toolbar">
+            <div className="client-destination-privacy-note">{t('pages.clients.destinationPrivacyNote')}</div>
+            <Popconfirm
+              title={t('pages.clients.destinationResetConfirmTitle')}
+              description={t('pages.clients.destinationResetConfirmDesc')}
+              okText={t('confirm')}
+              cancelText={t('cancel')}
+              okButtonProps={{ danger: true, loading: resettingDestinations }}
+              onConfirm={clearDestinations}
+            >
+              <Button
+                danger
+                size="small"
+                icon={<DeleteOutlined />}
+                loading={resettingDestinations}
+                disabled={report.destinations.length === 0}
+              >
+                {t('pages.clients.destinationReset')}
+              </Button>
+            </Popconfirm>
+          </div>
           {!report.destinationTracking ? (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('pages.clients.destinationTrackingDisabled')} />
           ) : report.destinations.length === 0 ? (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('pages.clients.destinationTrackingEmpty')} />
           ) : (
             <>
-              <div className="client-destination-privacy-note">{t('pages.clients.destinationPrivacyNote')}</div>
               <div className="client-destination-summary-grid">
                 {report.destinationSummaries.map((item) => (
                   <div className="client-destination-summary-card" key={item.service}>

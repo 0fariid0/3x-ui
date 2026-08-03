@@ -933,7 +933,12 @@
       "destinationConfidenceDomain": "Detected by domain",
       "destinationConfidenceNetwork": "Detected by network range",
       "destinationConfidenceIp": "IP only",
-      "destinationServiceOther": "Other"
+      "destinationServiceOther": "Other",
+      "destinationReset": "Clear destination history",
+      "destinationResetConfirmTitle": "Clear this client’s destination history?",
+      "destinationResetConfirmDesc": "All saved destination aggregates for this client will be deleted. New connections will be recorded again while tracking remains enabled.",
+      "destinationResetSuccess": "Destination history cleared.",
+      "destinationResetFailed": "Could not clear destination history."
     },
     "groups": {
       "name": "Name",

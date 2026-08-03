@@ -58,3 +58,24 @@ func TestClassifyDestinationMetaRangeIsNotOverstated(t *testing.T) {
 		t.Fatalf("unexpected Meta IP classification: %q %q %q", service, owner, confidence)
 	}
 }
+func TestReclassifyDestinationItemRepairsStoredOther(t *testing.T) {
+	item := ClientDestinationItem{
+		Key:        ":149.154.167.91:443",
+		Service:    "Other",
+		IP:         "149.154.167.91",
+		Port:       443,
+		Confidence: "ip",
+	}
+	reclassifyDestinationItem(&item)
+	if item.Service != "Telegram" || item.Owner != "Telegram network" || item.Confidence != "network" {
+		t.Fatalf("stored Other row was not repaired: %#v", item)
+	}
+}
+
+func TestReclassifyDestinationItemRepairsStoredMetaOther(t *testing.T) {
+	item := ClientDestinationItem{Service: "Other", IP: "157.240.10.35", Port: 443, Confidence: "ip"}
+	reclassifyDestinationItem(&item)
+	if item.Service != "Instagram / Meta" || item.Owner != "Meta network" || item.Confidence != "network" {
+		t.Fatalf("stored Meta row was not repaired: %#v", item)
+	}
+}

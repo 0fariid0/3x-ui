@@ -599,6 +599,15 @@ export const sections: readonly Section[] = [
         responseSchema: 'ClientInsightReport',
       },
       {
+        method: 'POST',
+        path: '/panel/api/clients/clearDestinations/:email',
+        summary: 'Delete all privacy-preserving destination aggregates stored for one client. Complete pending access-log lines are ingested first, so pre-reset data does not reappear on the next collector run.',
+        params: [
+          { name: 'email', in: 'path', type: 'string', desc: 'Client email (unique identifier).' },
+        ],
+        response: '{\n  "success": true,\n  "msg": "Destination history cleared."\n}',
+      },
+      {
         method: 'GET',
         path: '/panel/api/clients/usageAlerts',
         summary: 'Return the highest-usage clients for the selected range, enriched with recent IP count, peak minute, anomaly state, quota percentage, and last-online metadata.',

@@ -86,6 +86,7 @@ func (a *ClientController) initRouter(g *gin.RouterGroup) {
 	g.POST("/bulkResetTraffic", a.bulkResetTraffic)
 	g.POST("/resetTraffic/:email", a.resetTrafficByEmail)
 	g.POST("/updateTraffic/:email", a.updateTrafficByEmail)
+	g.POST("/clearDestinations/:email", a.clearDestinations)
 	g.POST("/ips/:email", a.getIps)
 	g.POST("/clearIps/:email", a.clearIps)
 	g.POST("/onlines", a.onlines)
@@ -203,6 +204,16 @@ func (a *ClientController) getUsageAlerts(c *gin.Context) {
 		return
 	}
 	jsonObj(c, alerts, nil)
+}
+
+func (a *ClientController) clearDestinations(c *gin.Context) {
+	email := strings.TrimSpace(c.Param("email"))
+	if err := a.insightService.ClearDestinations(email); err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.clients.destinationResetFailed"), err)
+		return
+	}
+	_ = a.insightService.RecordEvent(email, "destinations_reset", "Destination history reset", nil)
+	jsonMsg(c, I18nWeb(c, "pages.clients.destinationResetSuccess"), nil)
 }
 
 func (a *ClientController) create(c *gin.Context) {
