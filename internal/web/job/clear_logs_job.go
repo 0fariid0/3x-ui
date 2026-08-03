@@ -9,15 +9,20 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
 
-const defaultMaxXrayLogBytes int64 = 64 << 20
+const (
+	defaultMaxXrayLogBytes    int64 = 8 << 20
+	defaultMaxIPLimitLogBytes int64 = 4 << 20
+)
 
-var maxXrayLogBytes = defaultMaxXrayLogBytes
+var (
+	maxXrayLogBytes    = defaultMaxXrayLogBytes
+	maxIPLimitLogBytes = defaultMaxIPLimitLogBytes
+)
 
 // ClearLogsJob clears old log files to prevent disk space issues.
 type ClearLogsJob struct{}
 
-// PruneXrayLogsJob truncates oversized Xray access and error logs.
-// PruneXrayLogsJob truncates the Xray access and error logs once either exceeds maxXrayLogBytes.
+// PruneXrayLogsJob truncates Xray access and error logs once either exceeds the bounded size limit.
 type PruneXrayLogsJob struct{}
 
 // NewClearLogsJob creates a new log cleanup job instance.
@@ -95,6 +100,32 @@ func (j *ClearLogsJob) Run() {
 func (j *PruneXrayLogsJob) Run() {
 	truncateXrayLog(xray.GetAccessLogPath, maxXrayLogBytes)
 	truncateXrayLog(xray.GetErrorLogPath, maxXrayLogBytes)
+	for _, path := range []string{
+		xray.GetIPLimitLogPath(),
+		xray.GetIPLimitBannedLogPath(),
+		xray.GetIPLimitBannedPrevLogPath(),
+	} {
+		truncatePlainLog(path, maxIPLimitLogBytes)
+	}
+}
+
+func truncatePlainLog(path string, maxBytes int64) {
+	if disabledLogPath(path) {
+		return
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			logger.Warning("Failed to stat log:", path, "-", err)
+		}
+		return
+	}
+	if maxBytes > 0 && info.Size() <= maxBytes {
+		return
+	}
+	if err := os.Truncate(path, 0); err != nil && !os.IsNotExist(err) {
+		logger.Warning("Failed to truncate log:", path, "-", err)
+	}
 }
 
 func wipeXrayLogs() {

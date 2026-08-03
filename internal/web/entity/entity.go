@@ -252,7 +252,7 @@ func (s *AllSetting) CheckValid() error {
 		s.AnomalyCooldownMinutes = 60
 	}
 	if s.AnomalyHistoryDays == 0 {
-		s.AnomalyHistoryDays = 90
+		s.AnomalyHistoryDays = 30
 	}
 	if s.AnomalySpikeMBPerMinute < 1 || s.AnomalySpikeMBPerMinute > 1048576 ||
 		s.AnomalySustainedMBPerMinute < 1 || s.AnomalySustainedMBPerMinute > 1048576 ||

@@ -1,5 +1,13 @@
 # Custom changelog
 
+## v3.6.6
+
+- Unified all report, history, log, and chart timestamps with the panel-selected calendar and server/Tehran clock offset.
+- Added rolling 12-hour and 24-hour client traffic charts with separate hourly upload/download data.
+- Reworked top-consumer alerts into a compact text-only dashboard card and placed compact Xray/system uptime beside it.
+- Added bounded minute/hour/day traffic rollups so long-range reports use compact summaries instead of unbounded minute records.
+- Added hourly insight cleanup, SQLite WAL compaction, and strict small-file limits for panel, Xray, and IP-limit logs.
+
 ## v3.6.5
 
 - Added configurable client-usage ranges from 24 hours to 365 days.

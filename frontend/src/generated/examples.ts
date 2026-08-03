@@ -436,6 +436,7 @@ export const EXAMPLES: Record<string, unknown> = {
         "up": 0
       }
     ],
+    "hours": 0,
     "lastDataAt": 0,
     "lastOnline": 0,
     "latestMinuteBytes": 0,
@@ -444,6 +445,8 @@ export const EXAMPLES: Record<string, unknown> = {
     "peakHour": 0,
     "peakHourBytes": 0,
     "peakMinuteBytes": 0,
+    "rangeEnd": 0,
+    "rangeStart": 0,
     "recentIpCount": 0,
     "recentIps": [
       {
@@ -453,6 +456,14 @@ export const EXAMPLES: Record<string, unknown> = {
         "ip": "",
         "lastSeen": 0,
         "seenCount": 0
+      }
+    ],
+    "timelineUsage": [
+      {
+        "bucketStart": 0,
+        "down": 0,
+        "total": 0,
+        "up": 0
       }
     ],
     "totalDown": 0,
@@ -509,6 +520,12 @@ export const EXAMPLES: Record<string, unknown> = {
   "ClientReverse": {
     "tag": ""
   },
+  "ClientTimelineUsage": {
+    "bucketStart": 0,
+    "down": 0,
+    "total": 0,
+    "up": 0
+  },
   "ClientTraffic": {
     "down": 2097152,
     "email": "user1",
@@ -530,6 +547,29 @@ export const EXAMPLES: Record<string, unknown> = {
     "email": "",
     "id": 0,
     "samples": 0,
+    "up": 0,
+    "updatedAt": 0
+  },
+  "ClientTrafficDayBucket": {
+    "activeMinutes": 0,
+    "bucketStart": 0,
+    "createdAt": 0,
+    "day": "",
+    "down": 0,
+    "email": "",
+    "id": 0,
+    "peakMinuteBytes": 0,
+    "up": 0,
+    "updatedAt": 0
+  },
+  "ClientTrafficHourBucket": {
+    "activeMinutes": 0,
+    "bucketStart": 0,
+    "createdAt": 0,
+    "down": 0,
+    "email": "",
+    "id": 0,
+    "peakMinuteBytes": 0,
     "up": 0,
     "updatedAt": 0
   },

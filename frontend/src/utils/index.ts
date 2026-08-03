@@ -939,14 +939,64 @@ export class FileManager {
 export type CalendarKind = 'gregorian' | 'jalalian';
 
 export class IntlUtil {
-  static formatDate(date: string | number | Date | null | undefined, calendar: CalendarKind = 'gregorian'): string {
-    if (date == null) return '';
-    const d = new Date(date);
-    if (!isFinite(d.getTime())) return '';
-    const language = LanguageManager.getLanguage();
-    const locale = calendar === 'jalalian' ? 'fa-IR' : language;
+  private static readonly panelOffsetStorageKey = 'xui-panel-offset-seconds';
 
-    const intlOptions: Intl.DateTimeFormatOptions = {
+  static setPanelOffsetSeconds(offsetSeconds: number): void {
+    try {
+      globalThis.localStorage?.setItem(
+        IntlUtil.panelOffsetStorageKey,
+        String(Number.isFinite(offsetSeconds) ? Math.trunc(offsetSeconds) : 0),
+      );
+    } catch (_) {
+      // Storage may be unavailable in private mode; callers still pass the
+      // live offset directly through formatPanel* helpers.
+    }
+  }
+
+  private static savedPanelOffsetSeconds(): number {
+    try {
+      const value = Number(globalThis.localStorage?.getItem(IntlUtil.panelOffsetStorageKey) || 0);
+      return Number.isFinite(value) ? Math.trunc(value) : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  private static panelLocale(calendar: CalendarKind): string {
+    if (calendar === 'jalalian') return 'fa-IR-u-ca-persian-nu-latn';
+    const language = LanguageManager.getLanguage();
+    const base = language.toLowerCase().startsWith('fa') ? 'fa-IR' : language.split('-u-')[0];
+    return `${base}-u-ca-gregory-nu-latn`;
+  }
+
+  private static shiftedPanelDate(
+    date: string | number | Date | null | undefined,
+    offsetSeconds: number,
+  ): Date | null {
+    if (date == null) return null;
+    const normalized = typeof date === 'number' && Math.abs(date) < 100_000_000_000
+      ? date * 1000
+      : date;
+    const parsed = new Date(normalized);
+    if (!isFinite(parsed.getTime())) return null;
+    return new Date(parsed.getTime() + (Number(offsetSeconds) || 0) * 1000);
+  }
+
+  static formatDate(date: string | number | Date | null | undefined, calendar: CalendarKind = 'gregorian'): string {
+    return IntlUtil.formatPanelDateTime(date, calendar, IntlUtil.savedPanelOffsetSeconds());
+  }
+
+  // Formats an absolute timestamp using the exact offset selected by the panel
+  // clock. The timestamp is shifted first and then rendered in UTC so the
+  // administrator browser timezone can never alter the displayed value.
+  static formatPanelDateTime(
+    date: string | number | Date | null | undefined,
+    calendar: CalendarKind = 'gregorian',
+    offsetSeconds = 0,
+  ): string {
+    const shifted = IntlUtil.shiftedPanelDate(date, offsetSeconds);
+    if (!shifted) return '';
+    return new Intl.DateTimeFormat(IntlUtil.panelLocale(calendar), {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -954,10 +1004,53 @@ export class IntlUtil {
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
-    };
+      timeZone: 'UTC',
+    }).format(shifted);
+  }
 
-    const intl = new Intl.DateTimeFormat(locale, intlOptions);
-    return intl.format(d);
+  static formatPanelDate(
+    date: string | number | Date | null | undefined,
+    calendar: CalendarKind = 'gregorian',
+    offsetSeconds = 0,
+  ): string {
+    const shifted = IntlUtil.shiftedPanelDate(date, offsetSeconds);
+    if (!shifted) return '';
+    return new Intl.DateTimeFormat(IntlUtil.panelLocale(calendar), {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: 'UTC',
+    }).format(shifted);
+  }
+
+  static formatPanelTime(
+    date: string | number | Date | null | undefined,
+    offsetSeconds = 0,
+    withSeconds = false,
+  ): string {
+    const shifted = IntlUtil.shiftedPanelDate(date, offsetSeconds);
+    if (!shifted) return '';
+    return new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: withSeconds ? '2-digit' : undefined,
+      hour12: false,
+      timeZone: 'UTC',
+    }).format(shifted);
+  }
+
+  static formatPanelDayKey(day: string, calendar: CalendarKind = 'gregorian'): string {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return day;
+    // Noon UTC is intentionally used so a calendar conversion cannot cross a
+    // date boundary when the browser has an unusual local timezone.
+    const parsed = new Date(`${day}T12:00:00Z`);
+    if (!isFinite(parsed.getTime())) return day;
+    return new Intl.DateTimeFormat(IntlUtil.panelLocale(calendar), {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: 'UTC',
+    }).format(parsed);
   }
 
   static formatRelativeTime(date: number | null | undefined): string {

@@ -1632,6 +1632,9 @@ export const SCHEMAS: Record<string, unknown> = {
         },
         "type": "array"
       },
+      "hours": {
+        "type": "integer"
+      },
       "lastDataAt": {
         "format": "int64",
         "type": "integer"
@@ -1662,12 +1665,26 @@ export const SCHEMAS: Record<string, unknown> = {
         "format": "int64",
         "type": "integer"
       },
+      "rangeEnd": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "rangeStart": {
+        "format": "int64",
+        "type": "integer"
+      },
       "recentIpCount": {
         "type": "integer"
       },
       "recentIps": {
         "items": {
           "$ref": "#/components/schemas/ClientIPHistory"
+        },
+        "type": "array"
+      },
+      "timelineUsage": {
+        "items": {
+          "$ref": "#/components/schemas/ClientTimelineUsage"
         },
         "type": "array"
       },
@@ -1697,6 +1714,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "firstDataAt",
       "hosts",
       "hourlyUsage",
+      "hours",
       "lastDataAt",
       "lastOnline",
       "latestMinuteBytes",
@@ -1705,8 +1723,11 @@ export const SCHEMAS: Record<string, unknown> = {
       "peakHour",
       "peakHourBytes",
       "peakMinuteBytes",
+      "rangeEnd",
+      "rangeStart",
       "recentIpCount",
       "recentIps",
+      "timelineUsage",
       "totalDown",
       "totalUp",
       "totalUsage"
@@ -1912,6 +1933,34 @@ export const SCHEMAS: Record<string, unknown> = {
     ],
     "type": "object"
   },
+  "ClientTimelineUsage": {
+    "description": "ClientTimelineUsage represents one absolute hour on rolling 12h/24h charts.",
+    "properties": {
+      "bucketStart": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "down": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "total": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "up": {
+        "format": "int64",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "bucketStart",
+      "down",
+      "total",
+      "up"
+    ],
+    "type": "object"
+  },
   "ClientTraffic": {
     "description": "ClientTraffic represents traffic statistics and limits for a specific client.\nIt tracks upload/download usage, expiry times, and online status for inbound clients.",
     "properties": {
@@ -2025,6 +2074,110 @@ export const SCHEMAS: Record<string, unknown> = {
       "email",
       "id",
       "samples",
+      "up",
+      "updatedAt"
+    ],
+    "type": "object"
+  },
+  "ClientTrafficDayBucket": {
+    "description": "ClientTrafficDayBucket is the long-term daily rollup. It allows 30–365 day\nusage charts without retaining millions of minute-level rows.",
+    "properties": {
+      "activeMinutes": {
+        "type": "integer"
+      },
+      "bucketStart": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "createdAt": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "day": {
+        "type": "string"
+      },
+      "down": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "email": {
+        "type": "string"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "peakMinuteBytes": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "up": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "updatedAt": {
+        "format": "int64",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "activeMinutes",
+      "bucketStart",
+      "createdAt",
+      "day",
+      "down",
+      "email",
+      "id",
+      "peakMinuteBytes",
+      "up",
+      "updatedAt"
+    ],
+    "type": "object"
+  },
+  "ClientTrafficHourBucket": {
+    "description": "ClientTrafficHourBucket is the compact hourly rollup used by longer charts.\nOne active client creates at most 24 rows per day, keeping the database small\nwhile the raw minute table is retained only for the recent 25-hour window.",
+    "properties": {
+      "activeMinutes": {
+        "type": "integer"
+      },
+      "bucketStart": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "createdAt": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "down": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "email": {
+        "type": "string"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "peakMinuteBytes": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "up": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "updatedAt": {
+        "format": "int64",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "activeMinutes",
+      "bucketStart",
+      "createdAt",
+      "down",
+      "email",
+      "id",
+      "peakMinuteBytes",
       "up",
       "updatedAt"
     ],

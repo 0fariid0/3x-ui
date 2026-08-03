@@ -273,13 +273,16 @@ export default function IndexPage() {
                     />
                   </div>
 
-                  <UsageAlertsCard onOpenClient={setClientUsageEmail} />
+                  <div className="ov-insights-row">
+                    <UsageAlertsCard onOpenClient={setClientUsageEmail} />
 
-                  <SystemStrip
-                    status={status}
-                    showIp={showIp}
-                    onToggleIp={() => setShowIp((v) => !v)}
-                  />
+                    <SystemStrip
+                      status={status}
+                      showIp={showIp}
+                      onToggleIp={() => setShowIp((v) => !v)}
+                      compact
+                    />
+                  </div>
                 </div>
               )}
             </Spin>

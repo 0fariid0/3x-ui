@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertOutlined, AreaChartOutlined, ReloadOutlined } from '@ant-design/icons';
-import { Button, Card, Empty, Progress, Select, Spin, Tag, Tooltip } from 'antd';
+import { Button, Card, Empty, Select, Spin, Tag, Tooltip } from 'antd';
 
 import { HttpUtil, SizeFormatter } from '@/utils';
+import { usePanelDateTime } from '@/hooks/usePanelDateTime';
 
 interface ApiMsg<T> { success?: boolean; obj?: T; }
 
@@ -46,6 +47,7 @@ const RANGE_OPTIONS = [
 
 export default function UsageAlertsCard({ onOpenClient }: UsageAlertsCardProps) {
   const { t } = useTranslation();
+  const panelDateTime = usePanelDateTime();
   const [days, setDays] = useState(7);
   const [items, setItems] = useState<ClientUsageAlert[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,7 +56,7 @@ export default function UsageAlertsCard({ onOpenClient }: UsageAlertsCardProps) 
     setLoading(true);
     try {
       const msg = await HttpUtil.get(
-        `/panel/api/clients/usageAlerts?days=${days}&limit=8`,
+        `/panel/api/clients/usageAlerts?days=${days}&limit=6`,
         undefined,
         { silent: true },
       ) as ApiMsg<ClientUsageAlertsResponse>;
@@ -68,7 +70,6 @@ export default function UsageAlertsCard({ onOpenClient }: UsageAlertsCardProps) 
 
   useEffect(() => { void load(); }, [load]);
 
-  const maxUsage = useMemo(() => Math.max(1, ...items.map((item) => item.totalUsage || 0)), [items]);
   const tagFor = (item: ClientUsageAlert) => {
     if (item.severity === 'critical') return <Tag color="red">{t('pages.index.usageAlertCritical')}</Tag>;
     if (item.severity === 'warning') return <Tag color="orange">{t('pages.index.usageAlertWarning')}</Tag>;
@@ -78,7 +79,7 @@ export default function UsageAlertsCard({ onOpenClient }: UsageAlertsCardProps) 
   return (
     <Card hoverable styles={{ body: { padding: 0 } }} className="ov-usage-alerts">
       <div className="ov-usage-alerts-head">
-        <div>
+        <div className="ov-usage-alerts-title">
           <div className="ov-kicker ov-kicker-icon"><AlertOutlined /> {t('pages.index.usageAlerts')}</div>
           <div className="ov-sub">{t('pages.index.usageAlertsSub')}</div>
         </div>
@@ -102,15 +103,11 @@ export default function UsageAlertsCard({ onOpenClient }: UsageAlertsCardProps) 
                   <strong>{item.email}</strong>
                   {tagFor(item)}
                 </span>
-                <Progress
-                  percent={Math.max(2, Math.min(100, (item.totalUsage / maxUsage) * 100))}
-                  showInfo={false}
-                  size="small"
-                />
                 <span className="ov-usage-meta">
                   <span>{t('pages.clients.recentIpCount')}: {item.recentIpCount}</span>
                   <span>{t('pages.clients.usagePeakMinute')}: {SizeFormatter.sizeFormat(item.peakMinuteBytes || 0)}/min</span>
                   {item.anomalyCount > 0 && <span>{t('pages.index.usageAlertCount', { count: item.anomalyCount })}</span>}
+                  {item.lastOnline > 0 && <span>{t('lastOnline')}: {panelDateTime.formatDateTime(item.lastOnline)}</span>}
                 </span>
               </span>
               <span className="ov-usage-values">

@@ -9,15 +9,16 @@ import {
   HistoryOutlined,
 } from '@ant-design/icons';
 
-import { HttpUtil, IntlUtil, SizeFormatter } from '@/utils';
+import { HttpUtil, SizeFormatter } from '@/utils';
 import { Sparkline } from '@/components/viz';
-import { useDatepicker } from '@/hooks/useDatepicker';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { usePanelDateTime } from '@/hooks/usePanelDateTime';
 import './ClientUsageModal.css';
 
 interface ApiMsg<T> { success?: boolean; obj?: T; }
 interface DailyUsage { day: string; up: number; down: number; total: number; }
 interface HourlyUsage { hour: number; up: number; down: number; total: number; bytes: number; }
+interface TimelineUsage { bucketStart: number; up: number; down: number; total: number; }
 interface ReportIP { id: number; ip: string; firstSeen: number; lastSeen: number; seenCount: number; }
 interface ReportApp { id: number; appName: string; version?: string; os?: string; userAgent?: string; format?: string; requestCount?: number; firstSeen?: number; lastSeen?: number; }
 interface ReportHost { id: number; inboundId: number; remark?: string; address?: string; port?: number; lastSeen?: number; }
@@ -38,6 +39,9 @@ interface ReportAnomaly {
 export interface ClientInsightReport {
   email: string;
   days: number;
+  hours: number;
+  rangeStart: number;
+  rangeEnd: number;
   lastOnline: number;
   recentIpCount: number;
   recentIps: ReportIP[];
@@ -45,6 +49,7 @@ export interface ClientInsightReport {
   hosts: ReportHost[];
   dailyUsage: DailyUsage[];
   hourlyUsage: HourlyUsage[];
+  timelineUsage: TimelineUsage[];
   totalUp: number;
   totalDown: number;
   totalUsage: number;
@@ -70,37 +75,45 @@ interface ClientUsageModalProps {
   onClose: () => void;
 }
 
-const RANGE_OPTIONS = [
-  { value: 1, label: '24h' },
-  { value: 7, label: '7d' },
-  { value: 14, label: '14d' },
-  { value: 30, label: '30d' },
-  { value: 60, label: '60d' },
-  { value: 90, label: '90d' },
-  { value: 180, label: '180d' },
-  { value: 365, label: '365d' },
+type RangeValue = '12h' | '24h' | '7d' | '14d' | '30d' | '60d' | '90d' | '180d' | '365d';
+
+const RANGE_OPTIONS: { value: RangeValue; label: string }[] = [
+  { value: '12h', label: '12h' },
+  { value: '24h', label: '24h' },
+  { value: '7d', label: '7d' },
+  { value: '14d', label: '14d' },
+  { value: '30d', label: '30d' },
+  { value: '60d', label: '60d' },
+  { value: '90d', label: '90d' },
+  { value: '180d', label: '180d' },
+  { value: '365d', label: '365d' },
 ];
 
-function dayLabel(day: string, days: number): string {
-  if (!day) return '';
-  if (days > 90) return day.slice(0, 7);
-  if (days > 30) return day.slice(5);
-  return day.slice(5);
+function initialRange(initialDays: number): RangeValue {
+  if (initialDays === 1) return '24h';
+  const value = `${initialDays}d` as RangeValue;
+  return RANGE_OPTIONS.some((option) => option.value === value) ? value : '7d';
+}
+
+function rangeQuery(range: RangeValue): string {
+  return range.endsWith('h')
+    ? `hours=${Number.parseInt(range, 10)}`
+    : `days=${Number.parseInt(range, 10)}`;
 }
 
 export default function ClientUsageModal({ open, email, initialDays = 7, onClose }: ClientUsageModalProps) {
   const { t } = useTranslation();
   const { token } = theme.useToken();
-  const { datepicker } = useDatepicker();
+  const panelDateTime = usePanelDateTime();
   const { isMobile } = useMediaQuery();
-  const [days, setDays] = useState(initialDays);
+  const [range, setRange] = useState<RangeValue>(() => initialRange(initialDays));
   const [activeTab, setActiveTab] = useState('usage');
   const [report, setReport] = useState<ClientInsightReport | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setDays(initialDays);
+      setRange(initialRange(initialDays));
       setActiveTab('usage');
     }
   }, [open, initialDays, email]);
@@ -110,7 +123,7 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
     setLoading(true);
     try {
       const msg = await HttpUtil.get(
-        `/panel/api/clients/report/${encodeURIComponent(email)}?days=${days}`,
+        `/panel/api/clients/report/${encodeURIComponent(email)}?${rangeQuery(range)}`,
         undefined,
         { silent: true },
       ) as ApiMsg<ClientInsightReport>;
@@ -120,27 +133,28 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
     } finally {
       setLoading(false);
     }
-  }, [open, email, days]);
+  }, [open, email, range]);
 
   useEffect(() => { void load(); }, [load]);
 
-  const dateLabel = (ts?: number) => (!ts || ts <= 0 ? '—' : IntlUtil.formatDate(ts, datepicker));
+  const dateLabel = (ts?: number) => (!ts || ts <= 0 ? '—' : panelDateTime.formatDateTime(ts));
   const daily = report?.dailyUsage ?? [];
   const hourly = report?.hourlyUsage ?? [];
-  const useHourlyMainChart = days === 1;
+  const timeline = report?.timelineUsage ?? [];
+  const useRollingHours = (report?.hours ?? 0) > 0;
   const labels = useMemo(
-    () => useHourlyMainChart
-      ? hourly.map((row) => `${String(row.hour).padStart(2, '0')}:00`)
-      : daily.map((row) => dayLabel(row.day, days)),
-    [daily, hourly, days, useHourlyMainChart],
+    () => useRollingHours
+      ? timeline.map((row) => panelDateTime.formatTime(row.bucketStart))
+      : daily.map((row) => panelDateTime.formatDayKey(row.day)),
+    [daily, timeline, panelDateTime, useRollingHours],
   );
   const up = useMemo(
-    () => useHourlyMainChart ? hourly.map((row) => row.up || 0) : daily.map((row) => row.up),
-    [daily, hourly, useHourlyMainChart],
+    () => useRollingHours ? timeline.map((row) => row.up || 0) : daily.map((row) => row.up || 0),
+    [daily, timeline, useRollingHours],
   );
   const down = useMemo(
-    () => useHourlyMainChart ? hourly.map((row) => row.down || 0) : daily.map((row) => row.down),
-    [daily, hourly, useHourlyMainChart],
+    () => useRollingHours ? timeline.map((row) => row.down || 0) : daily.map((row) => row.down || 0),
+    [daily, timeline, useRollingHours],
   );
   const maxHourly = useMemo(() => Math.max(1, ...hourly.map((row) => row.total || row.bytes || 0)), [hourly]);
 
@@ -155,14 +169,24 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
     return value === key ? event.summary : value;
   };
 
+  const chartRangeText = report
+    ? report.hours > 0
+      ? t('pages.clients.usageChartHours', { hours: report.hours })
+      : t('pages.clients.usageChartRange', { days: report.days })
+    : '';
+
   const usagePanel = report ? (
     <div className="client-usage-panel">
       <div className="client-usage-summary">
         <div><span>{t('pages.clients.usageTotal')}</span><strong>{SizeFormatter.sizeFormat(report.totalUsage || 0)}</strong></div>
         <div><span>{t('pages.clients.usageAverageDaily')}</span><strong>{SizeFormatter.sizeFormat(report.averageDaily || 0)}</strong></div>
-        <div><span>{t('pages.clients.usagePeakDay')}</span><strong>{report.peakDay || '—'}</strong><small>{SizeFormatter.sizeFormat(report.peakDayBytes || 0)}</small></div>
+        <div>
+          <span>{t('pages.clients.usagePeakDay')}</span>
+          <strong>{report.peakDay ? panelDateTime.formatDayKey(report.peakDay) : '—'}</strong>
+          <small>{SizeFormatter.sizeFormat(report.peakDayBytes || 0)}</small>
+        </div>
         <div><span>{t('pages.clients.usagePeakMinute')}</span><strong>{SizeFormatter.sizeFormat(report.peakMinuteBytes || 0)}/min</strong></div>
-        <div><span>{t('pages.clients.activeDays')}</span><strong>{report.activeDays}/{report.days}</strong></div>
+        <div><span>{t('pages.clients.activeMinutes')}</span><strong>{report.activeMinutes.toLocaleString()}</strong></div>
         <div><span>{t('pages.clients.recentIpCount')}</span><strong>{report.recentIpCount}</strong></div>
       </div>
 
@@ -171,7 +195,7 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
           <div>
             <div className="client-usage-chart-title">{t('pages.clients.usageChart')}</div>
             <div className="client-usage-chart-sub">
-              {t('pages.clients.usageChartRange', { days: report.days })} · {dateLabel(report.firstDataAt)} — {dateLabel(report.lastDataAt)}
+              {chartRangeText} · {dateLabel(report.rangeStart || report.firstDataAt)} — {dateLabel(report.rangeEnd || report.lastDataAt)}
             </div>
           </div>
           <div className="client-usage-legend">
@@ -195,7 +219,7 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
           showTooltip
           showLegend={false}
           fillOpacity={0.18}
-          tickCountX={isMobile ? 4 : 7}
+          tickCountX={isMobile ? 4 : Math.min(8, Math.max(5, labels.length))}
           yFormatter={SizeFormatter.sizeFormat}
           tooltipFormatter={SizeFormatter.sizeFormat}
         />
@@ -210,7 +234,7 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
         <section className="client-usage-detail-card">
           <div className="client-usage-section-title">{t('pages.clients.hourlyPattern')}</div>
           <div className="client-hour-bars">
-            {(report.hourlyUsage ?? []).map((row) => (
+            {hourly.map((row) => (
               <div className="client-hour-bar-wrap" key={row.hour} title={`${String(row.hour).padStart(2, '0')}:00 — ${SizeFormatter.sizeFormat(row.total || row.bytes || 0)}`}>
                 <div className="client-hour-bar" style={{ height: `${Math.max(2, ((row.total || row.bytes || 0) / maxHourly) * 100)}%` }} />
                 <span>{String(row.hour).padStart(2, '0')}</span>
@@ -305,12 +329,12 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
       title={(
         <div className="client-usage-modal-title">
           <div><AreaChartOutlined /> {t('pages.clients.usageDetails')} {email ? `— ${email}` : ''}</div>
-          <Select
-            value={days}
+          <Select<RangeValue>
+            value={range}
             size="small"
             className="client-usage-range"
             options={RANGE_OPTIONS}
-            onChange={setDays}
+            onChange={setRange}
           />
         </div>
       )}

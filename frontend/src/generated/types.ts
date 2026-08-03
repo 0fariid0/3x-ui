@@ -387,6 +387,7 @@ export interface ClientInsightReport {
   firstDataAt: number;
   hosts: ClientReportHost[];
   hourlyUsage: ClientHourlyUsage[];
+  hours: number;
   lastDataAt: number;
   lastOnline: number;
   latestMinuteBytes: number;
@@ -395,8 +396,11 @@ export interface ClientInsightReport {
   peakHour: number;
   peakHourBytes: number;
   peakMinuteBytes: number;
+  rangeEnd: number;
+  rangeStart: number;
   recentIpCount: number;
   recentIps: ClientIPHistory[];
+  timelineUsage: ClientTimelineUsage[];
   totalDown: number;
   totalUp: number;
   totalUsage: number;
@@ -456,6 +460,13 @@ export interface ClientReverse {
   tag: string;
 }
 
+export interface ClientTimelineUsage {
+  bucketStart: number;
+  down: number;
+  total: number;
+  up: number;
+}
+
 export interface ClientTraffic {
   down: number;
   email: string;
@@ -478,6 +489,31 @@ export interface ClientTrafficBucket {
   email: string;
   id: number;
   samples: number;
+  up: number;
+  updatedAt: number;
+}
+
+export interface ClientTrafficDayBucket {
+  activeMinutes: number;
+  bucketStart: number;
+  createdAt: number;
+  day: string;
+  down: number;
+  email: string;
+  id: number;
+  peakMinuteBytes: number;
+  up: number;
+  updatedAt: number;
+}
+
+export interface ClientTrafficHourBucket {
+  activeMinutes: number;
+  bucketStart: number;
+  createdAt: number;
+  down: number;
+  email: string;
+  id: number;
+  peakMinuteBytes: number;
   up: number;
   updatedAt: number;
 }

@@ -256,7 +256,7 @@
       "threads": "نخ‌ها",
       "uptime": "مدت کارکرد",
       "usageAlerts": "هشدار مصرف کاربران",
-      "usageAlertsSub": "پرمصرف‌ترین کاربران و موارد مشکوک در بازه انتخاب‌شده",
+      "usageAlertsSub": "پرمصرف‌ها و موارد مشکوک در بازه انتخابی",
       "noUsageAlerts": "هنوز مصرفی برای نمایش ثبت نشده است",
       "usageAlertCritical": "نیازمند بررسی",
       "usageAlertWarning": "مصرف غیرعادی",
@@ -918,7 +918,8 @@
       "rangeBreakdown": "جزئیات بازه",
       "firstSeen": "اولین مشاهده",
       "lastSeen": "آخرین مشاهده",
-      "seenCount": "تعداد مشاهده"
+      "seenCount": "تعداد مشاهده",
+      "usageChartHours": "گزارش {{hours}} ساعت گذشته"
     },
     "groups": {
       "name": "نام",

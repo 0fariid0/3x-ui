@@ -410,6 +410,7 @@ export const ClientInsightReportSchema = z.object({
   firstDataAt: z.number().int(),
   hosts: z.array(z.lazy(() => ClientReportHostSchema)),
   hourlyUsage: z.array(z.lazy(() => ClientHourlyUsageSchema)),
+  hours: z.number().int(),
   lastDataAt: z.number().int(),
   lastOnline: z.number().int(),
   latestMinuteBytes: z.number().int(),
@@ -418,8 +419,11 @@ export const ClientInsightReportSchema = z.object({
   peakHour: z.number().int(),
   peakHourBytes: z.number().int(),
   peakMinuteBytes: z.number().int(),
+  rangeEnd: z.number().int(),
+  rangeStart: z.number().int(),
   recentIpCount: z.number().int(),
   recentIps: z.array(z.lazy(() => ClientIPHistorySchema)),
+  timelineUsage: z.array(z.lazy(() => ClientTimelineUsageSchema)),
   totalDown: z.number().int(),
   totalUp: z.number().int(),
   totalUsage: z.number().int(),
@@ -484,6 +488,14 @@ export const ClientReverseSchema = z.object({
 });
 export type ClientReverse = z.infer<typeof ClientReverseSchema>;
 
+export const ClientTimelineUsageSchema = z.object({
+  bucketStart: z.number().int(),
+  down: z.number().int(),
+  total: z.number().int(),
+  up: z.number().int(),
+});
+export type ClientTimelineUsage = z.infer<typeof ClientTimelineUsageSchema>;
+
 export const ClientTrafficSchema = z.object({
   down: z.number().int(),
   email: z.string(),
@@ -511,6 +523,33 @@ export const ClientTrafficBucketSchema = z.object({
   updatedAt: z.number().int(),
 });
 export type ClientTrafficBucket = z.infer<typeof ClientTrafficBucketSchema>;
+
+export const ClientTrafficDayBucketSchema = z.object({
+  activeMinutes: z.number().int(),
+  bucketStart: z.number().int(),
+  createdAt: z.number().int(),
+  day: z.string(),
+  down: z.number().int(),
+  email: z.string(),
+  id: z.number().int(),
+  peakMinuteBytes: z.number().int(),
+  up: z.number().int(),
+  updatedAt: z.number().int(),
+});
+export type ClientTrafficDayBucket = z.infer<typeof ClientTrafficDayBucketSchema>;
+
+export const ClientTrafficHourBucketSchema = z.object({
+  activeMinutes: z.number().int(),
+  bucketStart: z.number().int(),
+  createdAt: z.number().int(),
+  down: z.number().int(),
+  email: z.string(),
+  id: z.number().int(),
+  peakMinuteBytes: z.number().int(),
+  up: z.number().int(),
+  updatedAt: z.number().int(),
+});
+export type ClientTrafficHourBucket = z.infer<typeof ClientTrafficHourBucketSchema>;
 
 export const ClientUsageAlertSchema = z.object({
   activeMinutes: z.number().int(),

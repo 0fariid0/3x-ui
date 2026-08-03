@@ -94,7 +94,7 @@ func (j *XrayTrafficJob) Run() {
 		if err := j.insightService.EvaluateAnomalies(clientTraffics, insightSettings, &j.inboundService, &j.xrayService); err != nil {
 			logger.Warning("evaluate client anomalies failed:", err)
 		}
-		if j.lastInsightCleanup.IsZero() || now.Sub(j.lastInsightCleanup) >= 24*time.Hour {
+		if j.lastInsightCleanup.IsZero() || now.Sub(j.lastInsightCleanup) >= time.Hour {
 			if err := j.insightService.Cleanup(insightSettings.AnomalyHistoryDays); err != nil {
 				logger.Warning("cleanup client insight history failed:", err)
 			} else {

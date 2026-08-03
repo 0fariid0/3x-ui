@@ -185,7 +185,8 @@ func (a *ClientController) getByTgId(c *gin.Context) {
 
 func (a *ClientController) getReport(c *gin.Context) {
 	days, _ := strconv.Atoi(c.DefaultQuery("days", "30"))
-	report, err := a.insightService.GetReport(c.Param("email"), days)
+	hours, _ := strconv.Atoi(c.DefaultQuery("hours", "0"))
+	report, err := a.insightService.GetReportForRange(c.Param("email"), days, hours)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
 		return

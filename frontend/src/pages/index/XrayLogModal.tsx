@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Button, Checkbox, Form, Input, Modal, Select, Tag } from 'antd';
 import { DownloadOutlined, SyncOutlined } from '@ant-design/icons';
 
-import { HttpUtil, FileManager, IntlUtil, PromiseUtil } from '@/utils';
+import { HttpUtil, FileManager, PromiseUtil } from '@/utils';
 import { activateOnKey } from '@/utils/a11y';
-import { useDatepicker } from '@/hooks/useDatepicker';
+import { usePanelDateTime } from '@/hooks/usePanelDateTime';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import './XrayLogModal.css';
 
@@ -35,21 +35,11 @@ function eventColor(ev?: number): string {
   return EVENT_COLORS[ev ?? -1] ?? 'default';
 }
 
-function shortTime(value?: string | number): string {
-  if (!value) return '';
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return '';
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  const ss = String(d.getSeconds()).padStart(2, '0');
-  return `${hh}:${mm}:${ss}`;
-}
-
 const AUTO_UPDATE_INTERVAL = 5000;
 
 export default function XrayLogModal({ open, onClose }: XrayLogModalProps) {
   const { t } = useTranslation();
-  const { datepicker } = useDatepicker();
+  const panelDateTime = usePanelDateTime();
   const { isMobile } = useMediaQuery();
   const [rows, setRows] = useState('20');
   const [filter, setFilter] = useState('');
@@ -100,7 +90,11 @@ export default function XrayLogModal({ open, onClose }: XrayLogModalProps) {
   }, [open, autoUpdate]);
 
   function fullDate(value?: string | number): string {
-    return IntlUtil.formatDate(value, datepicker);
+    return panelDateTime.formatDateTime(value);
+  }
+
+  function shortTime(value?: string | number): string {
+    return panelDateTime.formatTime(value, true);
   }
 
   function download() {

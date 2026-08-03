@@ -65,3 +65,41 @@ type ClientAnomaly struct {
 }
 
 func (ClientAnomaly) TableName() string { return "client_anomalies" }
+
+// ClientTrafficHourBucket is the compact hourly rollup used by longer charts.
+// One active client creates at most 24 rows per day, keeping the database small
+// while the raw minute table is retained only for the recent 25-hour window.
+type ClientTrafficHourBucket struct {
+	Id              int    `json:"id" gorm:"primaryKey;autoIncrement"`
+	Email           string `json:"email" gorm:"uniqueIndex:idx_client_traffic_hour,priority:1;index:idx_client_traffic_hour_email;size:255;not null"`
+	BucketStart     int64  `json:"bucketStart" gorm:"uniqueIndex:idx_client_traffic_hour,priority:2;index:idx_client_traffic_hour_time;not null"`
+	Up              int64  `json:"up" gorm:"default:0"`
+	Down            int64  `json:"down" gorm:"default:0"`
+	ActiveMinutes   int    `json:"activeMinutes" gorm:"default:0"`
+	PeakMinuteBytes int64  `json:"peakMinuteBytes" gorm:"default:0"`
+	LastMinuteStart int64  `json:"-" gorm:"default:0"`
+	LastMinuteBytes int64  `json:"-" gorm:"default:0"`
+	CreatedAt       int64  `json:"createdAt" gorm:"autoCreateTime:milli"`
+	UpdatedAt       int64  `json:"updatedAt" gorm:"autoUpdateTime:milli"`
+}
+
+func (ClientTrafficHourBucket) TableName() string { return "client_traffic_hour_buckets" }
+
+// ClientTrafficDayBucket is the long-term daily rollup. It allows 30–365 day
+// usage charts without retaining millions of minute-level rows.
+type ClientTrafficDayBucket struct {
+	Id              int    `json:"id" gorm:"primaryKey;autoIncrement"`
+	Email           string `json:"email" gorm:"uniqueIndex:idx_client_traffic_day,priority:1;index:idx_client_traffic_day_email;size:255;not null"`
+	BucketStart     int64  `json:"bucketStart" gorm:"uniqueIndex:idx_client_traffic_day,priority:2;index:idx_client_traffic_day_time;not null"`
+	Day             string `json:"day" gorm:"index:idx_client_traffic_day_key;size:10;not null"`
+	Up              int64  `json:"up" gorm:"default:0"`
+	Down            int64  `json:"down" gorm:"default:0"`
+	ActiveMinutes   int    `json:"activeMinutes" gorm:"default:0"`
+	PeakMinuteBytes int64  `json:"peakMinuteBytes" gorm:"default:0"`
+	LastMinuteStart int64  `json:"-" gorm:"default:0"`
+	LastMinuteBytes int64  `json:"-" gorm:"default:0"`
+	CreatedAt       int64  `json:"createdAt" gorm:"autoCreateTime:milli"`
+	UpdatedAt       int64  `json:"updatedAt" gorm:"autoUpdateTime:milli"`
+}
+
+func (ClientTrafficDayBucket) TableName() string { return "client_traffic_day_buckets" }

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 
-import { HttpUtil } from '@/utils';
+import { HttpUtil, IntlUtil } from '@/utils';
+import { useDatepicker } from '@/hooks/useDatepicker';
 
 const RestartStatusSchema = z.object({
   serverUnix: z.number().int(),
@@ -39,20 +40,13 @@ function formatClock(date: Date): string {
   }).format(date);
 }
 
-function formatDateTime(date: Date): string {
-  return new Intl.DateTimeFormat('fa-IR-u-nu-latn', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZone: 'UTC',
-  }).format(date);
+function formatDateTime(date: Date, calendar: 'gregorian' | 'jalalian'): string {
+  return IntlUtil.formatPanelDateTime(date, calendar, 0);
 }
 
+
 export function useServerClock() {
+  const { datepicker } = useDatepicker();
   const query = useQuery({
     queryKey: ['xray', 'scheduled-restart-status'],
     queryFn: fetchRestartStatus,
@@ -66,6 +60,10 @@ export function useServerClock() {
     const timer = window.setInterval(() => setTick((value) => value + 1), 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (query.data) IntlUtil.setPanelOffsetSeconds(query.data.offsetSeconds);
+  }, [query.data]);
 
   const data = query.data;
   if (!data) {
@@ -86,7 +84,7 @@ export function useServerClock() {
   return {
     ...query,
     clockText: formatClock(current),
-    dateTimeText: formatDateTime(current),
-    lastRestartText: last ? formatDateTime(last) : '',
+    dateTimeText: formatDateTime(current, datepicker),
+    lastRestartText: last ? formatDateTime(last, datepicker) : '',
   };
 }

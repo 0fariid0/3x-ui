@@ -17,6 +17,7 @@ import {
 import { HttpUtil, SizeFormatter } from '@/utils';
 import { Sparkline } from '@/components/viz';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { usePanelDateTime } from '@/hooks/usePanelDateTime';
 import type { Status } from '@/models/status';
 import './SystemHistoryModal.css';
 
@@ -75,25 +76,10 @@ function unitFormatter(unit: string, activeKey: string): (v: number) => string {
   };
 }
 
-function formatFullTimestamp(unixSec: number): string {
-  const d = new Date(unixSec * 1000);
-  const today = new Date();
-  const sameDay = d.getFullYear() === today.getFullYear()
-    && d.getMonth() === today.getMonth()
-    && d.getDate() === today.getDate();
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  const ss = String(d.getSeconds()).padStart(2, '0');
-  const time = `${hh}:${mm}:${ss}`;
-  if (sameDay) return time;
-  const MM = String(d.getMonth() + 1).padStart(2, '0');
-  const DD = String(d.getDate()).padStart(2, '0');
-  return `${MM}-${DD} ${time}`;
-}
-
 export default function SystemHistoryModal({ open, status, onClose }: SystemHistoryModalProps) {
   const { t } = useTranslation();
   const { isMobile } = useMediaQuery();
+  const panelDateTime = usePanelDateTime();
   const [activeKey, setActiveKey] = useState('cpu');
   const [bucket, setBucket] = useState(2);
   const [points, setPoints] = useState<number[]>([]);
@@ -121,9 +107,9 @@ export default function SystemHistoryModal({ open, status, onClose }: SystemHist
   const tooltipLabelFormatter = useCallback(
     (label: string) => {
       const ts = tsLookup.get(label);
-      return ts ? formatFullTimestamp(ts) : label;
+      return ts ? panelDateTime.formatDateTime(ts * 1000) : label;
     },
-    [tsLookup],
+    [panelDateTime, tsLookup],
   );
 
   const fetchBucket = useCallback(async () => {
@@ -136,13 +122,10 @@ export default function SystemHistoryModal({ open, status, onClose }: SystemHist
         const labs: string[] = [];
         const tss: number[] = [];
         for (const p of msg.obj) {
-          const d = new Date(p.t * 1000);
-          const MM = String(d.getMonth() + 1).padStart(2, '0');
-          const DD = String(d.getDate()).padStart(2, '0');
-          const hh = String(d.getHours()).padStart(2, '0');
-          const mm = String(d.getMinutes()).padStart(2, '0');
-          const ss = String(d.getSeconds()).padStart(2, '0');
-          const lab = bucket >= 2880 ? `${MM}-${DD} ${hh}:${mm}` : bucket >= 60 ? `${hh}:${mm}` : `${hh}:${mm}:${ss}`;
+          const timestamp = Number(p.t) * 1000;
+          const lab = bucket >= 2880
+            ? `${panelDateTime.formatDate(timestamp)} ${panelDateTime.formatTime(timestamp)}`
+            : panelDateTime.formatTime(timestamp, bucket < 60);
           labs.push(lab);
           vals.push(Number(p.v) || 0);
           tss.push(Number(p.t) || 0);
@@ -178,7 +161,7 @@ export default function SystemHistoryModal({ open, status, onClose }: SystemHist
       setPoints3([]);
       setTimestamps([]);
     }
-  }, [activeMetric, bucket]);
+  }, [activeMetric, bucket, panelDateTime]);
 
   useEffect(() => {
     if (open) setActiveKey('cpu');

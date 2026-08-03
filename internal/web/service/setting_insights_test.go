@@ -12,7 +12,7 @@ func TestMaintenanceAndAnomalySettingsDefaultsAndPersistence(t *testing.T) {
 	if settings.SubMaintenanceEnable || settings.SubMaintenanceMode != "notice" {
 		t.Fatalf("maintenance defaults = %#v", settings)
 	}
-	if settings.AnomalyEnable || settings.AnomalyAction != "alert" || settings.AnomalySpikeMBPerMinute != 1024 || settings.AnomalyHistoryDays != 90 {
+	if settings.AnomalyEnable || settings.AnomalyAction != "alert" || settings.AnomalySpikeMBPerMinute != 1024 || settings.AnomalyHistoryDays != 30 {
 		t.Fatalf("anomaly defaults = %#v", settings)
 	}
 

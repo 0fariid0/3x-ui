@@ -256,7 +256,7 @@
       "threads": "Threads",
       "uptime": "Uptime",
       "usageAlerts": "Client usage alerts",
-      "usageAlertsSub": "Top consumers and suspicious usage in the selected range",
+      "usageAlertsSub": "Top consumers and suspicious activity in the selected range",
       "noUsageAlerts": "No usage has been recorded yet",
       "usageAlertCritical": "Review now",
       "usageAlertWarning": "Abnormal usage",
@@ -918,7 +918,8 @@
       "rangeBreakdown": "Range breakdown",
       "firstSeen": "First seen",
       "lastSeen": "Last seen",
-      "seenCount": "Seen count"
+      "seenCount": "Seen count",
+      "usageChartHours": "Last {{hours}} hours"
     },
     "groups": {
       "name": "Name",

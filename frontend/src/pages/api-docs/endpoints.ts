@@ -594,6 +594,7 @@ export const sections: readonly Section[] = [
         params: [
           { name: 'email', in: 'path', type: 'string', desc: 'Client email (unique identifier).' },
           { name: 'days', in: 'query', type: 'integer', optional: true, defaultValue: 30, desc: 'Daily traffic range, 1 to 365 days.' },
+          { name: 'hours', in: 'query', type: 'integer', optional: true, desc: 'Rolling hourly chart range. Supported values: 12 or 24. When set, it takes precedence over days.' },
         ],
         responseSchema: 'ClientInsightReport',
       },

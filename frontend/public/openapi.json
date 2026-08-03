@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.x",
+    "version": "3.6.6",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -1658,6 +1658,9 @@
             },
             "type": "array"
           },
+          "hours": {
+            "type": "integer"
+          },
           "lastDataAt": {
             "format": "int64",
             "type": "integer"
@@ -1688,12 +1691,26 @@
             "format": "int64",
             "type": "integer"
           },
+          "rangeEnd": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rangeStart": {
+            "format": "int64",
+            "type": "integer"
+          },
           "recentIpCount": {
             "type": "integer"
           },
           "recentIps": {
             "items": {
               "$ref": "#/components/schemas/ClientIPHistory"
+            },
+            "type": "array"
+          },
+          "timelineUsage": {
+            "items": {
+              "$ref": "#/components/schemas/ClientTimelineUsage"
             },
             "type": "array"
           },
@@ -1723,6 +1740,7 @@
           "firstDataAt",
           "hosts",
           "hourlyUsage",
+          "hours",
           "lastDataAt",
           "lastOnline",
           "latestMinuteBytes",
@@ -1731,8 +1749,11 @@
           "peakHour",
           "peakHourBytes",
           "peakMinuteBytes",
+          "rangeEnd",
+          "rangeStart",
           "recentIpCount",
           "recentIps",
+          "timelineUsage",
           "totalDown",
           "totalUp",
           "totalUsage"
@@ -1938,6 +1959,34 @@
         ],
         "type": "object"
       },
+      "ClientTimelineUsage": {
+        "description": "ClientTimelineUsage represents one absolute hour on rolling 12h/24h charts.",
+        "properties": {
+          "bucketStart": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "down": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "up": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bucketStart",
+          "down",
+          "total",
+          "up"
+        ],
+        "type": "object"
+      },
       "ClientTraffic": {
         "description": "ClientTraffic represents traffic statistics and limits for a specific client.\nIt tracks upload/download usage, expiry times, and online status for inbound clients.",
         "properties": {
@@ -2051,6 +2100,110 @@
           "email",
           "id",
           "samples",
+          "up",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "ClientTrafficDayBucket": {
+        "description": "ClientTrafficDayBucket is the long-term daily rollup. It allows 30–365 day\nusage charts without retaining millions of minute-level rows.",
+        "properties": {
+          "activeMinutes": {
+            "type": "integer"
+          },
+          "bucketStart": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "day": {
+            "type": "string"
+          },
+          "down": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "peakMinuteBytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "up": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "activeMinutes",
+          "bucketStart",
+          "createdAt",
+          "day",
+          "down",
+          "email",
+          "id",
+          "peakMinuteBytes",
+          "up",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "ClientTrafficHourBucket": {
+        "description": "ClientTrafficHourBucket is the compact hourly rollup used by longer charts.\nOne active client creates at most 24 rows per day, keeping the database small\nwhile the raw minute table is retained only for the recent 25-hour window.",
+        "properties": {
+          "activeMinutes": {
+            "type": "integer"
+          },
+          "bucketStart": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "down": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "peakMinuteBytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "up": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "activeMinutes",
+          "bucketStart",
+          "createdAt",
+          "down",
+          "email",
+          "id",
+          "peakMinuteBytes",
           "up",
           "updatedAt"
         ],
@@ -6712,6 +6865,15 @@
               "type": "integer",
               "default": 30
             }
+          },
+          {
+            "name": "hours",
+            "in": "query",
+            "required": false,
+            "description": "Rolling hourly chart range. Supported values: 12 or 24. When set, it takes precedence over days.",
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -6812,6 +6974,7 @@
                         "up": 0
                       }
                     ],
+                    "hours": 0,
                     "lastDataAt": 0,
                     "lastOnline": 0,
                     "latestMinuteBytes": 0,
@@ -6820,6 +6983,8 @@
                     "peakHour": 0,
                     "peakHourBytes": 0,
                     "peakMinuteBytes": 0,
+                    "rangeEnd": 0,
+                    "rangeStart": 0,
                     "recentIpCount": 0,
                     "recentIps": [
                       {
@@ -6829,6 +6994,14 @@
                         "ip": "",
                         "lastSeen": 0,
                         "seenCount": 0
+                      }
+                    ],
+                    "timelineUsage": [
+                      {
+                        "bucketStart": 0,
+                        "down": 0,
+                        "total": 0,
+                        "up": 0
                       }
                     ],
                     "totalDown": 0,

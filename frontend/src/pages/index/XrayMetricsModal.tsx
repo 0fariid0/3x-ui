@@ -14,6 +14,7 @@ import {
 import { HttpUtil, Msg, SizeFormatter } from '@/utils';
 import { Sparkline } from '@/components/viz';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { usePanelDateTime } from '@/hooks/usePanelDateTime';
 import './XrayMetricsModal.css';
 
 const OBS_KEY = 'xrObs';
@@ -73,34 +74,10 @@ function unitFormatter(unit: string): (v: number) => string {
   };
 }
 
-function fmtTimestamp(unixSec: number): string {
-  if (!unixSec) return '—';
-  const d = new Date(unixSec * 1000);
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  const ss = String(d.getSeconds()).padStart(2, '0');
-  return `${d.toLocaleDateString()} ${hh}:${mm}:${ss}`;
-}
-
-function formatFullTimestamp(unixSec: number): string {
-  const d = new Date(unixSec * 1000);
-  const today = new Date();
-  const sameDay = d.getFullYear() === today.getFullYear()
-    && d.getMonth() === today.getMonth()
-    && d.getDate() === today.getDate();
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  const ss = String(d.getSeconds()).padStart(2, '0');
-  const time = `${hh}:${mm}:${ss}`;
-  if (sameDay) return time;
-  const MM = String(d.getMonth() + 1).padStart(2, '0');
-  const DD = String(d.getDate()).padStart(2, '0');
-  return `${MM}-${DD} ${time}`;
-}
-
 export default function XrayMetricsModal({ open, onClose }: XrayMetricsModalProps) {
   const { t } = useTranslation();
   const { isMobile } = useMediaQuery();
+  const panelDateTime = usePanelDateTime();
   const [activeKey, setActiveKey] = useState('xrAlloc');
   const [bucket, setBucket] = useState(2);
   const [points, setPoints] = useState<number[]>([]);
@@ -130,9 +107,9 @@ export default function XrayMetricsModal({ open, onClose }: XrayMetricsModalProp
   const tooltipLabelFormatter = useCallback(
     (label: string) => {
       const ts = tsLookup.get(label);
-      return ts ? formatFullTimestamp(ts) : label;
+      return ts ? panelDateTime.formatDateTime(ts * 1000) : label;
     },
-    [tsLookup],
+    [panelDateTime, tsLookup],
   );
 
   const applyHistory = useCallback((msg: Msg<{ t: number; v: number }[]> | null | undefined, currentBucket: number) => {
@@ -141,11 +118,8 @@ export default function XrayMetricsModal({ open, onClose }: XrayMetricsModalProp
       const labs: string[] = [];
       const tss: number[] = [];
       for (const p of msg.obj) {
-        const d = new Date(p.t * 1000);
-        const hh = String(d.getHours()).padStart(2, '0');
-        const mm = String(d.getMinutes()).padStart(2, '0');
-        const ss = String(d.getSeconds()).padStart(2, '0');
-        labs.push(currentBucket >= 60 ? `${hh}:${mm}` : `${hh}:${mm}:${ss}`);
+        const timestamp = Number(p.t) * 1000;
+        labs.push(panelDateTime.formatTime(timestamp, currentBucket < 60));
         vals.push(Number(p.v) || 0);
         tss.push(Number(p.t) || 0);
       }
@@ -157,7 +131,7 @@ export default function XrayMetricsModal({ open, onClose }: XrayMetricsModalProp
       setPoints([]);
       setTimestamps([]);
     }
-  }, []);
+  }, [panelDateTime]);
 
   const fetchState = useCallback(async () => {
     try {
@@ -357,10 +331,10 @@ export default function XrayMetricsModal({ open, onClose }: XrayMetricsModalProp
                   </Tag>
                   <Tag color="blue">{activeObsTag.delay} ms</Tag>
                   <span className="obs-stamp">
-                    {t('pages.index.xrayObservatoryLastSeen')}: {fmtTimestamp(activeObsTag.lastSeenTime)}
+                    {t('pages.index.xrayObservatoryLastSeen')}: {activeObsTag.lastSeenTime ? panelDateTime.formatDateTime(activeObsTag.lastSeenTime * 1000) : '—'}
                   </span>
                   <span className="obs-stamp">
-                    {t('pages.index.xrayObservatoryLastTry')}: {fmtTimestamp(activeObsTag.lastTryTime)}
+                    {t('pages.index.xrayObservatoryLastTry')}: {activeObsTag.lastTryTime ? panelDateTime.formatDateTime(activeObsTag.lastTryTime * 1000) : '—'}
                   </span>
                 </div>
               )}

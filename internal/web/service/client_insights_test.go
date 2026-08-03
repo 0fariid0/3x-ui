@@ -173,3 +173,37 @@ func TestInsightCleanupPreservesActiveActionAndItsManualChangeHistory(t *testing
 		t.Fatalf("cleanup counts active/resolved/event = %d/%d/%d, want 1/0/1", activeCount, resolvedCount, eventCount)
 	}
 }
+
+func TestClientInsightRollingTwelveHourTimeline(t *testing.T) {
+	setupSettingTestDB(t)
+	db := database.GetDB()
+	email := "rolling@example.com"
+	if err := db.Create(&model.ClientRecord{
+		Email: email, SubID: "rolling", UUID: "66666666-6666-4666-8666-666666666666", Enable: true,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().Truncate(time.Hour).Add(20 * time.Minute)
+	service := &ClientInsightService{}
+	if err := service.RecordTraffic([]*xray.ClientTraffic{{Email: email, Up: 100, Down: 200}}, now.Add(-11*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.RecordTraffic([]*xray.ClientTraffic{{Email: email, Up: 300, Down: 400}}, now); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := service.GetReportForRange(email, 30, 12)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Hours != 12 || len(report.TimelineUsage) != 12 {
+		t.Fatalf("rolling range hours/points = %d/%d, want 12/12", report.Hours, len(report.TimelineUsage))
+	}
+	if report.TotalUp != 400 || report.TotalDown != 600 || report.TotalUsage != 1000 {
+		t.Fatalf("rolling totals = %d/%d/%d, want 400/600/1000", report.TotalUp, report.TotalDown, report.TotalUsage)
+	}
+	if report.TimelineUsage[0].Total != 300 || report.TimelineUsage[len(report.TimelineUsage)-1].Total != 700 {
+		t.Fatalf("rolling endpoints = %#v ... %#v", report.TimelineUsage[0], report.TimelineUsage[len(report.TimelineUsage)-1])
+	}
+}

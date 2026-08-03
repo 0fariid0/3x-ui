@@ -18,14 +18,14 @@ import (
 )
 
 const (
-	maxLogBufferSize = 10240                 // Maximum log entries kept in memory
+	maxLogBufferSize = 3000                  // Maximum log entries kept in memory
 	logFileName      = "3xui.log"            // Log file name
 	timeFormat       = "2006/01/02 15:04:05" // Log timestamp format
 
 	// On-disk rotation limits — single file capped, old segments pruned automatically.
-	maxLogFileMB    = 10 // rotate active log when larger than this
-	maxLogBackups   = 5  // rotated files retained (beyond current segment)
-	maxLogAgeDays   = 7  // remove rotated backups older than this (0 disables time-based pruning)
+	maxLogFileMB    = 3 // rotate active log when larger than this
+	maxLogBackups   = 1 // rotated files retained (beyond current segment)
+	maxLogAgeDays   = 2 // remove rotated backups older than this (0 disables time-based pruning)
 	compressRotated = true
 )
 

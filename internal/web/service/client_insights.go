@@ -17,7 +17,13 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-const insightBytesPerMB int64 = 1024 * 1024
+const (
+	insightBytesPerMB            int64 = 1024 * 1024
+	insightRawRetention                = 25 * time.Hour
+	insightHourlyRetention             = 31 * 24 * time.Hour
+	insightMaxDailyRetentionDays       = 365
+	insightRollupBackfillKey           = "clientInsightRollupBackfilledV366"
+)
 
 // ClientInsightService owns durable per-client reporting and abnormal usage
 // detection. The zero value is ready to use, matching the other panel services.
@@ -36,6 +42,14 @@ type ClientHourlyUsage struct {
 	Down  int64 `json:"down"`
 	Total int64 `json:"total"`
 	Bytes int64 `json:"bytes"` // Backward-compatible alias of Total.
+}
+
+// ClientTimelineUsage represents one absolute hour on rolling 12h/24h charts.
+type ClientTimelineUsage struct {
+	BucketStart int64 `json:"bucketStart"`
+	Up          int64 `json:"up"`
+	Down        int64 `json:"down"`
+	Total       int64 `json:"total"`
 }
 
 type ClientReportApp struct {
@@ -62,6 +76,9 @@ type ClientReportHost struct {
 type ClientInsightReport struct {
 	Email             string                  `json:"email"`
 	Days              int                     `json:"days"`
+	Hours             int                     `json:"hours"`
+	RangeStart        int64                   `json:"rangeStart"`
+	RangeEnd          int64                   `json:"rangeEnd"`
 	LastOnline        int64                   `json:"lastOnline"`
 	RecentIPCount     int                     `json:"recentIpCount"`
 	RecentIPs         []model.ClientIPHistory `json:"recentIps"`
@@ -69,6 +86,7 @@ type ClientInsightReport struct {
 	Hosts             []ClientReportHost      `json:"hosts"`
 	DailyUsage        []ClientDailyUsage      `json:"dailyUsage"`
 	HourlyUsage       []ClientHourlyUsage     `json:"hourlyUsage"`
+	TimelineUsage     []ClientTimelineUsage   `json:"timelineUsage"`
 	TotalUp           int64                   `json:"totalUp"`
 	TotalDown         int64                   `json:"totalDown"`
 	TotalUsage        int64                   `json:"totalUsage"`
@@ -111,23 +129,72 @@ type ClientUsageAlerts struct {
 	Items     []ClientUsageAlert `json:"items"`
 }
 
+func insightPanelLocation() *time.Location {
+	timezone, err := (&SettingService{}).GetScheduledRestartTimezone()
+	if err != nil {
+		return time.Local
+	}
+	loc, _, err := entity.ScheduledRestartLocation(timezone)
+	if err != nil || loc == nil {
+		return time.Local
+	}
+	return loc
+}
+
+func insightHourStart(at time.Time, loc *time.Location) time.Time {
+	local := at.In(loc)
+	return time.Date(local.Year(), local.Month(), local.Day(), local.Hour(), 0, 0, 0, loc)
+}
+
+func insightDayStart(at time.Time, loc *time.Location) time.Time {
+	local := at.In(loc)
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc)
+}
+
+func compactRetentionDays(historyDays int) int {
+	if historyDays < 1 {
+		historyDays = 30
+	}
+	if historyDays > insightMaxDailyRetentionDays {
+		historyDays = insightMaxDailyRetentionDays
+	}
+	return historyDays
+}
+
+func rollupAssignments(minuteStart, deltaUp, deltaDown, updatedAt int64) map[string]any {
+	deltaTotal := deltaUp + deltaDown
+	currentMinute := "CASE WHEN last_minute_start = ? THEN last_minute_bytes + ? ELSE ? END"
+	return map[string]any{
+		"up":                gorm.Expr("up + ?", deltaUp),
+		"down":              gorm.Expr("down + ?", deltaDown),
+		"active_minutes":    gorm.Expr("active_minutes + CASE WHEN last_minute_start = ? THEN 0 ELSE 1 END", minuteStart),
+		"peak_minute_bytes": gorm.Expr("CASE WHEN peak_minute_bytes >= ("+currentMinute+") THEN peak_minute_bytes ELSE ("+currentMinute+") END", minuteStart, deltaTotal, deltaTotal, minuteStart, deltaTotal, deltaTotal),
+		"last_minute_start": minuteStart,
+		"last_minute_bytes": gorm.Expr(currentMinute, minuteStart, deltaTotal, deltaTotal),
+		"updated_at":        updatedAt,
+	}
+}
+
 func (s *ClientInsightService) RecordTraffic(clientTraffics []*xray.ClientTraffic, at time.Time) error {
 	if len(clientTraffics) == 0 {
 		return nil
 	}
-	bucket := at.Truncate(time.Minute).UnixMilli()
+	loc := insightPanelLocation()
+	minuteStart := at.Truncate(time.Minute).UnixMilli()
+	hourStart := insightHourStart(at, loc).UnixMilli()
+	dayStartTime := insightDayStart(at, loc)
+	dayStart := dayStartTime.UnixMilli()
+	dayKey := dayStartTime.Format("2006-01-02")
+	updatedAt := at.UnixMilli()
 	db := database.GetDB()
 	return db.Transaction(func(tx *gorm.DB) error {
 		for _, traffic := range clientTraffics {
 			if traffic == nil || strings.TrimSpace(traffic.Email) == "" || traffic.Up+traffic.Down <= 0 {
 				continue
 			}
-			row := model.ClientTrafficBucket{
-				Email:       traffic.Email,
-				BucketStart: bucket,
-				Up:          traffic.Up,
-				Down:        traffic.Down,
-				Samples:     1,
+			email := strings.TrimSpace(traffic.Email)
+			minute := model.ClientTrafficBucket{
+				Email: email, BucketStart: minuteStart, Up: traffic.Up, Down: traffic.Down, Samples: 1,
 			}
 			if err := tx.Clauses(clause.OnConflict{
 				Columns: []clause.Column{{Name: "email"}, {Name: "bucket_start"}},
@@ -135,9 +202,32 @@ func (s *ClientInsightService) RecordTraffic(clientTraffics []*xray.ClientTraffi
 					"up":         gorm.Expr("up + ?", traffic.Up),
 					"down":       gorm.Expr("down + ?", traffic.Down),
 					"samples":    gorm.Expr("samples + 1"),
-					"updated_at": at.UnixMilli(),
+					"updated_at": updatedAt,
 				}),
-			}).Create(&row).Error; err != nil {
+			}).Create(&minute).Error; err != nil {
+				return err
+			}
+
+			deltaTotal := traffic.Up + traffic.Down
+			hour := model.ClientTrafficHourBucket{
+				Email: email, BucketStart: hourStart, Up: traffic.Up, Down: traffic.Down,
+				ActiveMinutes: 1, PeakMinuteBytes: deltaTotal, LastMinuteStart: minuteStart, LastMinuteBytes: deltaTotal,
+			}
+			if err := tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "email"}, {Name: "bucket_start"}},
+				DoUpdates: clause.Assignments(rollupAssignments(minuteStart, traffic.Up, traffic.Down, updatedAt)),
+			}).Create(&hour).Error; err != nil {
+				return err
+			}
+
+			day := model.ClientTrafficDayBucket{
+				Email: email, BucketStart: dayStart, Day: dayKey, Up: traffic.Up, Down: traffic.Down,
+				ActiveMinutes: 1, PeakMinuteBytes: deltaTotal, LastMinuteStart: minuteStart, LastMinuteBytes: deltaTotal,
+			}
+			if err := tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "email"}, {Name: "bucket_start"}},
+				DoUpdates: clause.Assignments(rollupAssignments(minuteStart, traffic.Up, traffic.Down, updatedAt)),
+			}).Create(&day).Error; err != nil {
 				return err
 			}
 		}
@@ -229,6 +319,54 @@ func (s *ClientInsightService) RenameClientHistory(oldEmail, newEmail string) er
 			return err
 		}
 
+		var hourBuckets []model.ClientTrafficHourBucket
+		if err := tx.Where("email = ?", oldEmail).Find(&hourBuckets).Error; err != nil {
+			return err
+		}
+		for _, bucket := range hourBuckets {
+			row := bucket
+			row.Id = 0
+			row.Email = newEmail
+			if err := tx.Clauses(clause.OnConflict{
+				Columns: []clause.Column{{Name: "email"}, {Name: "bucket_start"}},
+				DoUpdates: clause.Assignments(map[string]any{
+					"up":                gorm.Expr("up + ?", bucket.Up),
+					"down":              gorm.Expr("down + ?", bucket.Down),
+					"active_minutes":    gorm.Expr("active_minutes + ?", bucket.ActiveMinutes),
+					"peak_minute_bytes": gorm.Expr("CASE WHEN peak_minute_bytes >= ? THEN peak_minute_bytes ELSE ? END", bucket.PeakMinuteBytes, bucket.PeakMinuteBytes),
+				}),
+			}).Create(&row).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("email = ?", oldEmail).Delete(&model.ClientTrafficHourBucket{}).Error; err != nil {
+			return err
+		}
+
+		var dayBuckets []model.ClientTrafficDayBucket
+		if err := tx.Where("email = ?", oldEmail).Find(&dayBuckets).Error; err != nil {
+			return err
+		}
+		for _, bucket := range dayBuckets {
+			row := bucket
+			row.Id = 0
+			row.Email = newEmail
+			if err := tx.Clauses(clause.OnConflict{
+				Columns: []clause.Column{{Name: "email"}, {Name: "bucket_start"}},
+				DoUpdates: clause.Assignments(map[string]any{
+					"up":                gorm.Expr("up + ?", bucket.Up),
+					"down":              gorm.Expr("down + ?", bucket.Down),
+					"active_minutes":    gorm.Expr("active_minutes + ?", bucket.ActiveMinutes),
+					"peak_minute_bytes": gorm.Expr("CASE WHEN peak_minute_bytes >= ? THEN peak_minute_bytes ELSE ? END", bucket.PeakMinuteBytes, bucket.PeakMinuteBytes),
+				}),
+			}).Create(&row).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("email = ?", oldEmail).Delete(&model.ClientTrafficDayBucket{}).Error; err != nil {
+			return err
+		}
+
 		var ips []model.ClientIPHistory
 		if err := tx.Where("email = ?", oldEmail).Find(&ips).Error; err != nil {
 			return err
@@ -278,91 +416,223 @@ func detectClientOS(userAgent string) string {
 }
 
 func (s *ClientInsightService) GetReport(email string, days int) (*ClientInsightReport, error) {
+	return s.GetReportForRange(email, days, 0)
+}
+
+func (s *ClientInsightService) GetReportForRange(email string, days, hours int) (*ClientInsightReport, error) {
+	if hours != 12 && hours != 24 {
+		hours = 0
+	}
 	if days < 1 {
 		days = 30
 	}
-	if days > 365 {
-		days = 365
+	if days > insightMaxDailyRetentionDays {
+		days = insightMaxDailyRetentionDays
 	}
+
 	db := database.GetDB()
+	if err := ensureInsightRollups(db, loc); err != nil {
+		return nil, err
+	}
 	var rec model.ClientRecord
 	if err := db.Where("email = ?", email).First(&rec).Error; err != nil {
 		return nil, err
 	}
-	now := time.Now()
-	localMidnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	loc := insightPanelLocation()
+	now := time.Now().In(loc)
+	currentHour := insightHourStart(now, loc)
+	localMidnight := insightDayStart(now, loc)
 	start := localMidnight.AddDate(0, 0, -(days - 1))
-	var buckets []model.ClientTrafficBucket
-	if err := db.Where("email = ? AND bucket_start >= ?", email, start.UnixMilli()).Order("bucket_start ASC").Find(&buckets).Error; err != nil {
+	if hours > 0 {
+		start = currentHour.Add(-time.Duration(hours-1) * time.Hour)
+		days = 1
+	}
+	rangeStart := start.UnixMilli()
+	rangeEnd := now.UnixMilli()
+
+	var dayBuckets []model.ClientTrafficDayBucket
+	dayQueryStart := insightDayStart(start, loc).UnixMilli()
+	if err := db.Where("email = ? AND bucket_start >= ? AND bucket_start <= ?", email, dayQueryStart, rangeEnd).
+		Order("bucket_start ASC").Find(&dayBuckets).Error; err != nil {
 		return nil, err
 	}
 
 	dailyMap := make(map[string]*ClientDailyUsage, days)
-	hourly := make([]ClientHourlyUsage, 24)
-	for hour := range hourly {
-		hourly[hour].Hour = hour
-	}
 	for i := 0; i < days; i++ {
-		day := start.AddDate(0, 0, i).Format("2006-01-02")
+		day := localMidnight.AddDate(0, 0, -(days-1)+i).Format("2006-01-02")
 		dailyMap[day] = &ClientDailyUsage{Day: day}
 	}
-	for _, bucket := range buckets {
-		t := time.UnixMilli(bucket.BucketStart).Local()
-		day := t.Format("2006-01-02")
-		if row := dailyMap[day]; row != nil {
+	if hours > 0 {
+		day := now.Format("2006-01-02")
+		dailyMap = map[string]*ClientDailyUsage{day: {Day: day}}
+	}
+	for _, bucket := range dayBuckets {
+		if row := dailyMap[bucket.Day]; row != nil {
 			row.Up += bucket.Up
 			row.Down += bucket.Down
 			row.Total += bucket.Up + bucket.Down
 		}
-		hourly[t.Hour()].Up += bucket.Up
-		hourly[t.Hour()].Down += bucket.Down
-		hourly[t.Hour()].Total += bucket.Up + bucket.Down
-		hourly[t.Hour()].Bytes = hourly[t.Hour()].Total
 	}
-	daily := make([]ClientDailyUsage, 0, days)
+
+	// Hour-of-day pattern is intentionally retained for 31 days only. This
+	// gives useful behavioural detail without keeping minute-level logs for the
+	// full 365-day reporting window.
+	hourly := make([]ClientHourlyUsage, 24)
+	for hour := range hourly {
+		hourly[hour].Hour = hour
+	}
+	hourPatternStart := rangeStart
+	retainedHourStart := now.Add(-insightHourlyRetention).UnixMilli()
+	if hourPatternStart < retainedHourStart {
+		hourPatternStart = retainedHourStart
+	}
+	var hourBuckets []model.ClientTrafficHourBucket
+	if err := db.Where("email = ? AND bucket_start >= ? AND bucket_start <= ?", email, hourPatternStart, rangeEnd).
+		Order("bucket_start ASC").Find(&hourBuckets).Error; err != nil {
+		return nil, err
+	}
+	for _, bucket := range hourBuckets {
+		h := time.UnixMilli(bucket.BucketStart).In(loc).Hour()
+		hourly[h].Up += bucket.Up
+		hourly[h].Down += bucket.Down
+		hourly[h].Total += bucket.Up + bucket.Down
+		hourly[h].Bytes = hourly[h].Total
+	}
+
+	timeline := make([]ClientTimelineUsage, 0)
+	if hours > 0 {
+		byStart := make(map[int64]model.ClientTrafficHourBucket, len(hourBuckets))
+		for _, bucket := range hourBuckets {
+			if bucket.BucketStart >= rangeStart {
+				byStart[bucket.BucketStart] = bucket
+			}
+		}
+		timeline = make([]ClientTimelineUsage, 0, hours)
+		for i := 0; i < hours; i++ {
+			bucketStart := start.Add(time.Duration(i) * time.Hour).UnixMilli()
+			bucket := byStart[bucketStart]
+			timeline = append(timeline, ClientTimelineUsage{
+				BucketStart: bucketStart,
+				Up:          bucket.Up,
+				Down:        bucket.Down,
+				Total:       bucket.Up + bucket.Down,
+			})
+		}
+	}
+
+	daily := make([]ClientDailyUsage, 0, len(dailyMap))
 	var totalUp, totalDown, peakDayBytes, peakMinuteBytes, latestMinuteBytes int64
 	peakDay := ""
 	activeDays := 0
-	for i := 0; i < days; i++ {
-		day := start.AddDate(0, 0, i).Format("2006-01-02")
-		row := *dailyMap[day]
-		daily = append(daily, row)
-		totalUp += row.Up
-		totalDown += row.Down
-		if row.Total > 0 {
-			activeDays++
+	activeMinutes := 0
+	firstDataAt, lastDataAt := int64(0), int64(0)
+	if hours > 0 {
+		rollingDays := make(map[string]*ClientDailyUsage, 2)
+		rollingDayOrder := make([]string, 0, 2)
+		for _, row := range timeline {
+			totalUp += row.Up
+			totalDown += row.Down
+			day := time.UnixMilli(row.BucketStart).In(loc).Format("2006-01-02")
+			dayRow := rollingDays[day]
+			if dayRow == nil {
+				dayRow = &ClientDailyUsage{Day: day}
+				rollingDays[day] = dayRow
+				rollingDayOrder = append(rollingDayOrder, day)
+			}
+			dayRow.Up += row.Up
+			dayRow.Down += row.Down
+			dayRow.Total += row.Total
+			if row.Total > 0 {
+				if firstDataAt == 0 {
+					firstDataAt = row.BucketStart
+				}
+				lastDataAt = row.BucketStart
+			}
 		}
-		if row.Total > peakDayBytes {
-			peakDay, peakDayBytes = row.Day, row.Total
+		for _, bucket := range hourBuckets {
+			if bucket.BucketStart < rangeStart {
+				continue
+			}
+			activeMinutes += bucket.ActiveMinutes
+			if bucket.PeakMinuteBytes > peakMinuteBytes {
+				peakMinuteBytes = bucket.PeakMinuteBytes
+			}
+		}
+		for _, day := range rollingDayOrder {
+			row := *rollingDays[day]
+			daily = append(daily, row)
+			if row.Total > 0 {
+				activeDays++
+			}
+			if row.Total > peakDayBytes {
+				peakDay, peakDayBytes = row.Day, row.Total
+			}
+		}
+	} else {
+		for i := 0; i < days; i++ {
+			day := localMidnight.AddDate(0, 0, -(days-1)+i).Format("2006-01-02")
+			row := *dailyMap[day]
+			daily = append(daily, row)
+			totalUp += row.Up
+			totalDown += row.Down
+			if row.Total > 0 {
+				activeDays++
+			}
+			if row.Total > peakDayBytes {
+				peakDay, peakDayBytes = row.Day, row.Total
+			}
+		}
+		for _, bucket := range dayBuckets {
+			if bucket.BucketStart < rangeStart {
+				continue
+			}
+			activeMinutes += bucket.ActiveMinutes
+			if bucket.PeakMinuteBytes > peakMinuteBytes {
+				peakMinuteBytes = bucket.PeakMinuteBytes
+			}
+			if bucket.Up+bucket.Down > 0 {
+				if firstDataAt == 0 {
+					firstDataAt = bucket.BucketStart
+				}
+				lastDataAt = bucket.BucketStart
+			}
 		}
 	}
-	peakHour, peakBytes := 0, int64(0)
+
+	peakHour, peakHourBytes := 0, int64(0)
 	for _, row := range hourly {
-		if row.Bytes > peakBytes {
-			peakHour, peakBytes = row.Hour, row.Bytes
+		if row.Total > peakHourBytes {
+			peakHour, peakHourBytes = row.Hour, row.Total
 		}
 	}
-	for i, bucket := range buckets {
-		minuteBytes := bucket.Up + bucket.Down
-		if minuteBytes > peakMinuteBytes {
-			peakMinuteBytes = minuteBytes
+
+	var latestBucket model.ClientTrafficBucket
+	if err := db.Where("email = ? AND bucket_start >= ? AND bucket_start <= ?", email, rangeStart, rangeEnd).
+		Order("bucket_start DESC").First(&latestBucket).Error; err == nil {
+		latestMinuteBytes = latestBucket.Up + latestBucket.Down
+		if lastDataAt == 0 || latestBucket.BucketStart > lastDataAt {
+			lastDataAt = latestBucket.BucketStart
 		}
-		if i == len(buckets)-1 {
-			latestMinuteBytes = minuteBytes
+		if firstDataAt == 0 {
+			firstDataAt = latestBucket.BucketStart
 		}
 	}
+
 	totalUsage := totalUp + totalDown
-	averageDaily := int64(0)
-	if days > 0 {
+	averageDaily := totalUsage
+	if hours > 0 {
+		averageDaily = totalUsage * 24 / int64(hours)
+	} else if days > 0 {
 		averageDaily = totalUsage / int64(days)
 	}
 
 	var traffic xray.ClientTraffic
 	_ = db.Where("email = ?", email).First(&traffic).Error
 	var recentIPCount int64
-	_ = db.Model(&model.ClientIPHistory{}).Where("email = ? AND last_seen >= ?", email, start.UnixMilli()).Count(&recentIPCount).Error
+	_ = db.Model(&model.ClientIPHistory{}).Where("email = ? AND last_seen >= ?", email, rangeStart).Count(&recentIPCount).Error
 	var ips []model.ClientIPHistory
-	_ = db.Where("email = ? AND last_seen >= ?", email, start.UnixMilli()).Order("last_seen DESC").Limit(20).Find(&ips).Error
+	_ = db.Where("email = ? AND last_seen >= ?", email, rangeStart).Order("last_seen DESC").Limit(20).Find(&ips).Error
 	var agents []model.ClientSubscriptionAgent
 	_ = db.Where("client_id = ?", rec.Id).Order("last_seen DESC, id DESC").Limit(maxRecentSubscriptionApps).Find(&agents).Error
 	apps := make([]ClientReportApp, 0, len(agents))
@@ -376,29 +646,22 @@ func (s *ClientInsightService) GetReport(email string, days int) (*ClientInsight
 		Joins("JOIN client_inbounds ON client_inbounds.inbound_id = hosts.inbound_id").
 		Where("client_inbounds.client_id = ? AND hosts.is_disabled = ? AND hosts.is_hidden = ?", rec.Id, false, false).
 		Order("hosts.sort_order ASC, hosts.id ASC").Scan(&hosts).Error
-	if len(buckets) > 0 {
-		lastSeen := buckets[len(buckets)-1].BucketStart
-		for i := range hosts {
-			hosts[i].LastSeen = lastSeen
-		}
+	for i := range hosts {
+		hosts[i].LastSeen = lastDataAt
 	}
 	var events []model.ClientEvent
-	_ = db.Where("email = ?", email).Order("created_at DESC, id DESC").Limit(100).Find(&events).Error
+	_ = db.Where("email = ? AND created_at >= ?", email, rangeStart).Order("created_at DESC, id DESC").Limit(100).Find(&events).Error
 	var anomalies []model.ClientAnomaly
-	_ = db.Where("email = ?", email).Order("created_at DESC, id DESC").Limit(50).Find(&anomalies).Error
+	_ = db.Where("email = ? AND created_at >= ?", email, rangeStart).Order("created_at DESC, id DESC").Limit(50).Find(&anomalies).Error
 
-	firstDataAt, lastDataAt := int64(0), int64(0)
-	if len(buckets) > 0 {
-		firstDataAt = buckets[0].BucketStart
-		lastDataAt = buckets[len(buckets)-1].BucketStart
-	}
 	return &ClientInsightReport{
-		Email: email, Days: days, LastOnline: traffic.LastOnline, RecentIPCount: int(recentIPCount), RecentIPs: ips,
-		Apps: apps, Hosts: hosts, DailyUsage: daily, HourlyUsage: hourly,
+		Email: email, Days: days, Hours: hours, RangeStart: rangeStart, RangeEnd: rangeEnd,
+		LastOnline: traffic.LastOnline, RecentIPCount: int(recentIPCount), RecentIPs: ips,
+		Apps: apps, Hosts: hosts, DailyUsage: daily, HourlyUsage: hourly, TimelineUsage: timeline,
 		TotalUp: totalUp, TotalDown: totalDown, TotalUsage: totalUsage, AverageDaily: averageDaily,
-		PeakDay: peakDay, PeakDayBytes: peakDayBytes, PeakHour: peakHour, PeakHourBytes: peakBytes,
+		PeakDay: peakDay, PeakDayBytes: peakDayBytes, PeakHour: peakHour, PeakHourBytes: peakHourBytes,
 		PeakMinuteBytes: peakMinuteBytes, LatestMinuteBytes: latestMinuteBytes,
-		ActiveDays: activeDays, ActiveMinutes: len(buckets), FirstDataAt: firstDataAt, LastDataAt: lastDataAt,
+		ActiveDays: activeDays, ActiveMinutes: activeMinutes, FirstDataAt: firstDataAt, LastDataAt: lastDataAt,
 		Events: events, Anomalies: anomalies,
 	}, nil
 }
@@ -426,8 +689,13 @@ func normalizeInsightLimit(limit int) int {
 func (s *ClientInsightService) GetUsageAlerts(days, limit int) (*ClientUsageAlerts, error) {
 	days = normalizeInsightDays(days)
 	limit = normalizeInsightLimit(limit)
-	start := time.Now().AddDate(0, 0, -days).UnixMilli()
+	loc := insightPanelLocation()
+	now := time.Now().In(loc)
+	start := insightDayStart(now, loc).AddDate(0, 0, -(days - 1)).UnixMilli()
 	db := database.GetDB()
+	if err := ensureInsightRollups(db, loc); err != nil {
+		return nil, err
+	}
 	type aggregate struct {
 		Email         string `gorm:"column:email"`
 		TotalUp       int64  `gorm:"column:total_up"`
@@ -437,8 +705,13 @@ func (s *ClientInsightService) GetUsageAlerts(days, limit int) (*ClientUsageAler
 		ActiveMinutes int    `gorm:"column:active_minutes"`
 	}
 	var rows []aggregate
-	if err := db.Model(&model.ClientTrafficBucket{}).
-		Select("email, COALESCE(SUM(up),0) AS total_up, COALESCE(SUM(down),0) AS total_down, COALESCE(SUM(up + down),0) AS total_usage, COALESCE(MAX(up + down),0) AS peak_minute, COUNT(*) AS active_minutes").
+	aggregateQuery := db.Model(&model.ClientTrafficDayBucket{})
+	if days == 1 {
+		start = insightHourStart(now, loc).Add(-23 * time.Hour).UnixMilli()
+		aggregateQuery = db.Model(&model.ClientTrafficHourBucket{})
+	}
+	if err := aggregateQuery.
+		Select("email, COALESCE(SUM(up),0) AS total_up, COALESCE(SUM(down),0) AS total_down, COALESCE(SUM(up + down),0) AS total_usage, COALESCE(MAX(peak_minute_bytes),0) AS peak_minute, COALESCE(SUM(active_minutes),0) AS active_minutes").
 		Where("bucket_start >= ?", start).
 		Group("email").
 		Order("total_usage DESC").
@@ -727,23 +1000,154 @@ func (s *ClientInsightService) EvaluateAnomalies(clientTraffics []*xray.ClientTr
 	return nil
 }
 
-func (s *ClientInsightService) Cleanup(historyDays int) error {
-	if historyDays < 1 {
-		historyDays = 90
-	}
-	cutoff := time.Now().AddDate(0, 0, -historyDays).UnixMilli()
-	db := database.GetDB()
+func rollupMarkerExists(db *gorm.DB) bool {
+	var count int64
+	_ = db.Model(&model.Setting{}).Where("key = ? AND value = ?", insightRollupBackfillKey, "true").Count(&count).Error
+	return count > 0
+}
+
+func saveRollupMarker(db *gorm.DB) error {
 	return db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("bucket_start < ?", cutoff).Delete(&model.ClientTrafficBucket{}).Error; err != nil {
+		if err := tx.Where("key = ?", insightRollupBackfillKey).Delete(&model.Setting{}).Error; err != nil {
 			return err
 		}
-		if err := tx.Where("last_seen < ?", cutoff).Delete(&model.ClientIPHistory{}).Error; err != nil {
+		return tx.Create(&model.Setting{Key: insightRollupBackfillKey, Value: "true"}).Error
+	})
+}
+
+// ensureInsightRollups performs a one-time upgrade of v3.6.4/v3.6.5 minute
+// history into the compact hourly/daily tables. If an earlier attempt was
+// interrupted, the absent marker causes a clean rebuild on the next run.
+func ensureInsightRollups(db *gorm.DB, loc *time.Location) error {
+	if rollupMarkerExists(db) {
+		return nil
+	}
+	if err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.ClientTrafficHourBucket{}).Error; err != nil {
+		return err
+	}
+	if err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.ClientTrafficDayBucket{}).Error; err != nil {
+		return err
+	}
+
+	rows, err := db.Model(&model.ClientTrafficBucket{}).Order("email ASC, bucket_start ASC").Rows()
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	currentEmail := ""
+	hours := make(map[int64]*model.ClientTrafficHourBucket)
+	days := make(map[int64]*model.ClientTrafficDayBucket)
+	flush := func() error {
+		if currentEmail == "" {
+			return nil
+		}
+		hourRows := make([]model.ClientTrafficHourBucket, 0, len(hours))
+		for _, row := range hours {
+			hourRows = append(hourRows, *row)
+		}
+		dayRows := make([]model.ClientTrafficDayBucket, 0, len(days))
+		for _, row := range days {
+			dayRows = append(dayRows, *row)
+		}
+		if len(hourRows) > 0 {
+			if err := db.CreateInBatches(&hourRows, 500).Error; err != nil {
+				return err
+			}
+		}
+		if len(dayRows) > 0 {
+			if err := db.CreateInBatches(&dayRows, 500).Error; err != nil {
+				return err
+			}
+		}
+		hours = make(map[int64]*model.ClientTrafficHourBucket)
+		days = make(map[int64]*model.ClientTrafficDayBucket)
+		return nil
+	}
+
+	for rows.Next() {
+		var bucket model.ClientTrafficBucket
+		if err := db.ScanRows(rows, &bucket); err != nil {
+			return err
+		}
+		if currentEmail != "" && bucket.Email != currentEmail {
+			if err := flush(); err != nil {
+				return err
+			}
+		}
+		currentEmail = bucket.Email
+		at := time.UnixMilli(bucket.BucketStart).In(loc)
+		hourStart := insightHourStart(at, loc).UnixMilli()
+		dayStartTime := insightDayStart(at, loc)
+		dayStart := dayStartTime.UnixMilli()
+		total := bucket.Up + bucket.Down
+
+		hour := hours[hourStart]
+		if hour == nil {
+			hour = &model.ClientTrafficHourBucket{Email: bucket.Email, BucketStart: hourStart}
+			hours[hourStart] = hour
+		}
+		hour.Up += bucket.Up
+		hour.Down += bucket.Down
+		hour.ActiveMinutes++
+		if total > hour.PeakMinuteBytes {
+			hour.PeakMinuteBytes = total
+		}
+		hour.LastMinuteStart = bucket.BucketStart
+		hour.LastMinuteBytes = total
+
+		day := days[dayStart]
+		if day == nil {
+			day = &model.ClientTrafficDayBucket{Email: bucket.Email, BucketStart: dayStart, Day: dayStartTime.Format("2006-01-02")}
+			days[dayStart] = day
+		}
+		day.Up += bucket.Up
+		day.Down += bucket.Down
+		day.ActiveMinutes++
+		if total > day.PeakMinuteBytes {
+			day.PeakMinuteBytes = total
+		}
+		day.LastMinuteStart = bucket.BucketStart
+		day.LastMinuteBytes = total
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if err := flush(); err != nil {
+		return err
+	}
+	return saveRollupMarker(db)
+}
+
+func (s *ClientInsightService) Cleanup(historyDays int) error {
+	historyDays = compactRetentionDays(historyDays)
+	loc := insightPanelLocation()
+	db := database.GetDB()
+	if err := ensureInsightRollups(db, loc); err != nil {
+		return err
+	}
+
+	now := time.Now()
+	rawCutoff := now.Add(-insightRawRetention).UnixMilli()
+	hourCutoff := now.Add(-insightHourlyRetention).UnixMilli()
+	dayCutoff := insightDayStart(now.In(loc), loc).AddDate(0, 0, -(historyDays - 1)).UnixMilli()
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("bucket_start < ?", rawCutoff).Delete(&model.ClientTrafficBucket{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("bucket_start < ?", hourCutoff).Delete(&model.ClientTrafficHourBucket{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("bucket_start < ?", dayCutoff).Delete(&model.ClientTrafficDayBucket{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("last_seen < ?", dayCutoff).Delete(&model.ClientIPHistory{}).Error; err != nil {
 			return err
 		}
 
 		// Active temporary actions need their later client events to decide
 		// whether an administrator changed the client before auto-restore.
-		eventCutoff := cutoff
+		eventCutoff := dayCutoff
 		var oldestActive struct {
 			CreatedAt int64 `gorm:"column:created_at"`
 		}
@@ -756,13 +1160,22 @@ func (s *ClientInsightService) Cleanup(historyDays int) error {
 		if err := tx.Where("created_at < ?", eventCutoff).Delete(&model.ClientEvent{}).Error; err != nil {
 			return err
 		}
-		// Never remove an acted row before its temporary state has been safely
-		// restored (or deliberately skipped after a manual change).
-		if err := tx.Where("created_at < ? AND status <> ?", cutoff, "acted").Delete(&model.ClientAnomaly{}).Error; err != nil {
+		if err := tx.Where("created_at < ? AND status <> ?", dayCutoff, "acted").Delete(&model.ClientAnomaly{}).Error; err != nil {
 			return err
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+
+	// Bound SQLite's WAL sidecar and refresh planner statistics. Deleted pages
+	// remain reusable by SQLite, preventing continued disk growth without the
+	// long exclusive lock of a full VACUUM on busy production panels.
+	if !database.IsPostgres() {
+		_ = db.Exec("PRAGMA wal_checkpoint(TRUNCATE)").Error
+		_ = db.Exec("PRAGMA optimize").Error
+	}
+	return nil
 }
 
 func equalIntSets(left, right []int) bool {

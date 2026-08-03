@@ -7,7 +7,7 @@ import { ClipboardManager, FileManager, HttpUtil, IntlUtil, SizeFormatter } from
 import { formatInboundLabel } from '@/lib/inbounds/label';
 import { withEmailConfigNames } from '@/lib/subscription-url';
 import { normalizeClientIps, type ClientIpInfo } from '@/lib/clients/ip-log';
-import { useDatepicker } from '@/hooks/useDatepicker';
+import { usePanelDateTime } from '@/hooks/usePanelDateTime';
 import type { ClientRecord, InboundOption } from '@/hooks/useClients';
 import { isPostQuantumLink } from '@/lib/xray/inbound-link';
 import { LinkTags, linkMetaText, parseLinkParts } from '@/lib/xray/link-label';
@@ -122,7 +122,7 @@ export default function ClientInfoModal({
   subSettings = DEFAULT_SUB,
   onOpenChange,
 }: ClientInfoModalProps) {
-  const { datepicker } = useDatepicker();
+  const panelDateTime = usePanelDateTime();
   const { t } = useTranslation();
   const expiryLabel = (ts?: number) => {
     if (!ts) return '∞';
@@ -130,9 +130,9 @@ export default function ClientInfoModal({
       const days = Math.round(ts / -86400000);
       return `${t('pages.clients.delayedStart')}: ${days}d`;
     }
-    return IntlUtil.formatDate(ts, datepicker);
+    return panelDateTime.formatDateTime(ts);
   };
-  const dateLabel = (ts?: number) => (!ts || ts <= 0 ? '-' : IntlUtil.formatDate(ts, datepicker));
+  const dateLabel = (ts?: number) => (!ts || ts <= 0 ? '-' : panelDateTime.formatDateTime(ts));
   const [messageApi, messageContextHolder] = message.useMessage();
   const [links, setLinks] = useState<string[]>([]);
   const [clientIps, setClientIps] = useState<ClientIpInfo[]>([]);

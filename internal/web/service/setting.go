@@ -139,7 +139,7 @@ var defaultValueMap = map[string]string{
 	"anomalyActionMinutes":          "30",
 	"anomalyThrottleInboundId":      "0",
 	"anomalyCooldownMinutes":        "60",
-	"anomalyHistoryDays":            "90",
+	"anomalyHistoryDays":            "30",
 	"scheduledRestartEnable":        "false",
 	"scheduledRestartInterval":      "24",
 	"scheduledRestartUnit":          "hours",
