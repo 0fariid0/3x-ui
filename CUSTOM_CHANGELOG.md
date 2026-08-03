@@ -1,5 +1,11 @@
 # Custom changelog
 
+## v3.6.14
+
+- Fixed the tag-only release workflow by replacing nonexistent checkout/setup action major tags with their supported v6 releases.
+- Kept upload-artifact v7 and download-artifact v8, which are valid current releases.
+- Preserved all v3.6.13 Neo Smart usage-history and live-destination features unchanged.
+
 ## v3.6.13
 
 - Added the Neo Smart subscription usage-history endpoint for real 24-hour hourly and 30-day daily charts.
