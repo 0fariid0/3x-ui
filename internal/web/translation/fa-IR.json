@@ -931,6 +931,7 @@
       "destinationOwner": "شبکه / مالک",
       "destinationLastSeen": "آخرین اتصال",
       "destinationConfidenceDomain": "شناسایی از دامنه",
+      "destinationConfidenceNetwork": "شناسایی از رنج شبکه",
       "destinationConfidenceIp": "فقط IP",
       "destinationServiceOther": "سایر"
     },

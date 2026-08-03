@@ -931,6 +931,7 @@
       "destinationOwner": "Network / owner",
       "destinationLastSeen": "Last seen",
       "destinationConfidenceDomain": "Detected by domain",
+      "destinationConfidenceNetwork": "Detected by network range",
       "destinationConfidenceIp": "IP only",
       "destinationServiceOther": "Other"
     },

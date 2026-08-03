@@ -1,5 +1,19 @@
 # Custom changelog
 
+## v3.6.9
+
+- Added official Telegram IPv4/IPv6 CIDR recognition, including `149.154.160.0/20`.
+- Added bundled Meta network prefixes so IP-only Meta traffic is no longer shown as `Other`.
+- Added a background prefix updater: Telegram is refreshed from its published CIDR list and Meta prefixes are refreshed from current AS32934/AS63293 announcements.
+- Kept domain matches authoritative: Instagram domains remain `Instagram`; IP-only Meta matches are labelled `Instagram / Meta` because Meta shares network ranges between Instagram, Facebook and WhatsApp.
+- Added a distinct `network` confidence label in client destination reports.
+
+## v3.6.8
+
+- Added per-client destination tracking, disabled by default for every client.
+- Added compact hourly destination aggregates with 14-day retention and bounded raw logging.
+- Added service/domain/IP destination reports without storing URLs or content.
+
 ## v3.6.7
 
 - Fixed the backend build failure in `ClientInsightService.GetReportForRange` by initializing the panel location before rollup migration uses it.

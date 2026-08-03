@@ -130,8 +130,13 @@ func classifyDestination(domain, ip string) (service, owner, confidence string) 
 		return "Other", "", "domain"
 	}
 	parsed := net.ParseIP(ip)
-	if parsed != nil && (parsed.IsPrivate() || parsed.IsLoopback() || parsed.IsLinkLocalUnicast()) {
-		return "Private network", "Local", "ip"
+	if parsed != nil {
+		if parsed.IsPrivate() || parsed.IsLoopback() || parsed.IsLinkLocalUnicast() {
+			return "Private network", "Local", "ip"
+		}
+		if service, owner, confidence, ok := classifyDestinationIP(parsed); ok {
+			return service, owner, confidence
+		}
 	}
 	return "Other", "", "ip"
 }

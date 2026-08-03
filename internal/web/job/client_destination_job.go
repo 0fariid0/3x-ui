@@ -15,6 +15,9 @@ type ClientDestinationJob struct {
 func NewClientDestinationJob() *ClientDestinationJob { return &ClientDestinationJob{} }
 
 func (j *ClientDestinationJob) Run() {
+	if service.AnyDestinationTrackingEnabled() {
+		service.RefreshDestinationNetworkRulesIfNeeded()
+	}
 	if err := j.insights.IngestDestinationAccessLog(); err != nil {
 		logger.Debug("[ClientDestinations] ingest failed:", err)
 	}

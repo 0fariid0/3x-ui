@@ -327,7 +327,7 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
                     </div>
                     <div>
                       <span>{item.connections.toLocaleString()} {t('pages.clients.destinationConnections')}</span>
-                      <small>{item.owner || '—'} · {item.confidence === 'domain' ? t('pages.clients.destinationConfidenceDomain') : t('pages.clients.destinationConfidenceIp')} · {dateLabel(item.lastSeen)}</small>
+                      <small>{item.owner || '—'} · {item.confidence === 'domain' ? t('pages.clients.destinationConfidenceDomain') : item.confidence === 'network' ? t('pages.clients.destinationConfidenceNetwork') : t('pages.clients.destinationConfidenceIp')} · {dateLabel(item.lastSeen)}</small>
                     </div>
                   </div>
                 ))}

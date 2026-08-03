@@ -39,3 +39,22 @@ func TestCompactDomainAndClassification(t *testing.T) {
 		t.Fatalf("unexpected classification: %q %q %q", service, owner, confidence)
 	}
 }
+
+func TestClassifyDestinationTelegramOfficialRange(t *testing.T) {
+	service, owner, confidence := classifyDestination("", "149.154.167.91")
+	if service != "Telegram" || owner != "Telegram network" || confidence != "network" {
+		t.Fatalf("unexpected Telegram IP classification: %q %q %q", service, owner, confidence)
+	}
+
+	service, owner, confidence = classifyDestination("", "2001:b28:f23d::1")
+	if service != "Telegram" || owner != "Telegram network" || confidence != "network" {
+		t.Fatalf("unexpected Telegram IPv6 classification: %q %q %q", service, owner, confidence)
+	}
+}
+
+func TestClassifyDestinationMetaRangeIsNotOverstated(t *testing.T) {
+	service, owner, confidence := classifyDestination("", "157.240.10.35")
+	if service != "Instagram / Meta" || owner != "Meta network" || confidence != "network" {
+		t.Fatalf("unexpected Meta IP classification: %q %q %q", service, owner, confidence)
+	}
+}
