@@ -25,8 +25,10 @@ import (
 const (
 	// Destination rows are intentionally short-lived. The ingestion job runs
 	// every 10 seconds; stale rows are purged every five minutes so this tab is
-	// a compact recent/live view rather than a long-term browsing history.
-	destinationRetention        = 15 * time.Minute
+	// a compact rolling view rather than a long-term browsing history. Rows are
+	// kept for ten minutes so an offline client still shows its most recent
+	// five-minute activity window until the next five-minute cleanup cycle.
+	destinationRetention        = 10 * time.Minute
 	destinationCleanupInterval  = 5 * time.Minute
 	destinationActiveWindow     = 5 * time.Minute
 	destinationMaxPerClientHour = 100

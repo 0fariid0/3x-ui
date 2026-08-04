@@ -1,5 +1,6 @@
 import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import {
   Badge,
   Button,
@@ -223,6 +224,7 @@ export default function ClientsPage() {
   const { isDark, isUltra, antdThemeConfig } = useTheme();
   const { datepicker } = useDatepicker();
   const { isMobile } = useMediaQuery();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [modal, modalContextHolder] = Modal.useModal();
   const [messageApi, messageContextHolder] = message.useMessage();
   useEffect(() => { setMessageInstance(messageApi); }, [messageApi]);
@@ -510,18 +512,31 @@ export default function ClientsPage() {
 
   const onEdit = useCallback(async (email: string) => {
     const row = rowsByEmail.current.get(email);
-    if (!row) return;
+    // The usage modal can be opened from the overview, where the client may not
+    // be present on the current paginated page. Hydrate by email first and use
+    // the visible row only as a lightweight fallback.
+    const full = await hydrate(email);
+    const base = full?.client ?? row;
+    if (!base) return;
     setFormMode('edit');
-    // Paged list omits per-client secrets to keep the row payload tiny;
-    // edit needs them, so fetch the full record first.
-    const full = await hydrate(row.email);
-    const merged: ClientRecord = full ? { ...row, ...full.client } : { ...row };
+    const merged: ClientRecord = row ? { ...row, ...base } : { ...base };
     setEditingClient(merged);
-    const ids = full?.inboundIds ?? (Array.isArray(row.inboundIds) ? row.inboundIds : []);
+    const ids = full?.inboundIds ?? (Array.isArray(base.inboundIds) ? base.inboundIds : []);
     setEditingAttachedIds([...ids]);
     setEditingExternalLinks(Array.isArray(full?.externalLinks) ? [...full.externalLinks] : []);
     setFormOpen(true);
   }, [hydrate]);
+
+  const editQuery = searchParams.get('edit')?.trim() || '';
+  const handledEditQuery = useRef('');
+  useEffect(() => {
+    if (!editQuery || handledEditQuery.current === editQuery) return;
+    handledEditQuery.current = editQuery;
+    void onEdit(editQuery);
+    const next = new URLSearchParams(searchParams);
+    next.delete('edit');
+    setSearchParams(next, { replace: true });
+  }, [editQuery, onEdit, searchParams, setSearchParams]);
 
   const onDelete = useCallback((email: string) => {
     const row = rowsByEmail.current.get(email);
@@ -1437,6 +1452,16 @@ export default function ClientsPage() {
                                     {bucket === 'depleted' && <Tag color="red" className="status-tag">{t('depleted')}</Tag>}
                                     {bucket === 'expiring' && <Tag color="orange" className="status-tag">{t('depletingSoon')}</Tag>}
                                     <div className="card-actions">
+                                      <Tooltip title={t('pages.clients.usageDetails')}>
+                                        <AreaChartOutlined
+                                          className="row-action-trigger"
+                                          role="button"
+                                          tabIndex={0}
+                                          aria-label={t('pages.clients.usageDetails')}
+                                          onClick={() => onShowUsage(row.email)}
+                                          onKeyDown={activateOnKey(() => onShowUsage(row.email))}
+                                        />
+                                      </Tooltip>
                                       <Tooltip title={t('pages.clients.clientInfo')}>
                                         <InfoCircleOutlined
                                           className="row-action-trigger"
@@ -1462,11 +1487,6 @@ export default function ClientsPage() {
                                               key: 'qr',
                                               label: <><QrcodeOutlined /> {t('pages.clients.qrCode')}</>,
                                               onClick: () => onShowQr(row.email),
-                                            },
-                                            {
-                                              key: 'usage',
-                                              label: <><AreaChartOutlined /> {t('pages.clients.usageDetails')}</>,
-                                              onClick: () => onShowUsage(row.email),
                                             },
                                             {
                                               key: 'reset',
@@ -1552,8 +1572,9 @@ export default function ClientsPage() {
           <ClientUsageModal
             open={!!clientUsageEmail}
             email={clientUsageEmail}
-            initialDays={7}
+            initialDays={1}
             onClose={() => setClientUsageEmail(null)}
+            onEdit={onEdit}
           />
         </LazyMount>
         <LazyMount when={qrOpen}>

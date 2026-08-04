@@ -259,3 +259,28 @@
   border-color: color-mix(in srgb, var(--ant-color-success) 42%, var(--ant-color-border-secondary));
   background: linear-gradient(180deg, color-mix(in srgb, var(--ant-color-success) 7%, var(--ant-color-bg-container)), var(--ant-color-bg-container));
 }
+
+
+.client-usage-title-main {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.client-usage-title-main > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.client-usage-edit-button {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 640px) {
+  .client-usage-title-main {
+    max-width: calc(100vw - 145px);
+  }
+}

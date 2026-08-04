@@ -48,7 +48,7 @@ const RANGE_OPTIONS = [
 export default function UsageAlertsCard({ onOpenClient }: UsageAlertsCardProps) {
   const { t } = useTranslation();
   const panelDateTime = usePanelDateTime();
-  const [days, setDays] = useState(7);
+  const [days, setDays] = useState(1);
   const [items, setItems] = useState<ClientUsageAlert[]>([]);
   const [loading, setLoading] = useState(false);
 

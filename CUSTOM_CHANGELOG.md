@@ -1,3 +1,13 @@
+## v3.6.14
+
+- Keep destination observations for a rolling 10-minute grace window with 5-minute cleanup, so recent destinations remain visible after a client goes offline.
+- Show the usage/report action directly on mobile client cards.
+- Remove the duplicated detailed report from Client Information; reports now open only from the dedicated statistics action.
+- Default client reports and dashboard usage alerts to the last 24 hours.
+- Use the primary theme color for download and the secondary color for upload.
+- Add a client edit action beside the client name inside the usage report modal.
+- Fix duplicate JSX/declarations inherited by the v3.6.13 source package.
+
 ## v3.6.13
 
 - Neo Smart subscription usage history API (24h / 30d) backed by existing compact rollups.

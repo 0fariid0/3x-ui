@@ -140,3 +140,15 @@ func TestDestinationIsActiveWindow(t *testing.T) {
 		t.Fatal("future destination timestamp must not be active")
 	}
 }
+
+func TestDestinationRollingWindowConfiguration(t *testing.T) {
+	if destinationActiveWindow != 5*time.Minute {
+		t.Fatalf("active destination window = %v, want 5m", destinationActiveWindow)
+	}
+	if destinationCleanupInterval != 5*time.Minute {
+		t.Fatalf("destination cleanup interval = %v, want 5m", destinationCleanupInterval)
+	}
+	if destinationRetention != 10*time.Minute {
+		t.Fatalf("destination retention = %v, want 10m", destinationRetention)
+	}
+}

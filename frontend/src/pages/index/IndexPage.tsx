@@ -335,7 +335,7 @@ export default function IndexPage() {
           <ClientUsageModal
             open={!!clientUsageEmail}
             email={clientUsageEmail}
-            initialDays={7}
+            initialDays={1}
             onClose={() => setClientUsageEmail(null)}
           />
         </LazyMount>

@@ -1,0 +1,31 @@
+Fara Xray v3.6.14 validation summary
+
+Base:
+- Full Fara Xray v3.6.13 source package.
+
+Validated locally:
+- internal/config/version is 3.6.14.
+- All 495 Go files parse and are gofmt-clean.
+- All 499 non-declaration TypeScript/TSX files pass TypeScript isolated syntax transpilation.
+- All 104 strict JSON files outside .vscode parse successfully.
+- All 12 YAML files parse successfully.
+- All 6 shell scripts pass bash -n.
+- Modified files have no trailing whitespace and end with one newline.
+- GitHub Actions contains only the tag-based release workflow.
+
+Behavior covered by source/tests:
+- Destination active window: 5 minutes.
+- Destination retention/grace window: 10 minutes.
+- Destination cleanup cadence: 5 minutes.
+- Client report default: 24 hours.
+- Dashboard usage alerts default: 24 hours.
+- Download uses the primary chart color; upload uses the secondary color.
+- Mobile client cards expose a direct usage button.
+- Client Information no longer embeds the detailed report.
+- Usage modal includes an edit-client action, including navigation from the overview page.
+
+Not run locally:
+- Full Go build/test because the available Go toolchain is 1.23.2 while go.mod requires 1.26.5.
+- Full Vite/typecheck build because the available Node is 22.16 while the project requires Node 24, and the local package mirror was missing one locked dependency.
+
+The retained release.yml performs the production frontend and multi-architecture Go builds after tag v3.6.14 is pushed.

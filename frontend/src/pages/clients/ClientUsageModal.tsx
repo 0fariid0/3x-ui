@@ -8,6 +8,7 @@ import {
   GlobalOutlined,
   DeleteOutlined,
   HistoryOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 
 import { HttpUtil, SizeFormatter } from '@/utils';
@@ -79,6 +80,7 @@ interface ClientUsageModalProps {
   email: string | null;
   initialDays?: number;
   onClose: () => void;
+  onEdit?: (email: string) => void;
 }
 
 type RangeValue = '12h' | '24h' | '7d' | '14d' | '30d' | '60d' | '90d' | '180d' | '365d';
@@ -98,7 +100,7 @@ const RANGE_OPTIONS: { value: RangeValue; label: string }[] = [
 function initialRange(initialDays: number): RangeValue {
   if (initialDays === 1) return '24h';
   const value = `${initialDays}d` as RangeValue;
-  return RANGE_OPTIONS.some((option) => option.value === value) ? value : '7d';
+  return RANGE_OPTIONS.some((option) => option.value === value) ? value : '24h';
 }
 
 function rangeQuery(range: RangeValue): string {
@@ -107,7 +109,7 @@ function rangeQuery(range: RangeValue): string {
     : `days=${Number.parseInt(range, 10)}`;
 }
 
-export default function ClientUsageModal({ open, email, initialDays = 7, onClose }: ClientUsageModalProps) {
+export default function ClientUsageModal({ open, email, initialDays = 1, onClose, onEdit }: ClientUsageModalProps) {
   const { t } = useTranslation();
   const { token } = theme.useToken();
   const panelDateTime = usePanelDateTime();
@@ -151,6 +153,17 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
     const timer = window.setInterval(() => { void load(true); }, 15_000);
     return () => window.clearInterval(timer);
   }, [activeTab, load, open, report?.destinationTracking]);
+
+  const editClient = useCallback(() => {
+    if (!email) return;
+    onClose();
+    if (onEdit) {
+      onEdit(email);
+      return;
+    }
+    const basePath = (window.X_UI_BASE_PATH || '').replace(/\/$/, '');
+    window.location.assign(`${basePath}/clients?edit=${encodeURIComponent(email)}`);
+  }, [email, onClose, onEdit]);
 
   const clearDestinations = useCallback(async () => {
     if (!email || resettingDestinations) return;
@@ -253,8 +266,8 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
             </div>
           </div>
           <div className="client-usage-legend">
-            <span><i style={{ background: token.colorPrimary }} />{t('pages.index.upload')} <b>{SizeFormatter.sizeFormat(report.totalUp || 0)}</b></span>
-            <span><i style={{ background: token.colorTextTertiary }} />{t('pages.index.download')} <b>{SizeFormatter.sizeFormat(report.totalDown || 0)}</b></span>
+            <span><i style={{ background: token.colorTextTertiary }} />{t('pages.index.upload')} <b>{SizeFormatter.sizeFormat(report.totalUp || 0)}</b></span>
+            <span><i style={{ background: token.colorPrimary }} />{t('pages.index.download')} <b>{SizeFormatter.sizeFormat(report.totalDown || 0)}</b></span>
           </div>
         </div>
         <Sparkline
@@ -263,8 +276,8 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
           labels={labels}
           height={isMobile ? 220 : 310}
           maxPoints={400}
-          stroke={token.colorPrimary}
-          stroke2={token.colorTextTertiary}
+          stroke={token.colorTextTertiary}
+          stroke2={token.colorPrimary}
           name1={t('pages.index.upload')}
           name2={t('pages.index.download')}
           valueMax={null}
@@ -451,7 +464,21 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
       destroyOnHidden
       title={(
         <div className="client-usage-modal-title">
-          <div><AreaChartOutlined /> {t('pages.clients.usageDetails')} {email ? `— ${email}` : ''}</div>
+          <div className="client-usage-title-main">
+            <AreaChartOutlined />
+            <span>{t('pages.clients.usageDetails')} {email ? `— ${email}` : ''}</span>
+            {email ? (
+              <Button
+                type="text"
+                size="small"
+                className="client-usage-edit-button"
+                icon={<EditOutlined />}
+                aria-label={t('edit')}
+                title={t('edit')}
+                onClick={editClient}
+              />
+            ) : null}
+          </div>
           <Select<RangeValue>
             value={range}
             size="small"
