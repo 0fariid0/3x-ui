@@ -1,17 +1,9 @@
-# Custom changelog
-
-## v3.6.14
-
-- Fixed the tag-only release workflow by replacing nonexistent checkout/setup action major tags with their supported v6 releases.
-- Kept upload-artifact v7 and download-artifact v8, which are valid current releases.
-- Preserved all v3.6.13 Neo Smart usage-history and live-destination features unchanged.
-
 ## v3.6.13
 
-- Added the Neo Smart subscription usage-history endpoint for real 24-hour hourly and 30-day daily charts.
-- Reused the panel's existing compact traffic rollups instead of adding duplicate history tables or collectors.
-- Changed destination tracking to short-lived reporting: stale destinations are automatically removed after 10 minutes.
-- Marked destinations seen in the last 2 minutes as active, sorted active rows first, and added background refresh while the destination tab is open.
+- Neo Smart subscription usage history API (24h / 30d) backed by existing compact rollups.
+- Short-lived destination view with five-minute cleanup and green recent-activity indicators.
+
+# Custom changelog
 
 ## v3.6.12
 

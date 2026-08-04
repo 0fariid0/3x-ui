@@ -23,8 +23,8 @@ interface TimelineUsage { bucketStart: number; up: number; down: number; total: 
 interface ReportIP { id: number; ip: string; firstSeen: number; lastSeen: number; seenCount: number; }
 interface ReportApp { id: number; appName: string; version?: string; os?: string; userAgent?: string; format?: string; requestCount?: number; firstSeen?: number; lastSeen?: number; }
 interface ReportHost { id: number; inboundId: number; remark?: string; address?: string; port?: number; lastSeen?: number; }
-interface DestinationSummary { service: string; owner?: string; connections: number; destinations: number; lastSeen: number; active: boolean; activeDestinations: number; }
-interface DestinationItem { key: string; service: string; owner?: string; domain?: string; ip?: string; port?: number; protocol?: string; confidence: string; connections: number; firstSeen: number; lastSeen: number; active: boolean; }
+interface DestinationSummary { service: string; owner?: string; connections: number; destinations: number; activeDestinations?: number; lastSeen: number; }
+interface DestinationItem { key: string; service: string; owner?: string; domain?: string; ip?: string; port?: number; protocol?: string; confidence: string; connections: number; firstSeen: number; lastSeen: number; active?: boolean; }
 interface ReportEvent { id: number; kind: string; summary: string; details?: string; createdAt: number; }
 interface ReportAnomaly {
   id: number;
@@ -125,34 +125,32 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
     }
   }, [open, initialDays, email]);
 
-  const load = useCallback(async (background = false) => {
+  const load = useCallback(async (silent = false) => {
     if (!open || !email) return;
-    if (!background) setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const msg = await HttpUtil.get(
         `/panel/api/clients/report/${encodeURIComponent(email)}?${rangeQuery(range)}`,
         undefined,
         { silent: true },
       ) as ApiMsg<ClientInsightReport>;
-      if (msg?.success && msg.obj) {
-        setReport(msg.obj);
-      } else if (!background) {
-        setReport(null);
-      }
+      setReport(msg?.success && msg.obj ? msg.obj : null);
     } catch (_) {
-      if (!background) setReport(null);
+      if (!silent) setReport(null);
     } finally {
-      if (!background) setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [open, email, range]);
 
   useEffect(() => { void load(); }, [load]);
 
+  // Destination tracking is a live/recent view. Refresh it silently while the
+  // tab is open so active dots and automatic expiry update without closing the modal.
   useEffect(() => {
-    if (!open || !email || activeTab !== 'destinations' || !report?.destinationTracking) return undefined;
+    if (!open || activeTab !== 'destinations' || !report?.destinationTracking) return undefined;
     const timer = window.setInterval(() => { void load(true); }, 15_000);
     return () => window.clearInterval(timer);
-  }, [activeTab, email, load, open, report?.destinationTracking]);
+  }, [activeTab, load, open, report?.destinationTracking]);
 
   const clearDestinations = useCallback(async () => {
     if (!email || resettingDestinations) return;
@@ -195,6 +193,8 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
     [daily, timeline, useRollingHours],
   );
   const maxHourly = useMemo(() => Math.max(1, ...hourly.map((row) => row.total || row.bytes || 0)), [hourly]);
+  const activeDestinations = useMemo(() => report?.destinations.filter((item) => item.active) ?? [], [report?.destinations]);
+  const recentDestinations = useMemo(() => report?.destinations.filter((item) => !item.active) ?? [], [report?.destinations]);
 
   const anomalyName = (kind: string) => {
     const key = `pages.clients.anomalyKinds.${kind}`;
@@ -206,6 +206,22 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
     const value = t(key);
     return value === key ? event.summary : value;
   };
+
+  const renderDestinationRow = (item: DestinationItem) => (
+    <div className={`client-usage-list-row client-destination-row${item.active ? ' is-active' : ''}`} key={item.key}>
+      <div>
+        <strong className="client-destination-name">
+          {item.active ? <i className="client-destination-live-dot" aria-label={t('pages.clients.destinationActive')} /> : null}
+          {item.service || t('pages.clients.destinationServiceOther')}
+        </strong>
+        <small className="client-usage-mono">{item.domain || item.ip || '—'}{item.port ? `:${item.port}` : ''}</small>
+      </div>
+      <div>
+        <span>{item.connections.toLocaleString()} {t('pages.clients.destinationConnections')}</span>
+        <small>{item.owner || '—'} · {item.confidence === 'domain' ? t('pages.clients.destinationConfidenceDomain') : item.confidence === 'network' ? t('pages.clients.destinationConfidenceNetwork') : t('pages.clients.destinationConfidenceIp')} · {dateLabel(item.lastSeen)}</small>
+      </div>
+    </div>
+  );
 
   const chartRangeText = report
     ? report.hours > 0
@@ -363,13 +379,13 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
             <>
               <div className="client-destination-summary-grid">
                 {report.destinationSummaries.map((item) => (
-                  <div className={`client-destination-summary-card${item.active ? ' is-active' : ''}`} key={item.service}>
+                  <div className={`client-destination-summary-card${(item.activeDestinations || 0) > 0 ? ' has-active' : ''}`} key={item.service}>
                     <div>
-                      <strong className="client-destination-service-name">
-                        {item.active ? <i className="client-destination-live-dot" aria-label={t('pages.clients.destinationActive')} /> : null}
+                      <strong className="client-destination-name">
+                        {(item.activeDestinations || 0) > 0 ? <i className="client-destination-live-dot" /> : null}
                         {item.service || t('pages.clients.destinationServiceOther')}
                       </strong>
-                      <small>{item.owner || '—'}{item.active ? ` · ${item.activeDestinations} ${t('pages.clients.destinationActiveCount')}` : ''}</small>
+                      <small>{item.owner || '—'}</small>
                     </div>
                     <div><b>{item.connections.toLocaleString()}</b><small>{t('pages.clients.destinationConnections')}</small></div>
                     <div><b>{item.destinations}</b><small>{t('pages.clients.destinationCount')}</small></div>
@@ -377,23 +393,24 @@ export default function ClientUsageModal({ open, email, initialDays = 7, onClose
                   </div>
                 ))}
               </div>
-              <div className="client-usage-list">
-                {report.destinations.map((item) => (
-                  <div className={`client-usage-list-row client-destination-row${item.active ? ' is-active' : ''}`} key={item.key}>
-                    <div>
-                      <strong className="client-destination-service-name">
-                        {item.active ? <i className="client-destination-live-dot" aria-label={t('pages.clients.destinationActive')} /> : null}
-                        {item.service || t('pages.clients.destinationServiceOther')}
-                      </strong>
-                      <small className="client-usage-mono">{item.domain || item.ip || '—'}{item.port ? `:${item.port}` : ''}</small>
-                    </div>
-                    <div>
-                      <span>{item.active ? <Tag color="green">{t('pages.clients.destinationActive')}</Tag> : null}{item.connections.toLocaleString()} {t('pages.clients.destinationConnections')}</span>
-                      <small>{item.owner || '—'} · {item.confidence === 'domain' ? t('pages.clients.destinationConfidenceDomain') : item.confidence === 'network' ? t('pages.clients.destinationConfidenceNetwork') : t('pages.clients.destinationConfidenceIp')} · {dateLabel(item.lastSeen)}</small>
-                    </div>
+              {activeDestinations.length > 0 ? (
+                <section className="client-destination-live-section">
+                  <div className="client-destination-section-title">
+                    <span><i className="client-destination-live-dot" /> {t('pages.clients.destinationActiveNow')}</span>
+                    <b>{activeDestinations.length}</b>
                   </div>
-                ))}
-              </div>
+                  <div className="client-usage-list">{activeDestinations.map(renderDestinationRow)}</div>
+                </section>
+              ) : null}
+              {recentDestinations.length > 0 ? (
+                <section className="client-destination-recent-section">
+                  <div className="client-destination-section-title">
+                    <span>{t('pages.clients.destinationRecent')}</span>
+                    <b>{recentDestinations.length}</b>
+                  </div>
+                  <div className="client-usage-list">{recentDestinations.map(renderDestinationRow)}</div>
+                </section>
+              ) : null}
             </>
           )}
         </div>

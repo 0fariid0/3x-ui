@@ -1,20 +1,14 @@
 Fara Xray v3.6.13 validation
-================================
+==============================
+parsed 495 Go files
+parsed 6 modified TypeScript files
+changed JSON and workflow YAML files parsed
+OpenAPI regenerated successfully with panel version 3.6.13.
+Git-compatible whitespace check passed.
+Only .github/workflows/release.yml is present.
+Neo Smart usage endpoints are registered for raw, JSON and Clash subscriptions.
+Destination cleanup interval: 5 minutes.
+Destination retention: 15 minutes.
+Green live indicator window: 5 minutes and client online state.
 
-Implemented:
-- Neo Smart subscription usage-history API for 24-hour and 30-day ranges.
-- Existing compact hourly/daily client rollups are reused; no duplicate collector or history tables were added.
-- Destination aggregates expire after 10 minutes of inactivity.
-- Destinations seen during the last 2 minutes are marked active and sorted first.
-- Destination reports refresh every 15 seconds while their tab is open.
-- Manual destination clearing remains available.
-
-Static validation:
-- Changed Go sources pass gofmt.
-- Persian and English translation JSON files parse successfully.
-- Generated TypeScript/OpenAPI schemas include active destination fields.
-- OpenAPI JSON documents parse successfully and report version 3.6.13.
-- Whitespace checks pass.
-
-Environment:
-- The final production build requires the repository Go 1.26.5 and Node 24 toolchains and is executed by the tag-triggered GitHub Actions release workflow.
+Local full go test/build was not executed because the isolated build container cannot download the required Go 1.26.5 toolchain or module dependencies. The tag-based GitHub Release workflow performs the complete frontend and multi-architecture Go build.

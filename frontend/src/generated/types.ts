@@ -358,7 +358,6 @@ export interface ClientDestinationItem {
 }
 
 export interface ClientDestinationSummary {
-  active: boolean;
   activeDestinations: number;
   connections: number;
   destinations: number;

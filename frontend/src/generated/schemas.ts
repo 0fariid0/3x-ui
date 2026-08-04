@@ -1513,9 +1513,6 @@ export const SCHEMAS: Record<string, unknown> = {
   "ClientDestinationSummary": {
     "description": "ClientDestinationSummary groups destination rows by recognized service.",
     "properties": {
-      "active": {
-        "type": "boolean"
-      },
       "activeDestinations": {
         "type": "integer"
       },
@@ -1538,7 +1535,6 @@ export const SCHEMAS: Record<string, unknown> = {
       }
     },
     "required": [
-      "active",
       "activeDestinations",
       "connections",
       "destinations",

@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.6.14",
+    "version": "3.6.13",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -1484,6 +1484,9 @@
       "ClientDestinationItem": {
         "description": "ClientDestinationItem is an aggregate destination shown in client reports.",
         "properties": {
+          "active": {
+            "type": "boolean"
+          },
           "confidence": {
             "type": "string"
           },
@@ -1519,9 +1522,6 @@
           },
           "service": {
             "type": "string"
-          },
-          "active": {
-            "type": "boolean"
           }
         },
         "required": [
@@ -1539,6 +1539,9 @@
       "ClientDestinationSummary": {
         "description": "ClientDestinationSummary groups destination rows by recognized service.",
         "properties": {
+          "activeDestinations": {
+            "type": "integer"
+          },
           "connections": {
             "format": "int64",
             "type": "integer"
@@ -1555,17 +1558,10 @@
           },
           "service": {
             "type": "string"
-          },
-          "active": {
-            "type": "boolean"
-          },
-          "activeDestinations": {
-            "type": "integer"
           }
         },
         "required": [
           "activeDestinations",
-          "active",
           "connections",
           "destinations",
           "lastSeen",

@@ -921,13 +921,11 @@
       "seenCount": "Seen count",
       "usageChartHours": "Last {{hours}} hours",
       "destinationTracking": "Destination tracking",
-      "destinationTrackingDesc": "Off by default. When enabled, only hourly domain/IP and service connection counts are retained for 14 days; URLs and content are never stored.",
+      "destinationTrackingDesc": "Off by default. Only destinations from the last 15 minutes are retained and stale rows are purged every 5 minutes; URLs and content are never stored.",
       "destinationsTab": "Destinations",
       "destinationTrackingDisabled": "Destination tracking is disabled for this client.",
       "destinationTrackingEmpty": "No destination has been recorded in this range yet.",
-      "destinationPrivacyNote": "Only compact domain/IP aggregates are stored. Destinations idle for 10 minutes are removed automatically; a green dot means activity was seen within the last 2 minutes.",
-      "destinationActive": "Active",
-      "destinationActiveCount": "active destinations",
+      "destinationPrivacyNote": "Private live view: stale data is purged every 5 minutes; a green dot means the client is online and the destination was seen within the last 5 minutes.",
       "destinationConnections": "Connections",
       "destinationCount": "Destinations",
       "destinationOwner": "Network / owner",
@@ -940,7 +938,10 @@
       "destinationResetConfirmTitle": "Clear this client’s destination history?",
       "destinationResetConfirmDesc": "All saved destination aggregates for this client will be deleted. New connections will be recorded again while tracking remains enabled.",
       "destinationResetSuccess": "Destination history cleared.",
-      "destinationResetFailed": "Could not clear destination history."
+      "destinationResetFailed": "Could not clear destination history.",
+      "destinationActive": "Active",
+      "destinationActiveNow": "Active destinations for online clients in the last 5 minutes",
+      "destinationRecent": "Recent destinations"
     },
     "groups": {
       "name": "Name",

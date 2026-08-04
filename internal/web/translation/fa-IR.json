@@ -921,13 +921,11 @@
       "seenCount": "تعداد مشاهده",
       "usageChartHours": "گزارش {{hours}} ساعت گذشته",
       "destinationTracking": "ثبت مقصدهای اتصال",
-      "destinationTrackingDesc": "به‌صورت پیش‌فرض خاموش است. با فعال‌سازی، فقط دامنه/IP و تعداد اتصال‌های تجمیعی ساعتی تا ۱۴ روز نگهداری می‌شود؛ URL و محتوای ارتباط ذخیره نمی‌شود.",
+      "destinationTrackingDesc": "به‌صورت پیش‌فرض خاموش است. فقط مقصدهای ۱۵ دقیقه اخیر نگهداری می‌شوند و داده‌های قدیمی هر ۵ دقیقه پاک می‌شوند؛ URL و محتوای ارتباط ذخیره نمی‌شود.",
       "destinationsTab": "مقصدها",
       "destinationTrackingDisabled": "ثبت مقصدها برای این کاربر خاموش است.",
       "destinationTrackingEmpty": "در این بازه هنوز مقصدی ثبت نشده است.",
-      "destinationPrivacyNote": "فقط دامنه/IP خلاصه‌شده نگهداری می‌شود؛ مقصدهای بدون فعالیت پس از ۱۰ دقیقه خودکار پاک می‌شوند و نقطه سبز یعنی در ۲ دقیقه اخیر اتصال دیده شده است.",
-      "destinationActive": "فعال",
-      "destinationActiveCount": "مقصد فعال",
+      "destinationPrivacyNote": "حالت زنده و خصوصی: داده‌های قدیمی هر ۵ دقیقه پاک می‌شوند؛ نقطه سبز یعنی کاربر آنلاین است و مقصد در ۵ دقیقه اخیر مشاهده شده است.",
       "destinationConnections": "تعداد اتصال",
       "destinationCount": "تعداد مقصد",
       "destinationOwner": "شبکه / مالک",
@@ -940,7 +938,10 @@
       "destinationResetConfirmTitle": "تاریخچه مقصدهای این کاربر پاک شود؟",
       "destinationResetConfirmDesc": "همه مقصدهای ذخیره‌شده این کاربر حذف می‌شوند. تا وقتی ثبت مقصد فعال باشد، اتصال‌های جدید دوباره ثبت خواهند شد.",
       "destinationResetSuccess": "تاریخچه مقصدهای کاربر پاک شد.",
-      "destinationResetFailed": "پاک‌کردن تاریخچه مقصدها ناموفق بود."
+      "destinationResetFailed": "پاک‌کردن تاریخچه مقصدها ناموفق بود.",
+      "destinationActive": "فعال",
+      "destinationActiveNow": "مقصدهای فعالِ کاربران آنلاین در ۵ دقیقه اخیر",
+      "destinationRecent": "مقصدهای اخیر"
     },
     "groups": {
       "name": "نام",

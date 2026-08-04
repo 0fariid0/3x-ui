@@ -129,11 +129,14 @@ func TestReclassifyDestinationItemRepairsStoredGoogleOther(t *testing.T) {
 }
 
 func TestDestinationIsActiveWindow(t *testing.T) {
-	now := time.Date(2026, 8, 4, 1, 40, 0, 0, time.UTC)
-	if !destinationIsActive(now.Add(-90*time.Second).UnixMilli(), now) {
-		t.Fatal("destination seen 90 seconds ago should be active")
+	now := time.Now().UnixMilli()
+	if !destinationIsActive(now-int64(2*time.Minute/time.Millisecond), now) {
+		t.Fatal("destination seen two minutes ago must be active")
 	}
-	if destinationIsActive(now.Add(-3*time.Minute).UnixMilli(), now) {
-		t.Fatal("destination seen three minutes ago must not be active")
+	if destinationIsActive(now-int64(6*time.Minute/time.Millisecond), now) {
+		t.Fatal("destination older than active window must not be active")
+	}
+	if destinationIsActive(now+1, now) {
+		t.Fatal("future destination timestamp must not be active")
 	}
 }
