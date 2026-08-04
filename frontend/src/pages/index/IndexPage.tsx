@@ -1,5 +1,6 @@
 import { lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
 import { Button, ConfigProvider, Layout, Modal, Result, Spin, message } from 'antd';
 import {
   CopyOutlined,
@@ -39,6 +40,7 @@ import './IndexPage.css';
 
 export default function IndexPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { isDark, isUltra, antdThemeConfig } = useTheme();
   const { status, fetched, fetchError, refresh } = useStatusQuery();
   const { isMobile } = useMediaQuery();
@@ -68,6 +70,10 @@ export default function IndexPage() {
   const [configText, setConfigText] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingTip, setLoadingTip] = useState(t('loading'));
+
+  const editClientFromUsage = useCallback((email: string) => {
+    navigate(`/clients?edit=${encodeURIComponent(email)}`);
+  }, [navigate]);
 
   const history = useOverviewHistory(status, fetched && !fetchError);
 
@@ -337,6 +343,7 @@ export default function IndexPage() {
             email={clientUsageEmail}
             initialDays={1}
             onClose={() => setClientUsageEmail(null)}
+            onEdit={editClientFromUsage}
           />
         </LazyMount>
 

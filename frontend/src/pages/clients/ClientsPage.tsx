@@ -221,10 +221,10 @@ function sortValueFor(column: string | null, order: 'ascend' | 'descend' | null)
 
 export default function ClientsPage() {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isDark, isUltra, antdThemeConfig } = useTheme();
   const { datepicker } = useDatepicker();
   const { isMobile } = useMediaQuery();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [modal, modalContextHolder] = Modal.useModal();
   const [messageApi, messageContextHolder] = message.useMessage();
   useEffect(() => { setMessageInstance(messageApi); }, [messageApi]);
@@ -512,31 +512,35 @@ export default function ClientsPage() {
 
   const onEdit = useCallback(async (email: string) => {
     const row = rowsByEmail.current.get(email);
-    // The usage modal can be opened from the overview, where the client may not
-    // be present on the current paginated page. Hydrate by email first and use
-    // the visible row only as a lightweight fallback.
+    // A stats card can deep-link here from another page, where the requested
+    // client may not belong to the currently loaded table page. Hydrate by
+    // email first and use the paged row only as an optional fresh-data overlay.
     const full = await hydrate(email);
-    const base = full?.client ?? row;
-    if (!base) return;
+    if (!row && !full?.client) return;
     setFormMode('edit');
-    const merged: ClientRecord = row ? { ...row, ...base } : { ...base };
+    const merged: ClientRecord = row
+      ? (full ? { ...row, ...full.client } : { ...row })
+      : { ...full!.client };
     setEditingClient(merged);
-    const ids = full?.inboundIds ?? (Array.isArray(base.inboundIds) ? base.inboundIds : []);
+    const ids = full?.inboundIds ?? (Array.isArray(row?.inboundIds) ? row.inboundIds : []);
     setEditingAttachedIds([...ids]);
     setEditingExternalLinks(Array.isArray(full?.externalLinks) ? [...full.externalLinks] : []);
     setFormOpen(true);
   }, [hydrate]);
 
-  const editQuery = searchParams.get('edit')?.trim() || '';
-  const handledEditQuery = useRef('');
+  const editFromQuery = searchParams.get('edit');
+  const handledEditQuery = useRef<string | null>(null);
   useEffect(() => {
-    if (!editQuery || handledEditQuery.current === editQuery) return;
-    handledEditQuery.current = editQuery;
-    void onEdit(editQuery);
-    const next = new URLSearchParams(searchParams);
-    next.delete('edit');
-    setSearchParams(next, { replace: true });
-  }, [editQuery, onEdit, searchParams, setSearchParams]);
+    if (!editFromQuery || handledEditQuery.current === editFromQuery) return;
+    handledEditQuery.current = editFromQuery;
+    void onEdit(editFromQuery).finally(() => {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        next.delete('edit');
+        return next;
+      }, { replace: true });
+    });
+  }, [editFromQuery, onEdit, setSearchParams]);
 
   const onDelete = useCallback((email: string) => {
     const row = rowsByEmail.current.get(email);
@@ -1452,16 +1456,6 @@ export default function ClientsPage() {
                                     {bucket === 'depleted' && <Tag color="red" className="status-tag">{t('depleted')}</Tag>}
                                     {bucket === 'expiring' && <Tag color="orange" className="status-tag">{t('depletingSoon')}</Tag>}
                                     <div className="card-actions">
-                                      <Tooltip title={t('pages.clients.usageDetails')}>
-                                        <AreaChartOutlined
-                                          className="row-action-trigger"
-                                          role="button"
-                                          tabIndex={0}
-                                          aria-label={t('pages.clients.usageDetails')}
-                                          onClick={() => onShowUsage(row.email)}
-                                          onKeyDown={activateOnKey(() => onShowUsage(row.email))}
-                                        />
-                                      </Tooltip>
                                       <Tooltip title={t('pages.clients.clientInfo')}>
                                         <InfoCircleOutlined
                                           className="row-action-trigger"
@@ -1470,6 +1464,16 @@ export default function ClientsPage() {
                                           aria-label={t('pages.clients.clientInfo')}
                                           onClick={() => onShowInfo(row.email)}
                                           onKeyDown={activateOnKey(() => onShowInfo(row.email))}
+                                        />
+                                      </Tooltip>
+                                      <Tooltip title={t('pages.clients.usageDetails')}>
+                                        <AreaChartOutlined
+                                          className="row-action-trigger"
+                                          role="button"
+                                          tabIndex={0}
+                                          aria-label={t('pages.clients.usageDetails')}
+                                          onClick={() => onShowUsage(row.email)}
+                                          onKeyDown={activateOnKey(() => onShowUsage(row.email))}
                                         />
                                       </Tooltip>
                                       <Switch

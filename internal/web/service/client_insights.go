@@ -698,7 +698,7 @@ func (s *ClientInsightService) GetReportForRange(email string, days, hours int) 
 
 func normalizeInsightDays(days int) int {
 	if days < 1 {
-		return 7
+		return 1
 	}
 	if days > 365 {
 		return 365

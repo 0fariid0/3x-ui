@@ -1,0 +1,30 @@
+Fara Xray v3.6.20 validation
+================================
+
+Source baseline:
+- Built directly from the archived v3.6.13 source package.
+- v3.6.14 through v3.6.19 source changes are intentionally excluded.
+
+Implemented:
+- Destination storage uses minute buckets with a 10-minute privacy retention.
+- Reports render the latest real 5-minute activity snapshot instead of becoming empty immediately after disconnect.
+- Green destination state requires both a currently-online client and destination activity within 5 minutes.
+- Mobile client cards have a direct statistics action.
+- Detailed reports were removed from Client Information and remain available only in the statistics modal.
+- All report entry points and API defaults use the previous 24 hours.
+- Download uses the theme primary chart color; upload uses the secondary/muted color.
+- The statistics header edit button opens the existing client editor, including when launched from the dashboard.
+
+Static validation completed:
+- All changed Go files pass gofmt parsing/formatting.
+- Persian and English translation JSON files parse successfully.
+- Frontend and documentation OpenAPI JSON files parse successfully and report version 3.6.20.
+- OpenAPI generation completed successfully: 173 paths, 177 operations, 12 tags.
+- Changed TS/TSX files pass TypeScript parser/transpile syntax validation.
+- Destination privacy-window helper tests were added for 5-minute visibility and 10-minute retention.
+- Source replacement and release script include checksum, clean-tree, backup-branch, version, whitespace, and tag guards.
+
+Environment limitation:
+- A complete npm/Go production build was not executable in the artifact environment because the source requires Node 24 and Go 1.26.5, while the available offline environment provides Node 22 and Go 1.23.2 without dependency downloads.
+- The supplied Git script contains an optional full local verification gate (RUN_FULL_VERIFY=1).
+- The existing tag-triggered GitHub Actions workflow builds the frontend first and then compiles release binaries using Node 24 and Go 1.26.5.

@@ -104,7 +104,7 @@ type ClientTrafficDayBucket struct {
 
 func (ClientTrafficDayBucket) TableName() string { return "client_traffic_day_buckets" }
 
-// ClientDestinationHour stores privacy-preserving hourly destination aggregates.
+// ClientDestinationHour stores privacy-preserving minute destination aggregates.
 // No URL path, payload, message content, or DNS query body is retained.
 type ClientDestinationHour struct {
 	Id          int    `json:"id" gorm:"primaryKey;autoIncrement"`

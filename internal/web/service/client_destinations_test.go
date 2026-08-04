@@ -129,50 +129,37 @@ func TestReclassifyDestinationItemRepairsStoredGoogleOther(t *testing.T) {
 }
 
 func TestDestinationIsActiveWindow(t *testing.T) {
-	now := time.Now().UnixMilli()
-	if !destinationIsActive(now-int64(2*time.Minute/time.Millisecond), now) {
-		t.Fatal("destination seen two minutes ago must be active")
+	now := time.Date(2026, 8, 4, 1, 40, 0, 0, time.UTC)
+	if !destinationIsActive(now.Add(-90*time.Second).UnixMilli(), now) {
+		t.Fatal("destination seen 90 seconds ago should be active")
 	}
-	if destinationIsActive(now-int64(6*time.Minute/time.Millisecond), now) {
-		t.Fatal("destination older than active window must not be active")
+	if !destinationIsActive(now.Add(-4*time.Minute-59*time.Second).UnixMilli(), now) {
+		t.Fatal("destination seen within five minutes should be active")
 	}
-	if destinationIsActive(now+1, now) {
-		t.Fatal("future destination timestamp must not be active")
-	}
-}
-
-func TestDestinationRollingWindowConfiguration(t *testing.T) {
-	if destinationActiveWindow != 5*time.Minute {
-		t.Fatalf("active destination window = %v, want 5m", destinationActiveWindow)
-	}
-	if destinationCleanupInterval != 5*time.Minute {
-		t.Fatalf("destination cleanup interval = %v, want 5m", destinationCleanupInterval)
-	}
-	if destinationRollingWindow != 5*time.Minute {
-		t.Fatalf("destination rolling window = %v, want 5m", destinationRollingWindow)
-	}
-	if destinationPruneThreshold != 10*time.Minute {
-		t.Fatalf("destination prune threshold = %v, want 10m", destinationPruneThreshold)
+	if destinationIsActive(now.Add(-5*time.Minute-time.Second).UnixMilli(), now) {
+		t.Fatal("destination older than five minutes must not be active")
 	}
 }
 
-func TestDestinationRollingCutoffKeepsOfflineSnapshot(t *testing.T) {
-	base := time.Date(2026, time.August, 4, 12, 0, 0, 0, time.UTC).UnixMilli()
-	if cutoff, ok := destinationRollingCutoff(base, base+int64(9*time.Minute/time.Millisecond)); ok || cutoff != 0 {
-		t.Fatalf("nine-minute span must stay intact, got cutoff=%d ok=%v", cutoff, ok)
+func TestDestinationPrivacyWindows(t *testing.T) {
+	if destinationVisibleWindow != 5*time.Minute {
+		t.Fatalf("visible window = %s, want 5m", destinationVisibleWindow)
 	}
-	latest := base + int64(10*time.Minute/time.Millisecond)
-	cutoff, ok := destinationRollingCutoff(base, latest)
-	if !ok {
-		t.Fatal("ten-minute span must trigger pruning")
+	if destinationRetention != 10*time.Minute {
+		t.Fatalf("retention = %s, want 10m", destinationRetention)
 	}
-	want := latest - int64(5*time.Minute/time.Millisecond)
-	if cutoff != want {
-		t.Fatalf("cutoff=%d, want %d", cutoff, want)
+}
+
+func TestDestinationVisibleStartAnchorsToLatestActivity(t *testing.T) {
+	latest := time.Date(2026, 8, 5, 12, 10, 0, 0, time.UTC).UnixMilli()
+	requestStart := time.UnixMilli(latest).Add(-24 * time.Hour).UnixMilli()
+	want := time.UnixMilli(latest).Add(-5 * time.Minute).UnixMilli()
+	if got := destinationVisibleStart(requestStart, latest); got != want {
+		t.Fatalf("visible start = %d, want %d", got, want)
 	}
-	// No wall-clock value is involved, so the last observed window remains
-	// available indefinitely after a client goes offline.
-	if laterCutoff, laterOK := destinationRollingCutoff(cutoff, latest); laterOK || laterCutoff != 0 {
-		t.Fatalf("retained five-minute snapshot must not prune while idle, got cutoff=%d ok=%v", laterCutoff, laterOK)
+
+	clamped := time.UnixMilli(latest).Add(-2 * time.Minute).UnixMilli()
+	if got := destinationVisibleStart(clamped, latest); got != clamped {
+		t.Fatalf("clamped visible start = %d, want %d", got, clamped)
 	}
 }

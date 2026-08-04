@@ -378,6 +378,7 @@ export const ClientDestinationItemSchema = z.object({
 export type ClientDestinationItem = z.infer<typeof ClientDestinationItemSchema>;
 
 export const ClientDestinationSummarySchema = z.object({
+  active: z.boolean(),
   activeDestinations: z.number().int(),
   connections: z.number().int(),
   destinations: z.number().int(),

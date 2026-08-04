@@ -593,8 +593,8 @@ export const sections: readonly Section[] = [
         summary: 'Return the detailed per-client report: daily and hourly traffic, recent IP history, detected subscription apps/OS, associated Hosts, anomalies, and the renewal/change timeline.',
         params: [
           { name: 'email', in: 'path', type: 'string', desc: 'Client email (unique identifier).' },
-          { name: 'days', in: 'query', type: 'integer', optional: true, defaultValue: 1, desc: 'Daily traffic range, 1 to 365 days. Default: last 24 hours.' },
-          { name: 'hours', in: 'query', type: 'integer', optional: true, desc: 'Rolling hourly chart range. Supported values: 12 or 24. When set, it takes precedence over days.' },
+          { name: 'days', in: 'query', type: 'integer', optional: true, defaultValue: 1, desc: 'Daily traffic range, 1 to 365 days. The endpoint defaults to a rolling 24-hour report when neither days nor hours is provided.' },
+          { name: 'hours', in: 'query', type: 'integer', optional: true, defaultValue: 24, desc: 'Rolling hourly chart range. Supported values: 12 or 24. When set, it takes precedence over days.' },
         ],
         responseSchema: 'ClientInsightReport',
       },
@@ -612,7 +612,7 @@ export const sections: readonly Section[] = [
         path: '/panel/api/clients/usageAlerts',
         summary: 'Return the highest-usage clients for the selected range, enriched with recent IP count, peak minute, anomaly state, quota percentage, and last-online metadata.',
         params: [
-          { name: 'days', in: 'query', type: 'integer', optional: true, defaultValue: 1, desc: 'Usage aggregation range, 1 to 365 days. Default: last 24 hours.' },
+          { name: 'days', in: 'query', type: 'integer', optional: true, defaultValue: 1, desc: 'Usage aggregation range, 1 to 365 days. One day is calculated as the rolling previous 24 hours.' },
           { name: 'limit', in: 'query', type: 'integer', optional: true, defaultValue: 8, desc: 'Maximum number of clients, 1 to 50.' },
         ],
         responseSchema: 'ClientUsageAlerts',

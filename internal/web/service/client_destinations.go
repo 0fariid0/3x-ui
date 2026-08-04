@@ -23,20 +23,18 @@ import (
 )
 
 const (
-	// Destination rows are intentionally short-lived. The ingestion job runs
-	// every 10 seconds; stale rows are purged every five minutes so this tab is
-	// a compact rolling view rather than a long-term browsing history. Rows are
-	// kept for ten minutes so an offline client still shows its most recent
-	// five-minute activity window until the next five-minute cleanup cycle.
-	destinationRollingWindow    = 5 * time.Minute
-	destinationPruneThreshold   = 10 * time.Minute
-	destinationCleanupInterval  = 5 * time.Minute
-	destinationActiveWindow     = 5 * time.Minute
-	destinationMaxPerClientHour = 100
-	destinationMaxReportItems   = 200
+	destinationVisibleWindow      = 5 * time.Minute
+	destinationRetention          = 10 * time.Minute
+	destinationActiveWindow       = destinationVisibleWindow
+	destinationCleanupInterval    = time.Minute
+	destinationMaxPerClientBucket = 100
+	destinationMaxReportItems     = 200
 )
 
-var destinationIngestMu sync.Mutex
+var (
+	destinationIngestMu  sync.Mutex
+	destinationLastPurge time.Time
+)
 
 // ClientDestinationItem is an aggregate destination shown in client reports.
 type ClientDestinationItem struct {
@@ -60,8 +58,9 @@ type ClientDestinationSummary struct {
 	Owner              string `json:"owner"`
 	Connections        int64  `json:"connections"`
 	Destinations       int    `json:"destinations"`
-	ActiveDestinations int    `json:"activeDestinations"`
 	LastSeen           int64  `json:"lastSeen"`
+	Active             bool   `json:"active"`
+	ActiveDestinations int    `json:"activeDestinations"`
 }
 
 type destinationEvent struct {
@@ -228,7 +227,7 @@ func parseDestinationAccessLine(line string, tracked map[string]struct{}, loc *t
 		domain = compactDomain(host)
 	}
 	service, owner, confidence := classifyDestination(domain, ip)
-	bucket := insightHourStart(at, loc).UnixMilli()
+	bucket := at.Truncate(time.Minute).UnixMilli()
 	keyHost := domain
 	if keyHost == "" {
 		keyHost = ip
@@ -255,6 +254,39 @@ func trackedDestinationEmails(db *gorm.DB) (map[string]struct{}, error) {
 	return out, nil
 }
 
+func destinationIsActive(lastSeen int64, now time.Time) bool {
+	if lastSeen <= 0 {
+		return false
+	}
+	seen := time.UnixMilli(lastSeen)
+	return !seen.After(now.Add(30*time.Second)) && !seen.Before(now.Add(-destinationActiveWindow))
+}
+
+func destinationVisibleStart(requestStart, latestSeen int64) int64 {
+	visibleStart := latestSeen - destinationVisibleWindow.Milliseconds()
+	if visibleStart < requestStart {
+		return requestStart
+	}
+	return visibleStart
+}
+
+// purgeStaleDestinationRows keeps destination reporting intentionally short-lived.
+// The ingest job runs every ten seconds, while deletion is rate-limited to once
+// per minute so the database stays small without creating unnecessary writes.
+func purgeStaleDestinationRows(db *gorm.DB, now time.Time) error {
+	if db == nil {
+		return errors.New("database is not initialized")
+	}
+	if !destinationLastPurge.IsZero() && now.Sub(destinationLastPurge) < destinationCleanupInterval {
+		return nil
+	}
+	if err := db.Where("last_seen < ?", now.Add(-destinationRetention).UnixMilli()).Delete(&model.ClientDestinationHour{}).Error; err != nil {
+		return err
+	}
+	destinationLastPurge = now
+	return nil
+}
+
 // AnyDestinationTrackingEnabled reports whether runtime access logging is needed.
 func AnyDestinationTrackingEnabled() bool {
 	var count int64
@@ -263,12 +295,15 @@ func AnyDestinationTrackingEnabled() bool {
 }
 
 // IngestDestinationAccessLog tails Xray's bounded access log and stores only
-// hourly aggregates for clients that explicitly enabled destination tracking.
+// minute aggregates for clients that explicitly enabled destination tracking.
 func (s *ClientInsightService) IngestDestinationAccessLog() error {
 	destinationIngestMu.Lock()
 	defer destinationIngestMu.Unlock()
 
 	db := database.GetDB()
+	if err := purgeStaleDestinationRows(db, time.Now()); err != nil {
+		logger.Debug("[ClientDestinations] stale destination purge failed:", err)
+	}
 	tracked, err := trackedDestinationEmails(db)
 	if err != nil {
 		return err
@@ -353,8 +388,8 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 			}
 			for _, events := range groups {
 				sort.Slice(events, func(i, j int) bool { return events[i].Count > events[j].Count })
-				if len(events) > destinationMaxPerClientHour {
-					events = events[:destinationMaxPerClientHour]
+				if len(events) > destinationMaxPerClientBucket {
+					events = events[:destinationMaxPerClientBucket]
 				}
 				for _, event := range events {
 					row := model.ClientDestinationHour{
@@ -367,7 +402,7 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 						Columns: []clause.Column{{Name: "email"}, {Name: "bucket_start"}, {Name: "key"}},
 						DoUpdates: clause.Assignments(map[string]any{
 							// Classification rules can improve between releases. Refresh all
-							// descriptive fields when an existing hourly row is hit so a row
+							// descriptive fields when an existing minute row is hit so a row
 							// previously stored as Other is repaired by the next connection.
 							"service":     event.Service,
 							"owner":       event.Owner,
@@ -392,8 +427,8 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 						Pluck("id", &ids).Error; err != nil {
 						return err
 					}
-					if len(ids) > destinationMaxPerClientHour {
-						if err := tx.Where("id IN ?", ids[destinationMaxPerClientHour:]).Delete(&model.ClientDestinationHour{}).Error; err != nil {
+					if len(ids) > destinationMaxPerClientBucket {
+						if err := tx.Where("id IN ?", ids[destinationMaxPerClientBucket:]).Delete(&model.ClientDestinationHour{}).Error; err != nil {
 							return err
 						}
 					}
@@ -406,13 +441,7 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 	}
 
 	now := time.Now().UnixMilli()
-	if cursor.LastCleanupAt == 0 || now-cursor.LastCleanupAt >= int64(destinationCleanupInterval/time.Millisecond) {
-		if err := pruneDestinationRollingWindows(db); err != nil {
-			logger.Debug("[ClientDestinations] rolling cleanup failed:", err)
-		} else {
-			cursor.LastCleanupAt = now
-		}
-	}
+	cursor.LastCleanupAt = destinationLastPurge.UnixMilli()
 	cursor.Path = path
 	cursor.Offset = offset
 	cursor.ObservedSize = info.Size()
@@ -440,6 +469,7 @@ func reclassifyDestinationItem(item *ClientDestinationItem) {
 		return
 	}
 	item.Service, item.Owner, item.Confidence = classifyDestination(item.Domain, item.IP)
+	item.Active = destinationIsActive(item.LastSeen, time.Now())
 }
 
 // ClearDestinations removes all stored destination aggregates for one client.
@@ -456,79 +486,45 @@ func (s *ClientInsightService) ClearDestinations(email string) error {
 	return database.GetDB().Where("email = ?", email).Delete(&model.ClientDestinationHour{}).Error
 }
 
-func destinationIsActive(lastSeen, now int64) bool {
-	return lastSeen > 0 && now >= lastSeen && now-lastSeen <= int64(destinationActiveWindow/time.Millisecond)
-}
-
-// destinationRollingCutoff returns the cutoff used for a client's compact
-// destination history. Cleanup is driven by that client's newest observation,
-// not wall-clock time. This keeps the last five minutes of observed activity
-// visible after the client disconnects. Once the retained span reaches ten
-// minutes, the older five-minute half is discarded.
-func destinationRollingCutoff(oldest, latest int64) (int64, bool) {
-	if oldest <= 0 || latest <= 0 || latest < oldest {
-		return 0, false
-	}
-	if latest-oldest < int64(destinationPruneThreshold/time.Millisecond) {
-		return 0, false
-	}
-	return latest - int64(destinationRollingWindow/time.Millisecond), true
-}
-
-func pruneDestinationRollingWindows(db *gorm.DB) error {
-	type clientWindow struct {
-		Email  string
-		Oldest int64
-		Latest int64
-	}
-	windows := make([]clientWindow, 0)
-	if err := db.Model(&model.ClientDestinationHour{}).
-		Select("email, MIN(last_seen) AS oldest, MAX(last_seen) AS latest").
-		Group("email").
-		Scan(&windows).Error; err != nil {
-		return err
-	}
-	for _, window := range windows {
-		cutoff, ok := destinationRollingCutoff(window.Oldest, window.Latest)
-		if !ok {
-			continue
-		}
-		if err := db.Where("email = ? AND last_seen < ?", window.Email, cutoff).
-			Delete(&model.ClientDestinationHour{}).Error; err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *ClientInsightService) destinationReport(email string, _ int64, end int64) ([]ClientDestinationItem, []ClientDestinationSummary, error) {
+func (s *ClientInsightService) destinationReport(email string, start, end int64) ([]ClientDestinationItem, []ClientDestinationSummary, error) {
 	// Opening a report also schedules a provider-rule refresh. Bundled ranges
 	// classify immediately; refreshed ranges are used by subsequent reports.
 	RefreshDestinationNetworkRulesIfNeeded()
-	now := time.Now().UnixMilli()
-	clientOnline := false
-	for _, onlineEmail := range (&InboundService{}).GetOnlineClients() {
-		if strings.EqualFold(strings.TrimSpace(onlineEmail), strings.TrimSpace(email)) {
-			clientOnline = true
-			break
-		}
-	}
-	// Keep the newest observed five-minute window available even when the
-	// client is offline. The rolling cleanup bounds storage independently of
-	// the report range selected for traffic charts.
-	if err := pruneDestinationRollingWindows(database.GetDB()); err != nil {
-		logger.Debug("[ClientDestinations] report cleanup failed:", err)
-	}
 	items := make([]ClientDestinationItem, 0)
-	err := database.GetDB().Model(&model.ClientDestinationHour{}).
+	now := time.Now()
+	retentionCutoff := now.Add(-destinationRetention).UnixMilli()
+	if start < retentionCutoff {
+		start = retentionCutoff
+	}
+
+	// Keep a ten-minute privacy buffer in storage, but always render only the
+	// newest five minutes that actually contain destination activity. Anchoring
+	// the window to MAX(last_seen), rather than to the wall clock, preserves the
+	// final five-minute snapshot after a client disconnects. The snapshot then
+	// disappears naturally when its newest row reaches the ten-minute retention
+	// boundary. Minute buckets keep connection totals close to the visible range.
+	var latestSeen int64
+	db := database.GetDB()
+	if err := db.Model(&model.ClientDestinationHour{}).
+		Where("email = ? AND last_seen >= ? AND last_seen <= ?", email, start, end).
+		Select("COALESCE(MAX(last_seen), 0)").
+		Scan(&latestSeen).Error; err != nil {
+		return nil, nil, err
+	}
+	if latestSeen <= 0 {
+		return items, []ClientDestinationSummary{}, nil
+	}
+	visibleStart := destinationVisibleStart(start, latestSeen)
+
+	err := db.Model(&model.ClientDestinationHour{}).
 		// Do not group by the stored classification. Older rows may have been
 		// saved as Other before a CIDR/domain rule was added. Aggregate by the
 		// actual destination and classify every returned item with the current
 		// rules, so upgrades repair historical reports immediately.
 		Select("key, domain, ip, port, protocol, SUM(connections) AS connections, MIN(first_seen) AS first_seen, MAX(last_seen) AS last_seen").
-		Where("email = ? AND last_seen <= ?", email, end).
+		Where("email = ? AND last_seen >= ? AND last_seen <= ?", email, visibleStart, latestSeen).
 		Group("key, domain, ip, port, protocol").
-		Order("last_seen DESC, connections DESC").
+		Order("connections DESC, last_seen DESC").
 		Limit(destinationMaxReportItems).
 		Scan(&items).Error
 	if err != nil {
@@ -536,17 +532,15 @@ func (s *ClientInsightService) destinationReport(email string, _ int64, end int6
 	}
 	for i := range items {
 		reclassifyDestinationItem(&items[i])
-		items[i].Active = clientOnline && destinationIsActive(items[i].LastSeen, now)
 	}
-	// Active destinations always stay at the top; recent inactive rows follow.
 	sort.SliceStable(items, func(i, j int) bool {
 		if items[i].Active != items[j].Active {
 			return items[i].Active
 		}
-		if items[i].LastSeen != items[j].LastSeen {
-			return items[i].LastSeen > items[j].LastSeen
+		if items[i].Connections != items[j].Connections {
+			return items[i].Connections > items[j].Connections
 		}
-		return items[i].Connections > items[j].Connections
+		return items[i].LastSeen > items[j].LastSeen
 	})
 	type summaryAccumulator struct {
 		ClientDestinationSummary
@@ -566,6 +560,7 @@ func (s *ClientInsightService) destinationReport(email string, _ int64, end int6
 		acc.Connections += item.Connections
 		acc.keys[item.Key] = struct{}{}
 		if item.Active {
+			acc.Active = true
 			acc.ActiveDestinations++
 		}
 		if item.LastSeen > acc.LastSeen {
@@ -578,8 +573,8 @@ func (s *ClientInsightService) destinationReport(email string, _ int64, end int6
 		summaries = append(summaries, acc.ClientDestinationSummary)
 	}
 	sort.Slice(summaries, func(i, j int) bool {
-		if summaries[i].ActiveDestinations != summaries[j].ActiveDestinations {
-			return summaries[i].ActiveDestinations > summaries[j].ActiveDestinations
+		if summaries[i].Active != summaries[j].Active {
+			return summaries[i].Active
 		}
 		return summaries[i].Connections > summaries[j].Connections
 	})

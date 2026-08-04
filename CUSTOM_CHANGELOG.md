@@ -1,36 +1,22 @@
-## v3.6.16
+# Custom changelog
 
-- Preserve each client's newest five-minute destination window even after the client disconnects.
-- When a client's retained observations span ten minutes, prune the older five-minute half instead of deleting by wall-clock age.
-- Keep the green live marker limited to online clients with a destination seen in the last five minutes.
-- Make 24 hours the backend/API default for client reports and dashboard usage alerts.
-- Keep the direct mobile statistics action, dedicated report-only UI, download-first chart color, and in-report edit action from v3.6.15.
-- Preserve the verified Linux amd64 release workflow and the frontend production-build fix from v3.6.15.
+## v3.6.20
 
-## v3.6.15
-
-- Fix the production frontend build by importing `useSearchParams` from the installed `react-router` package instead of the absent `react-router-dom` package.
-- Keep every functional change from v3.6.14 unchanged.
-- Replace the fragile seven-architecture release matrix with one verified Linux amd64 release pipeline.
-- Run frontend type-check, frontend production build and Go production build before publishing an asset.
-- Verify the release archive and its SHA-256 before creating the GitHub Release.
-
-## v3.6.14
-
-- Keep destination observations for a rolling 10-minute grace window with 5-minute cleanup, so recent destinations remain visible after a client goes offline.
-- Show the usage/report action directly on mobile client cards.
-- Remove the duplicated detailed report from Client Information; reports now open only from the dedicated statistics action.
-- Default client reports and dashboard usage alerts to the last 24 hours.
-- Use the primary theme color for download and the secondary color for upload.
-- Add a client edit action beside the client name inside the usage report modal.
-- Fix duplicate JSX/declarations inherited by the v3.6.13 source package.
+- Built directly from the v3.6.13 source baseline; v3.6.14 through v3.6.19 were intentionally excluded.
+- Preserved the latest real five-minute destination snapshot for up to ten minutes after disconnect.
+- Changed destination aggregation to minute buckets and required both client-online state and recent destination activity for the green indicator.
+- Added the direct mobile statistics action and removed the duplicate overflow-menu entry.
+- Removed the detailed report from Client Information so statistics are loaded only in the dedicated modal.
+- Made the previous 24 hours the default across client reports and usage alerts.
+- Made download the theme-primary chart series and upload the muted series.
+- Added the existing client-edit action to the statistics header, including dashboard-to-client deep linking.
 
 ## v3.6.13
 
-- Neo Smart subscription usage history API (24h / 30d) backed by existing compact rollups.
-- Short-lived destination view with five-minute cleanup and green recent-activity indicators.
-
-# Custom changelog
+- Added the Neo Smart subscription usage-history endpoint for real 24-hour hourly and 30-day daily charts.
+- Reused the panel's existing compact traffic rollups instead of adding duplicate history tables or collectors.
+- Changed destination tracking to short-lived reporting: stale destinations are automatically removed after 10 minutes.
+- Marked destinations seen in the last 2 minutes as active, sorted active rows first, and added background refresh while the destination tab is open.
 
 ## v3.6.12
 

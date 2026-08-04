@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Empty, message, Modal, Popconfirm, Select, Spin, Tabs, Tag, theme } from 'antd';
+import { Button, Empty, message, Modal, Popconfirm, Select, Spin, Tabs, Tag, Tooltip, theme } from 'antd';
 import {
   AlertOutlined,
   AppstoreOutlined,
   AreaChartOutlined,
   GlobalOutlined,
   DeleteOutlined,
-  HistoryOutlined,
   EditOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
 
 import { HttpUtil, SizeFormatter } from '@/utils';
@@ -24,8 +24,8 @@ interface TimelineUsage { bucketStart: number; up: number; down: number; total: 
 interface ReportIP { id: number; ip: string; firstSeen: number; lastSeen: number; seenCount: number; }
 interface ReportApp { id: number; appName: string; version?: string; os?: string; userAgent?: string; format?: string; requestCount?: number; firstSeen?: number; lastSeen?: number; }
 interface ReportHost { id: number; inboundId: number; remark?: string; address?: string; port?: number; lastSeen?: number; }
-interface DestinationSummary { service: string; owner?: string; connections: number; destinations: number; activeDestinations?: number; lastSeen: number; }
-interface DestinationItem { key: string; service: string; owner?: string; domain?: string; ip?: string; port?: number; protocol?: string; confidence: string; connections: number; firstSeen: number; lastSeen: number; active?: boolean; }
+interface DestinationSummary { service: string; owner?: string; connections: number; destinations: number; lastSeen: number; active: boolean; activeDestinations: number; }
+interface DestinationItem { key: string; service: string; owner?: string; domain?: string; ip?: string; port?: number; protocol?: string; confidence: string; connections: number; firstSeen: number; lastSeen: number; active: boolean; }
 interface ReportEvent { id: number; kind: string; summary: string; details?: string; createdAt: number; }
 interface ReportAnomaly {
   id: number;
@@ -80,7 +80,7 @@ interface ClientUsageModalProps {
   email: string | null;
   initialDays?: number;
   onClose: () => void;
-  onEdit?: (email: string) => void;
+  onEdit?: (email: string) => void | Promise<void>;
 }
 
 type RangeValue = '12h' | '24h' | '7d' | '14d' | '30d' | '60d' | '90d' | '180d' | '365d';
@@ -127,43 +127,49 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
     }
   }, [open, initialDays, email]);
 
-  const load = useCallback(async (silent = false) => {
+  const load = useCallback(async (background = false) => {
     if (!open || !email) return;
-    if (!silent) setLoading(true);
+    if (!background) setLoading(true);
     try {
-      const msg = await HttpUtil.get(
-        `/panel/api/clients/report/${encodeURIComponent(email)}?${rangeQuery(range)}`,
-        undefined,
-        { silent: true },
-      ) as ApiMsg<ClientInsightReport>;
-      setReport(msg?.success && msg.obj ? msg.obj : null);
+      const [msg, onlinesMsg] = await Promise.all([
+        HttpUtil.get(
+          `/panel/api/clients/report/${encodeURIComponent(email)}?${rangeQuery(range)}`,
+          undefined,
+          { silent: true },
+        ) as Promise<ApiMsg<ClientInsightReport>>,
+        HttpUtil.post('/panel/api/clients/onlines', undefined, { silent: true })
+          .catch(() => null) as Promise<ApiMsg<string[]> | null>,
+      ]);
+      if (msg?.success && msg.obj) {
+        const clientOnline = !!onlinesMsg?.success
+          && Array.isArray(onlinesMsg.obj)
+          && onlinesMsg.obj.includes(email);
+        setReport({
+          ...msg.obj,
+          destinations: msg.obj.destinations.map((item) => ({ ...item, active: clientOnline && item.active })),
+          destinationSummaries: msg.obj.destinationSummaries.map((item) => ({
+            ...item,
+            active: clientOnline && item.active,
+            activeDestinations: clientOnline ? item.activeDestinations : 0,
+          })),
+        });
+      } else if (!background) {
+        setReport(null);
+      }
     } catch (_) {
-      if (!silent) setReport(null);
+      if (!background) setReport(null);
     } finally {
-      if (!silent) setLoading(false);
+      if (!background) setLoading(false);
     }
   }, [open, email, range]);
 
   useEffect(() => { void load(); }, [load]);
 
-  // Destination tracking is a live/recent view. Refresh it silently while the
-  // tab is open so active dots and automatic expiry update without closing the modal.
   useEffect(() => {
-    if (!open || activeTab !== 'destinations' || !report?.destinationTracking) return undefined;
+    if (!open || !email || activeTab !== 'destinations' || !report?.destinationTracking) return undefined;
     const timer = window.setInterval(() => { void load(true); }, 15_000);
     return () => window.clearInterval(timer);
-  }, [activeTab, load, open, report?.destinationTracking]);
-
-  const editClient = useCallback(() => {
-    if (!email) return;
-    onClose();
-    if (onEdit) {
-      onEdit(email);
-      return;
-    }
-    const basePath = (window.X_UI_BASE_PATH || '').replace(/\/$/, '');
-    window.location.assign(`${basePath}/clients?edit=${encodeURIComponent(email)}`);
-  }, [email, onClose, onEdit]);
+  }, [activeTab, email, load, open, report?.destinationTracking]);
 
   const clearDestinations = useCallback(async () => {
     if (!email || resettingDestinations) return;
@@ -206,8 +212,6 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
     [daily, timeline, useRollingHours],
   );
   const maxHourly = useMemo(() => Math.max(1, ...hourly.map((row) => row.total || row.bytes || 0)), [hourly]);
-  const activeDestinations = useMemo(() => report?.destinations.filter((item) => item.active) ?? [], [report?.destinations]);
-  const recentDestinations = useMemo(() => report?.destinations.filter((item) => !item.active) ?? [], [report?.destinations]);
 
   const anomalyName = (kind: string) => {
     const key = `pages.clients.anomalyKinds.${kind}`;
@@ -219,22 +223,6 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
     const value = t(key);
     return value === key ? event.summary : value;
   };
-
-  const renderDestinationRow = (item: DestinationItem) => (
-    <div className={`client-usage-list-row client-destination-row${item.active ? ' is-active' : ''}`} key={item.key}>
-      <div>
-        <strong className="client-destination-name">
-          {item.active ? <i className="client-destination-live-dot" aria-label={t('pages.clients.destinationActive')} /> : null}
-          {item.service || t('pages.clients.destinationServiceOther')}
-        </strong>
-        <small className="client-usage-mono">{item.domain || item.ip || '—'}{item.port ? `:${item.port}` : ''}</small>
-      </div>
-      <div>
-        <span>{item.connections.toLocaleString()} {t('pages.clients.destinationConnections')}</span>
-        <small>{item.owner || '—'} · {item.confidence === 'domain' ? t('pages.clients.destinationConfidenceDomain') : item.confidence === 'network' ? t('pages.clients.destinationConfidenceNetwork') : t('pages.clients.destinationConfidenceIp')} · {dateLabel(item.lastSeen)}</small>
-      </div>
-    </div>
-  );
 
   const chartRangeText = report
     ? report.hours > 0
@@ -392,13 +380,13 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
             <>
               <div className="client-destination-summary-grid">
                 {report.destinationSummaries.map((item) => (
-                  <div className={`client-destination-summary-card${(item.activeDestinations || 0) > 0 ? ' has-active' : ''}`} key={item.service}>
+                  <div className={`client-destination-summary-card${item.active ? ' is-active' : ''}`} key={item.service}>
                     <div>
-                      <strong className="client-destination-name">
-                        {(item.activeDestinations || 0) > 0 ? <i className="client-destination-live-dot" /> : null}
+                      <strong className="client-destination-service-name">
+                        {item.active ? <i className="client-destination-live-dot" aria-label={t('pages.clients.destinationActive')} /> : null}
                         {item.service || t('pages.clients.destinationServiceOther')}
                       </strong>
-                      <small>{item.owner || '—'}</small>
+                      <small>{item.owner || '—'}{item.active ? ` · ${item.activeDestinations} ${t('pages.clients.destinationActiveCount')}` : ''}</small>
                     </div>
                     <div><b>{item.connections.toLocaleString()}</b><small>{t('pages.clients.destinationConnections')}</small></div>
                     <div><b>{item.destinations}</b><small>{t('pages.clients.destinationCount')}</small></div>
@@ -406,24 +394,23 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
                   </div>
                 ))}
               </div>
-              {activeDestinations.length > 0 ? (
-                <section className="client-destination-live-section">
-                  <div className="client-destination-section-title">
-                    <span><i className="client-destination-live-dot" /> {t('pages.clients.destinationActiveNow')}</span>
-                    <b>{activeDestinations.length}</b>
+              <div className="client-usage-list">
+                {report.destinations.map((item) => (
+                  <div className={`client-usage-list-row client-destination-row${item.active ? ' is-active' : ''}`} key={item.key}>
+                    <div>
+                      <strong className="client-destination-service-name">
+                        {item.active ? <i className="client-destination-live-dot" aria-label={t('pages.clients.destinationActive')} /> : null}
+                        {item.service || t('pages.clients.destinationServiceOther')}
+                      </strong>
+                      <small className="client-usage-mono">{item.domain || item.ip || '—'}{item.port ? `:${item.port}` : ''}</small>
+                    </div>
+                    <div>
+                      <span>{item.active ? <Tag color="green">{t('pages.clients.destinationActive')}</Tag> : null}{item.connections.toLocaleString()} {t('pages.clients.destinationConnections')}</span>
+                      <small>{item.owner || '—'} · {item.confidence === 'domain' ? t('pages.clients.destinationConfidenceDomain') : item.confidence === 'network' ? t('pages.clients.destinationConfidenceNetwork') : t('pages.clients.destinationConfidenceIp')} · {dateLabel(item.lastSeen)}</small>
+                    </div>
                   </div>
-                  <div className="client-usage-list">{activeDestinations.map(renderDestinationRow)}</div>
-                </section>
-              ) : null}
-              {recentDestinations.length > 0 ? (
-                <section className="client-destination-recent-section">
-                  <div className="client-destination-section-title">
-                    <span>{t('pages.clients.destinationRecent')}</span>
-                    <b>{recentDestinations.length}</b>
-                  </div>
-                  <div className="client-usage-list">{recentDestinations.map(renderDestinationRow)}</div>
-                </section>
-              ) : null}
+                ))}
+              </div>
             </>
           )}
         </div>
@@ -455,6 +442,12 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
     },
   ] : [];
 
+  const editClient = useCallback(() => {
+    if (!email || !onEdit) return;
+    onClose();
+    void onEdit(email);
+  }, [email, onClose, onEdit]);
+
   return (
     <Modal
       open={open}
@@ -464,19 +457,20 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
       destroyOnHidden
       title={(
         <div className="client-usage-modal-title">
-          <div className="client-usage-title-main">
+          <div className="client-usage-modal-heading">
             <AreaChartOutlined />
             <span>{t('pages.clients.usageDetails')} {email ? `— ${email}` : ''}</span>
-            {email ? (
-              <Button
-                type="text"
-                size="small"
-                className="client-usage-edit-button"
-                icon={<EditOutlined />}
-                aria-label={t('edit')}
-                title={t('edit')}
-                onClick={editClient}
-              />
+            {email && onEdit ? (
+              <Tooltip title={t('edit')}>
+                <Button
+                  type="text"
+                  size="small"
+                  className="client-usage-edit"
+                  icon={<EditOutlined />}
+                  aria-label={t('edit')}
+                  onClick={editClient}
+                />
+              </Tooltip>
             ) : null}
           </div>
           <Select<RangeValue>

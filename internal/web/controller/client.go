@@ -185,8 +185,18 @@ func (a *ClientController) getByTgId(c *gin.Context) {
 }
 
 func (a *ClientController) getReport(c *gin.Context) {
-	days, _ := strconv.Atoi(c.DefaultQuery("days", "1"))
-	hours, _ := strconv.Atoi(c.DefaultQuery("hours", "0"))
+	daysValue, hasDays := c.GetQuery("days")
+	hoursValue, hasHours := c.GetQuery("hours")
+	if !hasDays && !hasHours {
+		daysValue = "1"
+		hoursValue = "24"
+	} else if !hasDays {
+		daysValue = "1"
+	} else if !hasHours {
+		hoursValue = "0"
+	}
+	days, _ := strconv.Atoi(daysValue)
+	hours, _ := strconv.Atoi(hoursValue)
 	report, err := a.insightService.GetReportForRange(c.Param("email"), days, hours)
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.obtain"), err)
