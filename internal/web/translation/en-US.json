@@ -925,7 +925,7 @@
       "destinationsTab": "Destinations",
       "destinationTrackingDisabled": "Destination tracking is disabled for this client.",
       "destinationTrackingEmpty": "No destination has been recorded in this range yet.",
-      "destinationPrivacyNote": "Private live view: destinations are retained for 10 minutes and purged every 5 minutes; a green dot means the client is online and the destination was seen within the last 5 minutes.",
+      "destinationPrivacyNote": "Private live view: the latest five-minute destination window remains available after the client disconnects; when observations span ten minutes, the older five minutes are removed. A green dot means the client is online and the destination was seen within the last five minutes.",
       "destinationConnections": "Connections",
       "destinationCount": "Destinations",
       "destinationOwner": "Network / owner",

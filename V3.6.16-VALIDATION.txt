@@ -1,0 +1,23 @@
+Fara Xray v3.6.16 validation summary
+
+Base:
+- Full Fara Xray v3.6.15 source package.
+
+Changes verified:
+- Per-client destination retention is based on the newest observation, not current wall-clock time.
+- A span below ten minutes is preserved; at ten minutes the cutoff keeps the newest five minutes.
+- Client report and usage-alert backend defaults are 24 hours.
+- Mobile direct statistics button, report-only detailed view, download primary chart color, and report edit button remain present.
+- Client Information contains no duplicate detailed report.
+
+Static validation completed:
+- 495 Go source files parsed successfully with the Go parser.
+- All Go files are gofmt-clean.
+- Strict translation/package/OpenAPI JSON files parse successfully.
+- Shell scripts pass bash -n.
+- GitHub Actions YAML parses successfully.
+- Changed files contain no trailing-whitespace diagnostics.
+
+Environment limitation:
+- Full Go 1.26.5 and Node 24 builds require dependency/toolchain downloads, which are unavailable in the offline packaging container.
+- release.yml performs npm ci, TypeScript type-check, Vite production build, and static Go production build before publishing.

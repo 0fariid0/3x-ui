@@ -28,7 +28,8 @@ const (
 	// a compact rolling view rather than a long-term browsing history. Rows are
 	// kept for ten minutes so an offline client still shows its most recent
 	// five-minute activity window until the next five-minute cleanup cycle.
-	destinationRetention        = 10 * time.Minute
+	destinationRollingWindow    = 5 * time.Minute
+	destinationPruneThreshold   = 10 * time.Minute
 	destinationCleanupInterval  = 5 * time.Minute
 	destinationActiveWindow     = 5 * time.Minute
 	destinationMaxPerClientHour = 100
@@ -406,8 +407,8 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 
 	now := time.Now().UnixMilli()
 	if cursor.LastCleanupAt == 0 || now-cursor.LastCleanupAt >= int64(destinationCleanupInterval/time.Millisecond) {
-		if err := db.Where("last_seen < ?", time.Now().Add(-destinationRetention).UnixMilli()).Delete(&model.ClientDestinationHour{}).Error; err != nil {
-			logger.Debug("[ClientDestinations] cleanup failed:", err)
+		if err := pruneDestinationRollingWindows(db); err != nil {
+			logger.Debug("[ClientDestinations] rolling cleanup failed:", err)
 		} else {
 			cursor.LastCleanupAt = now
 		}
@@ -459,7 +460,48 @@ func destinationIsActive(lastSeen, now int64) bool {
 	return lastSeen > 0 && now >= lastSeen && now-lastSeen <= int64(destinationActiveWindow/time.Millisecond)
 }
 
-func (s *ClientInsightService) destinationReport(email string, start, end int64) ([]ClientDestinationItem, []ClientDestinationSummary, error) {
+// destinationRollingCutoff returns the cutoff used for a client's compact
+// destination history. Cleanup is driven by that client's newest observation,
+// not wall-clock time. This keeps the last five minutes of observed activity
+// visible after the client disconnects. Once the retained span reaches ten
+// minutes, the older five-minute half is discarded.
+func destinationRollingCutoff(oldest, latest int64) (int64, bool) {
+	if oldest <= 0 || latest <= 0 || latest < oldest {
+		return 0, false
+	}
+	if latest-oldest < int64(destinationPruneThreshold/time.Millisecond) {
+		return 0, false
+	}
+	return latest - int64(destinationRollingWindow/time.Millisecond), true
+}
+
+func pruneDestinationRollingWindows(db *gorm.DB) error {
+	type clientWindow struct {
+		Email  string
+		Oldest int64
+		Latest int64
+	}
+	windows := make([]clientWindow, 0)
+	if err := db.Model(&model.ClientDestinationHour{}).
+		Select("email, MIN(last_seen) AS oldest, MAX(last_seen) AS latest").
+		Group("email").
+		Scan(&windows).Error; err != nil {
+		return err
+	}
+	for _, window := range windows {
+		cutoff, ok := destinationRollingCutoff(window.Oldest, window.Latest)
+		if !ok {
+			continue
+		}
+		if err := db.Where("email = ? AND last_seen < ?", window.Email, cutoff).
+			Delete(&model.ClientDestinationHour{}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ClientInsightService) destinationReport(email string, _ int64, end int64) ([]ClientDestinationItem, []ClientDestinationSummary, error) {
 	// Opening a report also schedules a provider-rule refresh. Bundled ranges
 	// classify immediately; refreshed ranges are used by subsequent reports.
 	RefreshDestinationNetworkRulesIfNeeded()
@@ -471,9 +513,11 @@ func (s *ClientInsightService) destinationReport(email string, start, end int64)
 			break
 		}
 	}
-	liveCutoff := now - int64(destinationRetention/time.Millisecond)
-	if start < liveCutoff {
-		start = liveCutoff
+	// Keep the newest observed five-minute window available even when the
+	// client is offline. The rolling cleanup bounds storage independently of
+	// the report range selected for traffic charts.
+	if err := pruneDestinationRollingWindows(database.GetDB()); err != nil {
+		logger.Debug("[ClientDestinations] report cleanup failed:", err)
 	}
 	items := make([]ClientDestinationItem, 0)
 	err := database.GetDB().Model(&model.ClientDestinationHour{}).
@@ -482,7 +526,7 @@ func (s *ClientInsightService) destinationReport(email string, start, end int64)
 		// actual destination and classify every returned item with the current
 		// rules, so upgrades repair historical reports immediately.
 		Select("key, domain, ip, port, protocol, SUM(connections) AS connections, MIN(first_seen) AS first_seen, MAX(last_seen) AS last_seen").
-		Where("email = ? AND last_seen >= ? AND last_seen <= ?", email, start, end).
+		Where("email = ? AND last_seen <= ?", email, end).
 		Group("key, domain, ip, port, protocol").
 		Order("last_seen DESC, connections DESC").
 		Limit(destinationMaxReportItems).

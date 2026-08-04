@@ -148,7 +148,31 @@ func TestDestinationRollingWindowConfiguration(t *testing.T) {
 	if destinationCleanupInterval != 5*time.Minute {
 		t.Fatalf("destination cleanup interval = %v, want 5m", destinationCleanupInterval)
 	}
-	if destinationRetention != 10*time.Minute {
-		t.Fatalf("destination retention = %v, want 10m", destinationRetention)
+	if destinationRollingWindow != 5*time.Minute {
+		t.Fatalf("destination rolling window = %v, want 5m", destinationRollingWindow)
+	}
+	if destinationPruneThreshold != 10*time.Minute {
+		t.Fatalf("destination prune threshold = %v, want 10m", destinationPruneThreshold)
+	}
+}
+
+func TestDestinationRollingCutoffKeepsOfflineSnapshot(t *testing.T) {
+	base := time.Date(2026, time.August, 4, 12, 0, 0, 0, time.UTC).UnixMilli()
+	if cutoff, ok := destinationRollingCutoff(base, base+int64(9*time.Minute/time.Millisecond)); ok || cutoff != 0 {
+		t.Fatalf("nine-minute span must stay intact, got cutoff=%d ok=%v", cutoff, ok)
+	}
+	latest := base + int64(10*time.Minute/time.Millisecond)
+	cutoff, ok := destinationRollingCutoff(base, latest)
+	if !ok {
+		t.Fatal("ten-minute span must trigger pruning")
+	}
+	want := latest - int64(5*time.Minute/time.Millisecond)
+	if cutoff != want {
+		t.Fatalf("cutoff=%d, want %d", cutoff, want)
+	}
+	// No wall-clock value is involved, so the last observed window remains
+	// available indefinitely after a client goes offline.
+	if laterCutoff, laterOK := destinationRollingCutoff(cutoff, latest); laterOK || laterCutoff != 0 {
+		t.Fatalf("retained five-minute snapshot must not prune while idle, got cutoff=%d ok=%v", laterCutoff, laterOK)
 	}
 }

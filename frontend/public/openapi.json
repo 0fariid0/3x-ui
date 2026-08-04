@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.6.15",
+    "version": "3.6.16",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -6979,7 +6979,7 @@
             "description": "Daily traffic range, 1 to 365 days.",
             "schema": {
               "type": "integer",
-              "default": 30
+              "default": 1
             }
           },
           {
@@ -7216,7 +7216,7 @@
             "description": "Usage aggregation range, 1 to 365 days.",
             "schema": {
               "type": "integer",
-              "default": 7
+              "default": 1
             }
           },
           {

@@ -1,3 +1,12 @@
+## v3.6.16
+
+- Preserve each client's newest five-minute destination window even after the client disconnects.
+- When a client's retained observations span ten minutes, prune the older five-minute half instead of deleting by wall-clock age.
+- Keep the green live marker limited to online clients with a destination seen in the last five minutes.
+- Make 24 hours the backend/API default for client reports and dashboard usage alerts.
+- Keep the direct mobile statistics action, dedicated report-only UI, download-first chart color, and in-report edit action from v3.6.15.
+- Preserve the verified Linux amd64 release workflow and the frontend production-build fix from v3.6.15.
+
 ## v3.6.15
 
 - Fix the production frontend build by importing `useSearchParams` from the installed `react-router` package instead of the absent `react-router-dom` package.

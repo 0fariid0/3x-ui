@@ -185,7 +185,7 @@ func (a *ClientController) getByTgId(c *gin.Context) {
 }
 
 func (a *ClientController) getReport(c *gin.Context) {
-	days, _ := strconv.Atoi(c.DefaultQuery("days", "30"))
+	days, _ := strconv.Atoi(c.DefaultQuery("days", "1"))
 	hours, _ := strconv.Atoi(c.DefaultQuery("hours", "0"))
 	report, err := a.insightService.GetReportForRange(c.Param("email"), days, hours)
 	if err != nil {
@@ -196,7 +196,7 @@ func (a *ClientController) getReport(c *gin.Context) {
 }
 
 func (a *ClientController) getUsageAlerts(c *gin.Context) {
-	days, _ := strconv.Atoi(c.DefaultQuery("days", "7"))
+	days, _ := strconv.Atoi(c.DefaultQuery("days", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "8"))
 	alerts, err := a.insightService.GetUsageAlerts(days, limit)
 	if err != nil {
