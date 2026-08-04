@@ -1,5 +1,11 @@
 # Custom changelog
 
+## v3.6.21
+
+- Fixed the Go build failure in client destination ingestion by removing the unused `now` local variable.
+- Preserved all v3.6.20 live destination, mobile statistics, 24-hour defaults, chart color, and edit shortcut changes.
+- Updated the panel, OpenAPI, and destination updater version identifiers to 3.6.21.
+
 ## v3.6.20
 
 - Built directly from the v3.6.13 source baseline; v3.6.14 through v3.6.19 were intentionally excluded.

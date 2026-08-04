@@ -440,7 +440,6 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 		}
 	}
 
-	now := time.Now().UnixMilli()
 	cursor.LastCleanupAt = destinationLastPurge.UnixMilli()
 	cursor.Path = path
 	cursor.Offset = offset
