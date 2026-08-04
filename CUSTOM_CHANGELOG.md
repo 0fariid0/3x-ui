@@ -1,3 +1,11 @@
+## v3.6.15
+
+- Fix the production frontend build by importing `useSearchParams` from the installed `react-router` package instead of the absent `react-router-dom` package.
+- Keep every functional change from v3.6.14 unchanged.
+- Replace the fragile seven-architecture release matrix with one verified Linux amd64 release pipeline.
+- Run frontend type-check, frontend production build and Go production build before publishing an asset.
+- Verify the release archive and its SHA-256 before creating the GitHub Release.
+
 ## v3.6.14
 
 - Keep destination observations for a rolling 10-minute grace window with 5-minute cleanup, so recent destinations remain visible after a client goes offline.
