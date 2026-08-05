@@ -1,8 +1,13 @@
 package service
 
 import (
+	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/mhsanaei/3x-ui/v3/internal/database"
+	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 )
 
 func TestParseDestinationAccessLineTrackedClient(t *testing.T) {
@@ -141,25 +146,89 @@ func TestDestinationIsActiveWindow(t *testing.T) {
 	}
 }
 
-func TestDestinationPrivacyWindows(t *testing.T) {
-	if destinationVisibleWindow != 5*time.Minute {
-		t.Fatalf("visible window = %s, want 5m", destinationVisibleWindow)
+func TestDestinationBucketPolicy(t *testing.T) {
+	if destinationBucketLimit != 5 {
+		t.Fatalf("bucket limit = %d, want 5", destinationBucketLimit)
 	}
-	if destinationRetention != 10*time.Minute {
-		t.Fatalf("retention = %s, want 10m", destinationRetention)
+	if destinationActiveWindow != 5*time.Minute {
+		t.Fatalf("active window = %s, want 5m", destinationActiveWindow)
 	}
 }
 
-func TestDestinationVisibleStartAnchorsToLatestActivity(t *testing.T) {
-	latest := time.Date(2026, 8, 5, 12, 10, 0, 0, time.UTC).UnixMilli()
-	requestStart := time.UnixMilli(latest).Add(-24 * time.Hour).UnixMilli()
-	want := time.UnixMilli(latest).Add(-5 * time.Minute).UnixMilli()
-	if got := destinationVisibleStart(requestStart, latest); got != want {
-		t.Fatalf("visible start = %d, want %d", got, want)
+func TestDestinationBucketsRollOnlyOnSixthActivityMinute(t *testing.T) {
+	if err := database.InitDB(filepath.Join(t.TempDir(), "x-ui.db")); err != nil {
+		t.Fatalf("InitDB: %v", err)
+	}
+	db := database.GetDB()
+	base := time.Now().Add(-72 * time.Hour).Truncate(time.Minute)
+
+	insertBucket := func(minute int) {
+		t.Helper()
+		at := base.Add(time.Duration(minute)*time.Minute + 15*time.Second)
+		row := model.ClientDestinationHour{
+			Email:       "alice",
+			BucketStart: at.Truncate(time.Minute).UnixMilli(),
+			Key:         fmt.Sprintf("tcp:example-%d.test:443", minute),
+			Service:     "Other",
+			Domain:      fmt.Sprintf("example-%d.test", minute),
+			Port:        443,
+			Protocol:    "tcp",
+			Confidence:  "domain",
+			Connections: 1,
+			FirstSeen:   at.UnixMilli(),
+			LastSeen:    at.UnixMilli(),
+		}
+		if err := db.Create(&row).Error; err != nil {
+			t.Fatalf("insert minute %d: %v", minute, err)
+		}
 	}
 
-	clamped := time.UnixMilli(latest).Add(-2 * time.Minute).UnixMilli()
-	if got := destinationVisibleStart(clamped, latest); got != clamped {
-		t.Fatalf("clamped visible start = %d, want %d", got, clamped)
+	for minute := 0; minute < destinationBucketLimit; minute++ {
+		insertBucket(minute)
+	}
+
+	// The normal background cleanup must not erase an offline client's final
+	// five buckets, even though these rows are much older than 24 hours.
+	service := &ClientInsightService{}
+	if err := service.Cleanup(30); err != nil {
+		t.Fatalf("Cleanup: %v", err)
+	}
+	buckets, err := latestDestinationBucketStarts(db, "alice", 10)
+	if err != nil {
+		t.Fatalf("latest buckets after offline cleanup: %v", err)
+	}
+	if len(buckets) != destinationBucketLimit {
+		t.Fatalf("offline bucket count = %d, want %d", len(buckets), destinationBucketLimit)
+	}
+
+	// The sixth activity minute creates one new bucket and removes only minute 0.
+	insertBucket(destinationBucketLimit)
+	if err := pruneDestinationBuckets(db, "alice"); err != nil {
+		t.Fatalf("prune sixth bucket: %v", err)
+	}
+	buckets, err = latestDestinationBucketStarts(db, "alice", 10)
+	if err != nil {
+		t.Fatalf("latest buckets after sixth minute: %v", err)
+	}
+	if len(buckets) != destinationBucketLimit {
+		t.Fatalf("bucket count after sixth minute = %d, want %d", len(buckets), destinationBucketLimit)
+	}
+	oldestKept := base.Add(time.Minute).UnixMilli()
+	if buckets[len(buckets)-1] != oldestKept {
+		t.Fatalf("oldest kept bucket = %d, want %d", buckets[len(buckets)-1], oldestKept)
+	}
+
+	// The destination report deliberately ignores the traffic chart's 24-hour
+	// range and continues to return the final five offline buckets.
+	items, _, err := service.destinationReport(
+		"alice",
+		time.Now().Add(-24*time.Hour).UnixMilli(),
+		time.Now().UnixMilli(),
+	)
+	if err != nil {
+		t.Fatalf("destinationReport: %v", err)
+	}
+	if len(items) != destinationBucketLimit {
+		t.Fatalf("reported destination count = %d, want %d", len(items), destinationBucketLimit)
 	}
 }

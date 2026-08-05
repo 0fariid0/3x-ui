@@ -925,7 +925,7 @@
       "destinationsTab": "Destinations",
       "destinationTrackingDisabled": "Destination tracking is disabled for this client.",
       "destinationTrackingEmpty": "No destination has been recorded in this range yet.",
-      "destinationPrivacyNote": "Only compact domain/IP aggregates are stored. The latest real five-minute snapshot remains visible for up to ten minutes. A green dot means the client is online and that destination was seen within the last five minutes.",
+      "destinationPrivacyNote": "Only compact domain/IP aggregates are stored in five one-minute buckets. A sixth activity minute replaces the oldest bucket; going offline does not erase the final snapshot. A green dot means the client is online and that destination was seen within the last five minutes.",
       "destinationActive": "Active",
       "destinationActiveCount": "active destinations",
       "destinationConnections": "Connections",

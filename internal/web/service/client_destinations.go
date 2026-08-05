@@ -23,18 +23,13 @@ import (
 )
 
 const (
-	destinationVisibleWindow      = 5 * time.Minute
-	destinationRetention          = 10 * time.Minute
-	destinationActiveWindow       = destinationVisibleWindow
-	destinationCleanupInterval    = time.Minute
+	destinationActiveWindow       = 5 * time.Minute
+	destinationBucketLimit        = 5
 	destinationMaxPerClientBucket = 100
 	destinationMaxReportItems     = 200
 )
 
-var (
-	destinationIngestMu  sync.Mutex
-	destinationLastPurge time.Time
-)
+var destinationIngestMu sync.Mutex
 
 // ClientDestinationItem is an aggregate destination shown in client reports.
 type ClientDestinationItem struct {
@@ -262,29 +257,41 @@ func destinationIsActive(lastSeen int64, now time.Time) bool {
 	return !seen.After(now.Add(30*time.Second)) && !seen.Before(now.Add(-destinationActiveWindow))
 }
 
-func destinationVisibleStart(requestStart, latestSeen int64) int64 {
-	visibleStart := latestSeen - destinationVisibleWindow.Milliseconds()
-	if visibleStart < requestStart {
-		return requestStart
+func latestDestinationBucketStarts(db *gorm.DB, email string, limit int) ([]int64, error) {
+	if db == nil {
+		return nil, errors.New("database is not initialized")
 	}
-	return visibleStart
+	email = strings.TrimSpace(email)
+	if email == "" || limit <= 0 {
+		return []int64{}, nil
+	}
+
+	buckets := make([]int64, 0, limit)
+	err := db.Model(&model.ClientDestinationHour{}).
+		Distinct("bucket_start").
+		Where("email = ?", email).
+		Order("bucket_start DESC").
+		Limit(limit).
+		Pluck("bucket_start", &buckets).Error
+	return buckets, err
 }
 
-// purgeStaleDestinationRows keeps destination reporting intentionally short-lived.
-// The ingest job runs every ten seconds, while deletion is rate-limited to once
-// per minute so the database stays small without creating unnecessary writes.
-func purgeStaleDestinationRows(db *gorm.DB, now time.Time) error {
-	if db == nil {
-		return errors.New("database is not initialized")
-	}
-	if !destinationLastPurge.IsZero() && now.Sub(destinationLastPurge) < destinationCleanupInterval {
-		return nil
-	}
-	if err := db.Where("last_seen < ?", now.Add(-destinationRetention).UnixMilli()).Delete(&model.ClientDestinationHour{}).Error; err != nil {
+// pruneDestinationBuckets keeps exactly the five newest one-minute buckets for
+// a client. It runs only after a new destination bucket is written. Therefore an
+// offline client keeps its final five buckets unchanged until new activity creates
+// a sixth bucket, at which point only the oldest bucket is removed.
+func pruneDestinationBuckets(db *gorm.DB, email string) error {
+	buckets, err := latestDestinationBucketStarts(db, email, destinationBucketLimit+1)
+	if err != nil {
 		return err
 	}
-	destinationLastPurge = now
-	return nil
+	if len(buckets) <= destinationBucketLimit {
+		return nil
+	}
+
+	oldestKept := buckets[destinationBucketLimit-1]
+	return db.Where("email = ? AND bucket_start < ?", strings.TrimSpace(email), oldestKept).
+		Delete(&model.ClientDestinationHour{}).Error
 }
 
 // AnyDestinationTrackingEnabled reports whether runtime access logging is needed.
@@ -301,9 +308,6 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 	defer destinationIngestMu.Unlock()
 
 	db := database.GetDB()
-	if err := purgeStaleDestinationRows(db, time.Now()); err != nil {
-		logger.Debug("[ClientDestinations] stale destination purge failed:", err)
-	}
 	tracked, err := trackedDestinationEmails(db)
 	if err != nil {
 		return err
@@ -382,9 +386,11 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 	if len(aggregated) > 0 {
 		if err := db.Transaction(func(tx *gorm.DB) error {
 			groups := make(map[string][]destinationEvent)
+			touchedEmails := make(map[string]struct{})
 			for _, event := range aggregated {
 				groupKey := event.Email + "\x00" + strconv.FormatInt(event.BucketStart, 10)
 				groups[groupKey] = append(groups[groupKey], event)
+				touchedEmails[event.Email] = struct{}{}
 			}
 			for _, events := range groups {
 				sort.Slice(events, func(i, j int) bool { return events[i].Count > events[j].Count })
@@ -434,13 +440,17 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 					}
 				}
 			}
+			for email := range touchedEmails {
+				if err := pruneDestinationBuckets(tx, email); err != nil {
+					return err
+				}
+			}
 			return nil
 		}); err != nil {
 			return err
 		}
 	}
 
-	cursor.LastCleanupAt = destinationLastPurge.UnixMilli()
 	cursor.Path = path
 	cursor.Offset = offset
 	cursor.ObservedSize = info.Size()
@@ -485,43 +495,32 @@ func (s *ClientInsightService) ClearDestinations(email string) error {
 	return database.GetDB().Where("email = ?", email).Delete(&model.ClientDestinationHour{}).Error
 }
 
-func (s *ClientInsightService) destinationReport(email string, start, end int64) ([]ClientDestinationItem, []ClientDestinationSummary, error) {
+func (s *ClientInsightService) destinationReport(email string, _ int64, _ int64) ([]ClientDestinationItem, []ClientDestinationSummary, error) {
 	// Opening a report also schedules a provider-rule refresh. Bundled ranges
 	// classify immediately; refreshed ranges are used by subsequent reports.
 	RefreshDestinationNetworkRulesIfNeeded()
 	items := make([]ClientDestinationItem, 0)
-	now := time.Now()
-	retentionCutoff := now.Add(-destinationRetention).UnixMilli()
-	if start < retentionCutoff {
-		start = retentionCutoff
-	}
-
-	// Keep a ten-minute privacy buffer in storage, but always render only the
-	// newest five minutes that actually contain destination activity. Anchoring
-	// the window to MAX(last_seen), rather than to the wall clock, preserves the
-	// final five-minute snapshot after a client disconnects. The snapshot then
-	// disappears naturally when its newest row reaches the ten-minute retention
-	// boundary. Minute buckets keep connection totals close to the visible range.
-	var latestSeen int64
 	db := database.GetDB()
-	if err := db.Model(&model.ClientDestinationHour{}).
-		Where("email = ? AND last_seen >= ? AND last_seen <= ?", email, start, end).
-		Select("COALESCE(MAX(last_seen), 0)").
-		Scan(&latestSeen).Error; err != nil {
+
+	// Destination history is a rolling set of five one-minute activity buckets,
+	// not a wall-clock expiry window. Querying by the five newest bucket starts
+	// keeps the final snapshot visible when the client goes offline, even after
+	// hours or days. A sixth activity minute is what removes the oldest bucket.
+	bucketStarts, err := latestDestinationBucketStarts(db, email, destinationBucketLimit)
+	if err != nil {
 		return nil, nil, err
 	}
-	if latestSeen <= 0 {
+	if len(bucketStarts) == 0 {
 		return items, []ClientDestinationSummary{}, nil
 	}
-	visibleStart := destinationVisibleStart(start, latestSeen)
 
-	err := db.Model(&model.ClientDestinationHour{}).
+	err = db.Model(&model.ClientDestinationHour{}).
 		// Do not group by the stored classification. Older rows may have been
 		// saved as Other before a CIDR/domain rule was added. Aggregate by the
 		// actual destination and classify every returned item with the current
 		// rules, so upgrades repair historical reports immediately.
 		Select("key, domain, ip, port, protocol, SUM(connections) AS connections, MIN(first_seen) AS first_seen, MAX(last_seen) AS last_seen").
-		Where("email = ? AND last_seen >= ? AND last_seen <= ?", email, visibleStart, latestSeen).
+		Where("email = ? AND bucket_start IN ?", email, bucketStarts).
 		Group("key, domain, ip, port, protocol").
 		Order("connections DESC, last_seen DESC").
 		Limit(destinationMaxReportItems).

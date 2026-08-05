@@ -1,5 +1,14 @@
 # Custom changelog
 
+## v3.6.22
+
+- Replaced wall-clock destination expiration with an exact rolling limit of five distinct one-minute activity buckets per client.
+- The sixth activity minute removes only the oldest minute bucket; no timer removes data while the client is offline.
+- Destination reports always read the newest five stored buckets independently of the selected 24-hour traffic range.
+- Removed destination deletion from both the access-log ingestion timer and the general insight cleanup job.
+- Added regression coverage for five buckets, sixth-minute rollover, offline persistence, and reports older than 24 hours.
+- Updated the panel, OpenAPI, and destination updater version identifiers to 3.6.22.
+
 ## v3.6.21
 
 - Fixed the Go build failure in client destination ingestion by removing the unused `now` local variable.
