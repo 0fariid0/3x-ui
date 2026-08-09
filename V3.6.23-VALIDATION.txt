@@ -1,0 +1,56 @@
+Fara Xray v3.6.23 - validation report
+=====================================
+
+Base source
+-----------
+- User supplied: 3x-ui-main.zip
+- User supplied: 3x-ui-3.6.22.zip
+- Both extracted trees were compared and found identical before modification.
+- Base internal/config/version: 3.6.22
+- Result internal/config/version: 3.6.23
+
+Scope of change
+---------------
+- Added persistent subJsonDns setting with 1.1.1.1 default.
+- Exposed subJsonDns through the existing Xray settings API.
+- Added Xray Settings UI control with common DNS presets and custom input.
+- Injected the selected resolver into generated Xray JSON subscriptions per request.
+- Kept raw ss:// behavior unchanged because SIP002 does not carry a portable client-DNS setting.
+- No database schema migration was introduced.
+
+Static validation performed
+---------------------------
+- gofmt applied to all modified Go files.
+- All 496 Go source files parsed successfully with a Go 1.23 stdlib parser: 0 syntax errors.
+- All 579 TS/TSX source files parsed successfully with the TypeScript compiler API: 0 syntax errors.
+- 16 relevant JSON files parsed successfully, including translations, subscription default JSON, and both OpenAPI copies.
+- docs/public/openapi.json and frontend/public/openapi.json are byte-identical.
+- Modified-source whitespace validation completed with git diff --check semantics.
+
+Automated tests added
+---------------------
+- internal/web/service/setting_sub_json_dns_test.go
+  * empty value falls back to 1.1.1.1
+  * surrounding whitespace is trimmed
+  * DoH value is accepted
+  * newline/control-style invalid input is rejected
+  * oversized input is rejected
+  * DB default and persistence behavior are covered
+- internal/sub/mutation_audit_test.go
+  * request-specific DNS is injected into generated JSON
+  * shared subscription template remains unchanged
+  * nil/default request returns 1.1.1.1
+
+Environment limitations
+-----------------------
+Full Go test execution could not be completed in this sandbox because:
+- installed Go: 1.23.2
+- project go.mod requires Go 1.26.5
+- automatic Go toolchain download failed because this execution environment has no external network access.
+
+Frontend dependency installation could not be completed in this sandbox because:
+- installed Node: 22.16.0
+- project requires Node >=24
+- the configured package registry returned 404 for zod-validation-error-4.0.2.tgz.
+
+These environment limitations are explicitly reported rather than being treated as passing tests.

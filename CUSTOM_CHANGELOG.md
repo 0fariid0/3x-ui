@@ -1,5 +1,15 @@
 # Custom changelog
 
+## v3.6.23
+
+- Added a configurable DNS resolver for generated Xray JSON subscriptions directly in Xray Settings.
+- Changed the default generated Xray JSON subscription resolver from 8.8.8.8 to 1.1.1.1.
+- Added Cloudflare, Cloudflare DoH, Google, and Quad9 presets while still allowing custom Xray-compatible resolver addresses.
+- DNS changes are loaded per subscription request, so they take effect without restarting Xray or the panel.
+- Kept raw Shadowsocks `ss://` links standards-compatible: client-side DNS cannot be forced through SIP002 and remains controlled by the importing app.
+- Added backend validation, persistence coverage, and a concurrency-safe JSON template clone so changing DNS cannot mutate the shared subscription template.
+- Updated panel, OpenAPI, and destination updater version identifiers to 3.6.23.
+
 ## v3.6.22
 
 - Replaced wall-clock destination expiration with an exact rolling limit of five distinct one-minute activity buckets per client.

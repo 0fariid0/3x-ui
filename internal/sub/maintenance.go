@@ -2,7 +2,6 @@ package sub
 
 import (
 	"fmt"
-	"maps"
 	"strings"
 
 	"github.com/goccy/go-json"
@@ -86,8 +85,7 @@ func (s *SubJsonService) maintenanceConfig(subReq *SubService, inbound *model.In
 	outbounds := make([]json_util.RawMessage, 0, len(s.defaultOutbounds)+1)
 	outbounds = append(outbounds, outbound)
 	outbounds = append(outbounds, s.defaultOutbounds...)
-	config := make(map[string]any)
-	maps.Copy(config, s.configJson)
+	config := s.baseConfigForRequest(subReq)
 	config["outbounds"] = outbounds
 	config["remarks"] = remark
 	result, _ := json.MarshalIndent(config, "", "  ")
@@ -105,8 +103,7 @@ func (s *SubJsonService) maintenanceFallbackConfigs(subReq *SubService) []json_u
 		outbounds := make([]json_util.RawMessage, 0, len(s.defaultOutbounds)+1)
 		outbounds = append(outbounds, proxy)
 		outbounds = append(outbounds, s.defaultOutbounds...)
-		config := make(map[string]any)
-		maps.Copy(config, s.configJson)
+		config := s.baseConfigForRequest(subReq)
 		config["outbounds"] = outbounds
 		config["remarks"] = fmt.Sprintf("Fallback %d", i+1)
 		b, _ := json.MarshalIndent(config, "", "  ")

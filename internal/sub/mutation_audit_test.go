@@ -482,3 +482,31 @@ func TestApplyTransport_EmptyOptsOmitted(t *testing.T) {
 		t.Fatalf("empty opts must not set xhttp-opts: %#v", xhProxy["xhttp-opts"])
 	}
 }
+
+func TestSubJsonService_RequestDNSDoesNotMutateSharedTemplate(t *testing.T) {
+	svc := NewSubJsonService("", "", "", nil)
+	req := &SubService{subJsonDns: "https://1.1.1.1/dns-query"}
+
+	cfg := svc.baseConfigForRequest(req)
+	dns, _ := cfg["dns"].(map[string]any)
+	servers, _ := dns["servers"].([]any)
+	first, _ := servers[0].(map[string]any)
+	if got := first["address"]; got != "https://1.1.1.1/dns-query" {
+		t.Fatalf("request DNS = %#v, want Cloudflare DoH", got)
+	}
+
+	baseDNS, _ := svc.configJson["dns"].(map[string]any)
+	baseServers, _ := baseDNS["servers"].([]any)
+	baseFirst, _ := baseServers[0].(map[string]any)
+	if got := baseFirst["address"]; got != "1.1.1.1" {
+		t.Fatalf("shared template mutated: DNS = %#v, want 1.1.1.1", got)
+	}
+
+	defaultCfg := svc.baseConfigForRequest(nil)
+	defaultDNS, _ := defaultCfg["dns"].(map[string]any)
+	defaultServers, _ := defaultDNS["servers"].([]any)
+	defaultFirst, _ := defaultServers[0].(map[string]any)
+	if got := defaultFirst["address"]; got != "1.1.1.1" {
+		t.Fatalf("default request DNS = %#v, want 1.1.1.1", got)
+	}
+}

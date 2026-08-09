@@ -79,6 +79,10 @@ type SubService struct {
 	maintenanceMode          string
 	maintenanceMessage       string
 	maintenanceFallbackLinks string
+	// subJsonDns is the resolver embedded in Xray JSON subscription profiles.
+	// It is loaded per request so changing it in Xray Settings takes effect on
+	// the next subscription fetch without restarting the panel.
+	subJsonDns string
 	// Per-client link visibility caches. Exclusions opt a client out of globally
 	// enabled links; inclusions opt a client into globally disabled Hosts.
 	disabledLinkKeysByClient map[int]map[string]struct{}
@@ -324,6 +328,10 @@ func (s *SubService) loadRemarkSettings() {
 	s.maintenanceFallbackLinks, err = s.settingService.GetSubMaintenanceFallbackLinks()
 	if err != nil {
 		s.maintenanceFallbackLinks = ""
+	}
+	s.subJsonDns, err = s.settingService.GetSubJsonDNS()
+	if err != nil || strings.TrimSpace(s.subJsonDns) == "" {
+		s.subJsonDns = service.DefaultSubJsonDNS
 	}
 }
 

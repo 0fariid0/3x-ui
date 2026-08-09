@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { onNumber } from '@/utils/onNumber';
 import { useTranslation } from 'react-i18next';
-import { Alert, Button, Input, InputNumber, Modal, Select, Space, Switch, Tabs } from 'antd';
+import { Alert, AutoComplete, Button, Input, InputNumber, Modal, Select, Space, Switch, Tabs } from 'antd';
 import {
   BarChartOutlined,
   ClockCircleOutlined,
@@ -37,6 +37,8 @@ interface BasicsTabProps {
   setTemplateSettings: SetTemplate;
   outboundTestUrl: string;
   onChangeOutboundTestUrl: (v: string) => void;
+  subJsonDns: string;
+  onChangeSubJsonDns: (v: string) => void;
   scheduledRestartEnable: boolean;
   onChangeScheduledRestartEnable: (v: boolean) => void;
   scheduledRestartInterval: number;
@@ -65,6 +67,8 @@ export default function BasicsTab({
   setTemplateSettings,
   outboundTestUrl,
   onChangeOutboundTestUrl,
+  subJsonDns,
+  onChangeSubJsonDns,
   scheduledRestartEnable,
   onChangeScheduledRestartEnable,
   scheduledRestartInterval,
@@ -310,6 +314,25 @@ export default function BasicsTab({
                 value={outboundTestUrl}
                 onChange={(e) => onChangeOutboundTestUrl(e.target.value)}
                 placeholder="https://www.google.com/generate_204"
+              />
+            }
+          />
+          <SettingListItem
+            title={t('pages.xray.subJsonDns')}
+            description={t('pages.xray.subJsonDnsDesc')}
+            paddings="small"
+            control={
+              <AutoComplete
+                value={subJsonDns}
+                style={{ width: '100%' }}
+                options={[
+                  { value: '1.1.1.1', label: 'Cloudflare — 1.1.1.1' },
+                  { value: 'https://1.1.1.1/dns-query', label: 'Cloudflare DoH — https://1.1.1.1/dns-query' },
+                  { value: '8.8.8.8', label: 'Google — 8.8.8.8' },
+                  { value: '9.9.9.9', label: 'Quad9 — 9.9.9.9' },
+                ]}
+                onChange={onChangeSubJsonDns}
+                placeholder="1.1.1.1"
               />
             }
           />

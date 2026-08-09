@@ -15,6 +15,7 @@ import {
 } from '@/schemas/xray';
 
 const DEFAULT_TEST_URL = 'https://www.google.com/generate_204';
+const DEFAULT_SUB_JSON_DNS = '1.1.1.1';
 const DEFAULT_SCHEDULED_RESTART = JSON.stringify({
   enabled: false,
   interval: 24,
@@ -30,6 +31,10 @@ const DEFAULT_SCHEDULED_RESTART = JSON.stringify({
 
 function normalizeOutboundTestUrl(url: string) {
   return url || DEFAULT_TEST_URL;
+}
+
+function normalizeSubJsonDns(value: string) {
+  return value.trim() || DEFAULT_SUB_JSON_DNS;
 }
 // One HTTP-mode batch request tests this many outbounds through a single
 // shared temp xray instance; chunking keeps responses bounded (~30s worst
@@ -73,6 +78,8 @@ export interface UseXraySettingResult {
   setTemplateSettings: SetTemplate;
   outboundTestUrl: string;
   setOutboundTestUrl: (v: string) => void;
+  subJsonDns: string;
+  setSubJsonDns: (v: string) => void;
   scheduledRestartEnable: boolean;
   setScheduledRestartEnable: (v: boolean) => void;
   scheduledRestartInterval: number;
@@ -165,6 +172,7 @@ export function useXraySetting(): UseXraySettingResult {
   const [xraySetting, setXraySettingState] = useState('');
   const [templateSettings, setTemplateSettingsState] = useState<XraySettingsValue | null>(null);
   const [outboundTestUrl, setOutboundTestUrlState] = useState(DEFAULT_TEST_URL);
+  const [subJsonDns, setSubJsonDnsState] = useState(DEFAULT_SUB_JSON_DNS);
   const [scheduledRestartEnable, setScheduledRestartEnable] = useState(false);
   const [scheduledRestartInterval, setScheduledRestartInterval] = useState(24);
   const [scheduledRestartUnit, setScheduledRestartUnit] = useState<ScheduledRestartUnit>('hours');
@@ -187,16 +195,19 @@ export function useXraySetting(): UseXraySettingResult {
 
   const oldXraySettingRef = useRef('');
   const oldOutboundTestUrlRef = useRef(DEFAULT_TEST_URL);
+  const oldSubJsonDnsRef = useRef(DEFAULT_SUB_JSON_DNS);
   const oldScheduledRestartRef = useRef(DEFAULT_SCHEDULED_RESTART);
   const syncingRef = useRef(false);
   const xraySettingRef = useRef('');
   const outboundTestUrlRef = useRef(outboundTestUrl);
+  const subJsonDnsRef = useRef(subJsonDns);
   const scheduledRestartRef = useRef('');
   const templateSettingsRef = useRef<XraySettingsValue | null>(null);
   const subscriptionOutboundsRef = useRef<unknown[]>([]);
 
   xraySettingRef.current = xraySetting;
   outboundTestUrlRef.current = outboundTestUrl;
+  subJsonDnsRef.current = subJsonDns;
   scheduledRestartRef.current = JSON.stringify({
     enabled: scheduledRestartEnable,
     interval: scheduledRestartInterval,
@@ -219,8 +230,10 @@ export function useXraySetting(): UseXraySettingResult {
     const obj = configQuery.data;
     const pretty = JSON.stringify(obj.xraySetting, null, 2);
     const nextUrl = normalizeOutboundTestUrl(obj.outboundTestUrl || '');
+    const nextSubJsonDns = normalizeSubJsonDns(obj.subJsonDns || '');
     const isDirty = oldXraySettingRef.current !== xraySettingRef.current
       || normalizeOutboundTestUrl(oldOutboundTestUrlRef.current) !== normalizeOutboundTestUrl(outboundTestUrlRef.current)
+      || normalizeSubJsonDns(oldSubJsonDnsRef.current) !== normalizeSubJsonDns(subJsonDnsRef.current)
       || oldScheduledRestartRef.current !== scheduledRestartRef.current;
     if (isDirty) return;
     syncingRef.current = true;
@@ -234,6 +247,8 @@ export function useXraySetting(): UseXraySettingResult {
     setSubscriptionOutboundTags(obj.subscriptionOutboundTags || []);
     setOutboundTestUrlState(nextUrl);
     oldOutboundTestUrlRef.current = nextUrl;
+    setSubJsonDnsState(nextSubJsonDns);
+    oldSubJsonDnsRef.current = nextSubJsonDns;
     const nextScheduledEnable = !!obj.scheduledRestartEnable;
     const nextScheduledInterval = obj.scheduledRestartInterval || 24;
     const nextScheduledUnit = obj.scheduledRestartUnit || 'hours';
@@ -304,6 +319,10 @@ export function useXraySetting(): UseXraySettingResult {
     setOutboundTestUrlState(v);
   }, []);
 
+  const setSubJsonDns = useCallback((v: string) => {
+    setSubJsonDnsState(v);
+  }, []);
+
   const fetchAll = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: keys.xray.config() });
   }, [queryClient]);
@@ -316,6 +335,7 @@ export function useXraySetting(): UseXraySettingResult {
     mutationFn: async () => {
       const sentXraySetting = xraySettingRef.current;
       const sentTestUrl = normalizeOutboundTestUrl(outboundTestUrlRef.current);
+      const sentSubJsonDns = normalizeSubJsonDns(subJsonDnsRef.current);
       const sentScheduled = JSON.parse(scheduledRestartRef.current || '{}') as {
         enabled?: boolean;
         interval?: number;
@@ -331,6 +351,7 @@ export function useXraySetting(): UseXraySettingResult {
       const msg = await HttpUtil.post('/panel/api/xray/update', {
         xraySetting: sentXraySetting,
         outboundTestUrl: sentTestUrl,
+        subJsonDns: sentSubJsonDns,
         scheduledRestartEnable: !!sentScheduled.enabled,
         scheduledRestartInterval: sentScheduled.interval || 24,
         scheduledRestartUnit: sentScheduled.unit || 'hours',
@@ -342,12 +363,13 @@ export function useXraySetting(): UseXraySettingResult {
         xrayHealthMaxRestarts: sentScheduled.healthMaxRestarts || 3,
         xrayHealthWindowMinutes: sentScheduled.healthWindowMinutes || 30,
       });
-      return { msg, sentXraySetting, sentTestUrl, sentScheduled };
+      return { msg, sentXraySetting, sentTestUrl, sentSubJsonDns, sentScheduled };
     },
-    onSuccess: ({ msg, sentXraySetting, sentTestUrl, sentScheduled }) => {
+    onSuccess: ({ msg, sentXraySetting, sentTestUrl, sentSubJsonDns, sentScheduled }) => {
       if (!msg?.success) return;
       oldXraySettingRef.current = sentXraySetting;
       oldOutboundTestUrlRef.current = sentTestUrl;
+      oldSubJsonDnsRef.current = sentSubJsonDns;
       oldScheduledRestartRef.current = JSON.stringify(sentScheduled);
       queryClient.invalidateQueries({ queryKey: keys.xray.config() });
       queryClient.invalidateQueries({ queryKey: ['xray', 'scheduled-restart-status'] });
@@ -545,6 +567,7 @@ export function useXraySetting(): UseXraySettingResult {
 
   const saveDisabled = oldXraySettingRef.current === xraySetting
     && normalizeOutboundTestUrl(oldOutboundTestUrlRef.current) === normalizeOutboundTestUrl(outboundTestUrl)
+    && normalizeSubJsonDns(oldSubJsonDnsRef.current) === normalizeSubJsonDns(subJsonDns)
     && oldScheduledRestartRef.current === scheduledRestartRef.current;
 
   const outboundsTraffic = useMemo(() => trafficQuery.data ?? [], [trafficQuery.data]);
@@ -561,6 +584,8 @@ export function useXraySetting(): UseXraySettingResult {
       setTemplateSettings,
       outboundTestUrl,
       setOutboundTestUrl,
+      subJsonDns,
+      setSubJsonDns,
       scheduledRestartEnable,
       setScheduledRestartEnable,
       scheduledRestartInterval,
@@ -609,6 +634,8 @@ export function useXraySetting(): UseXraySettingResult {
       setTemplateSettings,
       outboundTestUrl,
       setOutboundTestUrl,
+      subJsonDns,
+      setSubJsonDns,
       scheduledRestartEnable,
       scheduledRestartInterval,
       scheduledRestartUnit,

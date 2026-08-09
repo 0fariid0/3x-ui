@@ -38,6 +38,7 @@ const (
 	DefaultSubJsonUserAgentRegex  = ``
 	DefaultRemarkTemplate         = "{{INBOUND}}-{{EMAIL}}|📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D"
 	DefaultTrustedProxyCIDRs      = "127.0.0.1/32,::1/128"
+	DefaultSubJsonDNS             = "1.1.1.1"
 	maxRegexLength                = 2048
 )
 
@@ -122,6 +123,7 @@ var defaultValueMap = map[string]string{
 	"subJsonMux":                    "",
 	"subJsonRules":                  "",
 	"subJsonFinalMask":              "",
+	"subJsonDns":                    DefaultSubJsonDNS,
 	"subThemeDir":                   "",
 	"datepicker":                    "gregorian",
 	"warp":                          "",
@@ -453,6 +455,47 @@ func (s *SettingService) SetXrayOutboundTestUrl(url string) error {
 		return err
 	}
 	return s.setString("xrayOutboundTestUrl", clean)
+}
+
+// GetSubJsonDNS returns the resolver embedded in generated Xray JSON
+// subscriptions. It is separate from the server-side Xray DNS section: this
+// value configures subscriber clients, not the panel's running Xray core.
+func (s *SettingService) GetSubJsonDNS() (string, error) {
+	value, err := s.getString("subJsonDns")
+	if err != nil {
+		return DefaultSubJsonDNS, err
+	}
+	normalized, err := normalizeSubJsonDNS(value)
+	if err != nil {
+		logger.Warningf("invalid stored Xray JSON subscription DNS %q; using default %s: %v", value, DefaultSubJsonDNS, err)
+		return DefaultSubJsonDNS, nil
+	}
+	return normalized, nil
+}
+
+// SetSubJsonDNS stores the resolver embedded in generated Xray JSON
+// subscriptions. Empty input resets to the default. Xray accepts plain IP
+// resolvers as well as URL-style DNS transports such as DoH.
+func (s *SettingService) SetSubJsonDNS(value string) error {
+	normalized, err := normalizeSubJsonDNS(value)
+	if err != nil {
+		return err
+	}
+	return s.setString("subJsonDns", normalized)
+}
+
+func normalizeSubJsonDNS(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return DefaultSubJsonDNS, nil
+	}
+	if len(value) > 512 {
+		return "", common.NewError("Xray JSON subscription DNS is too long")
+	}
+	if strings.ContainsAny(value, "\r\n\t\x00") {
+		return "", common.NewError("Xray JSON subscription DNS contains invalid characters")
+	}
+	return value, nil
 }
 
 func (s *SettingService) GetListen() (string, error) {

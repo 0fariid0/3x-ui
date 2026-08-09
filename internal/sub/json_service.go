@@ -11,6 +11,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/util/json_util"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/random"
 	wgutil "github.com/mhsanaei/3x-ui/v3/internal/util/wireguard"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 )
 
 //go:embed default.json
@@ -55,6 +56,45 @@ func NewSubJsonService(mux string, rules string, finalMask string, subService *S
 		mux:              mux,
 		SubService:       subService,
 	}
+}
+
+// baseConfigForRequest clones the shared JSON subscription template and
+// injects the resolver selected in Xray Settings. Only the DNS branch is deep
+// copied because the rest of the template is treated as immutable. This keeps
+// concurrent subscription requests race-free when the admin changes DNS.
+func (s *SubJsonService) baseConfigForRequest(subReq *SubService) map[string]any {
+	config := make(map[string]any, len(s.configJson))
+	maps.Copy(config, s.configJson)
+
+	resolver := service.DefaultSubJsonDNS
+	if subReq != nil && strings.TrimSpace(subReq.subJsonDns) != "" {
+		resolver = strings.TrimSpace(subReq.subJsonDns)
+	}
+
+	dns, ok := s.configJson["dns"].(map[string]any)
+	if !ok {
+		return config
+	}
+	dnsCopy := make(map[string]any, len(dns))
+	maps.Copy(dnsCopy, dns)
+	servers, ok := dns["servers"].([]any)
+	if !ok || len(servers) == 0 {
+		dnsCopy["servers"] = []any{map[string]any{"address": resolver, "skipFallback": false}}
+		config["dns"] = dnsCopy
+		return config
+	}
+	serversCopy := append([]any(nil), servers...)
+	if first, ok := servers[0].(map[string]any); ok {
+		firstCopy := make(map[string]any, len(first))
+		maps.Copy(firstCopy, first)
+		firstCopy["address"] = resolver
+		serversCopy[0] = firstCopy
+	} else {
+		serversCopy[0] = map[string]any{"address": resolver, "skipFallback": false}
+	}
+	dnsCopy["servers"] = serversCopy
+	config["dns"] = dnsCopy
+	return config
 }
 
 // GetJson generates a JSON subscription configuration for the given subscription ID and host.
@@ -142,8 +182,7 @@ func (s *SubJsonService) GetJsonNamed(subId string, host string, alwaysReturnArr
 			}
 			newOutbounds := []json_util.RawMessage{outbound}
 			newOutbounds = append(newOutbounds, s.defaultOutbounds...)
-			newConfigJson := make(map[string]any)
-			maps.Copy(newConfigJson, s.configJson)
+			newConfigJson := s.baseConfigForRequest(subReq)
 			newConfigJson["outbounds"] = newOutbounds
 			newConfigJson["remarks"] = remark
 			newConfig, _ := json.MarshalIndent(newConfigJson, "", "  ")
@@ -275,8 +314,7 @@ func (s *SubJsonService) getConfig(subReq *SubService, inbound *model.Inbound, c
 		}
 
 		newOutbounds = append(newOutbounds, s.defaultOutbounds...)
-		newConfigJson := make(map[string]any)
-		maps.Copy(newConfigJson, s.configJson)
+		newConfigJson := s.baseConfigForRequest(subReq)
 
 		transport, _ := newStream["network"].(string)
 		newConfigJson["outbounds"] = newOutbounds

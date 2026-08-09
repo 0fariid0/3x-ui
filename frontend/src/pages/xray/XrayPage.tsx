@@ -57,6 +57,8 @@ export default function XrayPage() {
     setTemplateSettings,
     outboundTestUrl,
     setOutboundTestUrl,
+    subJsonDns,
+    setSubJsonDns,
     scheduledRestartEnable,
     setScheduledRestartEnable,
     scheduledRestartInterval,
@@ -318,6 +320,8 @@ export default function XrayPage() {
             setTemplateSettings={setTemplateSettings}
             outboundTestUrl={outboundTestUrl}
             onChangeOutboundTestUrl={setOutboundTestUrl}
+            subJsonDns={subJsonDns}
+            onChangeSubJsonDns={setSubJsonDns}
             scheduledRestartEnable={scheduledRestartEnable}
             onChangeScheduledRestartEnable={setScheduledRestartEnable}
             scheduledRestartInterval={scheduledRestartInterval}

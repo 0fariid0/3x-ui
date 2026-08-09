@@ -104,6 +104,7 @@ func (a *XraySettingController) getXraySetting(c *gin.Context) {
 	if outboundTestUrl == "" {
 		outboundTestUrl = "https://www.google.com/generate_204"
 	}
+	subJsonDns, _ := a.SettingService.GetSubJsonDNS()
 	scheduledRestartEnable, _ := a.SettingService.GetScheduledRestartEnable()
 	scheduledRestartInterval, _ := a.SettingService.GetScheduledRestartInterval()
 	scheduledRestartUnit, _ := a.SettingService.GetScheduledRestartUnit()
@@ -119,6 +120,7 @@ func (a *XraySettingController) getXraySetting(c *gin.Context) {
 		"inboundTags":                json.RawMessage(inboundTags),
 		"clientReverseTags":          json.RawMessage(clientReverseTags),
 		"outboundTestUrl":            outboundTestUrl,
+		"subJsonDns":                 subJsonDns,
 		"scheduledRestartEnable":     scheduledRestartEnable,
 		"scheduledRestartInterval":   scheduledRestartInterval,
 		"scheduledRestartUnit":       scheduledRestartUnit,
@@ -166,6 +168,13 @@ func (a *XraySettingController) updateSetting(c *gin.Context) {
 	if err := a.SettingService.SetXrayOutboundTestUrl(outboundTestUrl); err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
 		return
+	}
+
+	if rawDNS, present := c.GetPostForm("subJsonDns"); present {
+		if err := a.SettingService.SetSubJsonDNS(rawDNS); err != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
+			return
+		}
 	}
 
 	if rawEnable, present := c.GetPostForm("scheduledRestartEnable"); present {

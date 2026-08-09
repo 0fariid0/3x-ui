@@ -1,7 +1,6 @@
 package sub
 
 import (
-	"maps"
 	"strings"
 
 	"github.com/goccy/go-json"
@@ -115,8 +114,7 @@ func (s *SubJsonService) subscriptionDisplayConfig(subReq *SubService, inbound *
 	outbounds = append(outbounds, outbound)
 	outbounds = append(outbounds, s.defaultOutbounds...)
 
-	config := make(map[string]any)
-	maps.Copy(config, s.configJson)
+	config := s.baseConfigForRequest(subReq)
 	config["outbounds"] = outbounds
 	config["remarks"] = remark
 	result, _ := json.MarshalIndent(config, "", "  ")

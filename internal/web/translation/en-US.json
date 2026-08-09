@@ -1629,6 +1629,8 @@
       "RoutingStrategyDesc": "Set the overall traffic routing strategy for resolving all requests.",
       "outboundTestUrl": "Outbound Test URL",
       "outboundTestUrlDesc": "URL used when testing outbound connectivity.",
+      "subJsonDns": "Subscription DNS (Xray JSON)",
+      "subJsonDnsDesc": "Resolver embedded in generated Xray JSON subscriptions. Choose a preset or enter a custom Xray-compatible DNS address. Raw ss:// links cannot force client DNS.",
       "Torrent": "Block BitTorrent Protocol",
       "Inbounds": "Inbounds",
       "Outbounds": "Outbounds",
