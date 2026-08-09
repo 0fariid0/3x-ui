@@ -1,5 +1,13 @@
 # Custom changelog
 
+## v3.6.24
+
+- Client usage/statistics modal now refreshes automatically every 5 seconds while it remains open.
+- The first refresh still runs immediately; later refreshes are silent so the modal does not flash a loading spinner.
+- Auto-refresh now updates the complete client insight report (usage totals/chart, IPs, apps, hosts, destinations, anomalies and events) instead of refreshing only the Destinations tab.
+- Recursive timeout scheduling prevents background refresh requests from stacking on slow connections.
+- Updated panel, OpenAPI, and destination updater version identifiers to 3.6.24.
+
 ## v3.6.23
 
 - Added a configurable DNS resolver for generated Xray JSON subscriptions directly in Xray Settings.

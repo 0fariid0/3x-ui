@@ -85,6 +85,8 @@ interface ClientUsageModalProps {
 
 type RangeValue = '12h' | '24h' | '7d' | '14d' | '30d' | '60d' | '90d' | '180d' | '365d';
 
+const AUTO_REFRESH_INTERVAL_MS = 5_000;
+
 const RANGE_OPTIONS: { value: RangeValue; label: string }[] = [
   { value: '12h', label: '12h' },
   { value: '24h', label: '24h' },
@@ -163,13 +165,31 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
     }
   }, [open, email, range]);
 
-  useEffect(() => { void load(); }, [load]);
-
+  // Keep the usage/statistics modal live while it stays open. The previous
+  // implementation only refreshed the Destinations tab every 15 seconds, so
+  // traffic totals/charts and the other report tabs stayed frozen until the
+  // modal was closed and opened again. Run an immediate foreground fetch, then
+  // refresh the whole report silently every five seconds. Recursive timeout
+  // scheduling avoids piling up overlapping background requests on slow links.
   useEffect(() => {
-    if (!open || !email || activeTab !== 'destinations' || !report?.destinationTracking) return undefined;
-    const timer = window.setInterval(() => { void load(true); }, 15_000);
-    return () => window.clearInterval(timer);
-  }, [activeTab, email, load, open, report?.destinationTracking]);
+    if (!open || !email) return undefined;
+
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const run = async (background: boolean) => {
+      await load(background);
+      if (cancelled) return;
+      timer = window.setTimeout(() => { void run(true); }, AUTO_REFRESH_INTERVAL_MS);
+    };
+
+    void run(false);
+
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [email, load, open]);
 
   const clearDestinations = useCallback(async () => {
     if (!email || resettingDestinations) return;
