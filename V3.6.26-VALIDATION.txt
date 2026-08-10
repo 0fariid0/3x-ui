@@ -1,0 +1,14 @@
+Fara Xray v3.6.26 - validation report
+
+Scope:
+- Prevent automatic Let's Encrypt IP certificate issuance during Linux install and panel update.
+- Keep manual SSL options available.
+- Version identifier: 3.6.26.
+
+Checks performed:
+- install.sh and update.sh now default empty/invalid SSL choices to option 4 (Skip SSL/HTTP).
+- update.sh detects non-interactive runs and skips SSL setup instead of issuing IP certificates.
+- Option 2 still exists and must be selected explicitly to issue an IP certificate.
+- bash -n passed for install.sh, update.sh and x-ui.sh.
+- JSON validation passed for frontend/public/openapi.json and docs/public/openapi.json.
+- git diff --check passed.

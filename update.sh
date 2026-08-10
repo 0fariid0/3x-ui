@@ -628,17 +628,23 @@ prompt_and_setup_ssl() {
 
     echo -e "${yellow}Choose SSL certificate setup method:${plain}"
     echo -e "${green}1.${plain} Let's Encrypt for Domain (90-day validity, auto-renews)"
-    echo -e "${green}2.${plain} Let's Encrypt for IP Address (6-day validity, auto-renews)"
+    echo -e "${green}2.${plain} Let's Encrypt for IP Address (6-day validity, auto-renews, manual only)"
     echo -e "${green}3.${plain} Custom SSL Certificate (Path to existing files)"
-    echo -e "${green}4.${plain} Skip SSL (advanced — behind reverse proxy / SSH tunnel only)"
+    echo -e "${green}4.${plain} Skip SSL / keep HTTP (default — use reverse proxy / SSH tunnel if needed)"
     echo -e "${blue}Note:${plain} Options 1 & 2 require port 80 open. Option 3 requires manual paths."
-    echo -e "${blue}Note:${plain} Option 4 serves the panel over plain HTTP — only safe behind nginx/Caddy or an SSH tunnel."
-    read -rp "Choose an option (default 2 for IP): " ssl_choice
-    ssl_choice="${ssl_choice// /}" # Trim whitespace
+    echo -e "${blue}Note:${plain} Option 4 does not issue or apply any certificate automatically."
+    if [[ -t 0 ]]; then
+        read -rp "Choose an option (default 4 to skip SSL): " ssl_choice
+        ssl_choice="${ssl_choice// /}" # Trim whitespace
+    else
+        echo -e "${yellow}No interactive terminal detected; skipping SSL setup by default.${plain}"
+        ssl_choice="4"
+    fi
 
-    # Default to 2 (IP cert) if input is empty or invalid (not 1, 3 or 4)
-    if [[ "$ssl_choice" != "1" && "$ssl_choice" != "3" && "$ssl_choice" != "4" ]]; then
-        ssl_choice="2"
+    # Default to 4 (skip SSL/HTTP) if input is empty or invalid.
+    # IP certificates are only issued when option 2 is explicitly selected.
+    if [[ "$ssl_choice" != "1" && "$ssl_choice" != "2" && "$ssl_choice" != "3" && "$ssl_choice" != "4" ]]; then
+        ssl_choice="4"
     fi
 
     case "$ssl_choice" in
@@ -785,7 +791,11 @@ prompt_and_setup_ssl() {
             SSL_HOST="${server_ip}"
 
             local bind_local=""
-            read -rp "Bind the panel to 127.0.0.1 only? (recommended — forces SSH tunnel / reverse-proxy access) [y/N]: " bind_local
+            if [[ -t 0 ]]; then
+                read -rp "Bind the panel to 127.0.0.1 only? (recommended — forces SSH tunnel / reverse-proxy access) [y/N]: " bind_local
+            else
+                bind_local="n"
+            fi
             if [[ "$bind_local" == "y" || "$bind_local" == "Y" ]]; then
                 ${xui_folder}/x-ui setting -listenIP "127.0.0.1" > /dev/null 2>&1
                 SSL_HOST="127.0.0.1"
@@ -872,10 +882,10 @@ config_after_update() {
     if [[ -z "$existing_cert" ]]; then
         echo ""
         echo -e "${red}═══════════════════════════════════════════${plain}"
-        echo -e "${red}      ⚠ NO SSL CERTIFICATE DETECTED ⚠     ${plain}"
+        echo -e "${yellow}      ⚠ NO SSL CERTIFICATE DETECTED ⚠     ${plain}"
         echo -e "${red}═══════════════════════════════════════════${plain}"
-        echo -e "${yellow}For security, SSL certificate is MANDATORY for all panels.${plain}"
-        echo -e "${yellow}Let's Encrypt now supports both domains and IP addresses!${plain}"
+        echo -e "${yellow}SSL is optional here and will be skipped by default.${plain}"
+        echo -e "${yellow}SSL is optional and skipped by default; choose option 2 only if you explicitly want an IP certificate.${plain}"
         echo ""
 
         # Prompt and setup SSL (domain or IP)
