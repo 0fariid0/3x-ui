@@ -90,6 +90,7 @@ func allModels() []any {
 		&model.ClientTrafficHourBucket{},
 		&model.ClientTrafficDayBucket{},
 		&model.ClientIPHistory{},
+		&model.ClientInboundHistory{},
 		&model.ClientEvent{},
 		&model.ClientAnomaly{},
 		&model.ClientDestinationHour{},

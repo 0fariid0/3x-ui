@@ -1,3 +1,8 @@
+
+## v3.6.27
+- Client usage details now show all currently online inbounds plus the three most recent previously used inbounds, with the last connection time for each inbound.
+- The connected-inbounds panel stays inbound-based and does not expand multiple host/IP/share links for the same inbound.
+
 # Custom changelog
 
 ## v3.6.25

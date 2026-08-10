@@ -942,7 +942,7 @@
       "destinationResetSuccess": "تاریخچه مقصدهای کاربر پاک شد.",
       "destinationResetFailed": "پاک‌کردن تاریخچه مقصدها ناموفق بود.",
       "connectedInbounds": "این‌باندهای متصل",
-      "noConnectedInbounds": "در حال حاضر اتصال فعالی به هیچ این‌باندی شناسایی نشده است"
+      "noConnectedInbounds": "هیچ این‌باند آنلاین یا اتصال اخیر شناسایی نشده است"
     },
     "groups": {
       "name": "نام",

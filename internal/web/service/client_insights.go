@@ -18,11 +18,12 @@ import (
 )
 
 const (
-	insightBytesPerMB            int64 = 1024 * 1024
-	insightRawRetention                = 25 * time.Hour
-	insightHourlyRetention             = 31 * 24 * time.Hour
-	insightMaxDailyRetentionDays       = 365
-	insightRollupBackfillKey           = "clientInsightRollupBackfilledV366"
+	insightBytesPerMB              int64 = 1024 * 1024
+	insightRawRetention                  = 25 * time.Hour
+	insightHourlyRetention               = 31 * 24 * time.Hour
+	insightMaxDailyRetentionDays         = 365
+	insightRollupBackfillKey             = "clientInsightRollupBackfilledV366"
+	clientReportRecentInboundLimit       = 3
 )
 
 // ClientInsightService owns durable per-client reporting and abnormal usage
@@ -80,6 +81,8 @@ type ClientReportInbound struct {
 	Protocol string `json:"protocol"`
 	Port     int    `json:"port"`
 	NodeID   *int   `json:"nodeId,omitempty"`
+	Online   bool   `json:"online"`
+	LastSeen int64  `json:"lastSeen"`
 }
 
 type ClientInsightReport struct {
@@ -285,6 +288,100 @@ func (s *ClientInsightService) RecordIPHistory(observed map[string][]model.Clien
 	})
 }
 
+// RecordInboundActivity persists exact client -> inbound observations from the
+// access log. The input is email -> inbound tag -> last observed timestamp in
+// milliseconds. Share hosts and IPs are intentionally ignored here: the report
+// needs the inbound that was actually used, not every generated link for it.
+func (s *ClientInsightService) RecordInboundActivity(observed map[string]map[string]int64) error {
+	if len(observed) == 0 {
+		return nil
+	}
+
+	tagSet := make(map[string]struct{})
+	now := time.Now().UnixMilli()
+	for email, byTag := range observed {
+		if strings.TrimSpace(email) == "" {
+			continue
+		}
+		for tag := range byTag {
+			if tag = strings.TrimSpace(tag); tag != "" {
+				tagSet[tag] = struct{}{}
+			}
+		}
+	}
+	if len(tagSet) == 0 {
+		return nil
+	}
+
+	tags := make([]string, 0, len(tagSet))
+	for tag := range tagSet {
+		tags = append(tags, tag)
+	}
+
+	db := database.GetDB()
+	var inbounds []*model.Inbound
+	if err := db.Model(&model.Inbound{}).
+		Select("id, tag, origin_node_guid").
+		Where("tag IN ?", tags).
+		Find(&inbounds).Error; err != nil {
+		return err
+	}
+	if len(inbounds) == 0 {
+		return nil
+	}
+	(&InboundService{}).annotateLocalOriginGuid(inbounds)
+
+	byTag := make(map[string][]*model.Inbound, len(inbounds))
+	for _, inbound := range inbounds {
+		if inbound == nil || strings.TrimSpace(inbound.Tag) == "" {
+			continue
+		}
+		byTag[inbound.Tag] = append(byTag[inbound.Tag], inbound)
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		for email, observedTags := range observed {
+			email = strings.TrimSpace(email)
+			if email == "" {
+				continue
+			}
+			for tag, seen := range observedTags {
+				tag = strings.TrimSpace(tag)
+				if tag == "" {
+					continue
+				}
+				if seen <= 0 {
+					seen = now
+				} else if seen < 10_000_000_000 {
+					seen *= 1000
+				}
+				for _, inbound := range byTag[tag] {
+					if inbound == nil || inbound.Id <= 0 {
+						continue
+					}
+					row := model.ClientInboundHistory{
+						Email: email, InboundID: inbound.Id, InboundTag: inbound.Tag,
+						OriginNodeGuid: inbound.OriginNodeGuid, FirstSeen: seen, LastSeen: seen, SeenCount: 1,
+					}
+					if err := tx.Clauses(clause.OnConflict{
+						Columns: []clause.Column{{Name: "email"}, {Name: "inbound_id"}},
+						DoUpdates: clause.Assignments(map[string]any{
+							"inbound_tag":      inbound.Tag,
+							"origin_node_guid": inbound.OriginNodeGuid,
+							"first_seen":       gorm.Expr("CASE WHEN first_seen < ? THEN first_seen ELSE ? END", seen, seen),
+							"last_seen":        gorm.Expr("CASE WHEN last_seen > ? THEN last_seen ELSE ? END", seen, seen),
+							"seen_count":       gorm.Expr("seen_count + 1"),
+						}),
+					}).Create(&row).Error; err != nil {
+						return err
+					}
+				}
+			}
+		}
+		return nil
+	})
+}
+
 func (s *ClientInsightService) RecordEvent(email, kind, summary string, details any) error {
 	email = strings.TrimSpace(email)
 	if email == "" {
@@ -400,6 +497,32 @@ func (s *ClientInsightService) RenameClientHistory(oldEmail, newEmail string) er
 		if err := tx.Where("email = ?", oldEmail).Delete(&model.ClientIPHistory{}).Error; err != nil {
 			return err
 		}
+
+		var inboundHistory []model.ClientInboundHistory
+		if err := tx.Where("email = ?", oldEmail).Find(&inboundHistory).Error; err != nil {
+			return err
+		}
+		for _, item := range inboundHistory {
+			row := item
+			row.Id = 0
+			row.Email = newEmail
+			if err := tx.Clauses(clause.OnConflict{
+				Columns: []clause.Column{{Name: "email"}, {Name: "inbound_id"}},
+				DoUpdates: clause.Assignments(map[string]any{
+					"inbound_tag":      item.InboundTag,
+					"origin_node_guid": item.OriginNodeGuid,
+					"first_seen":       gorm.Expr("CASE WHEN first_seen < ? THEN first_seen ELSE ? END", item.FirstSeen, item.FirstSeen),
+					"last_seen":        gorm.Expr("CASE WHEN last_seen > ? THEN last_seen ELSE ? END", item.LastSeen, item.LastSeen),
+					"seen_count":       gorm.Expr("seen_count + ?", item.SeenCount),
+				}),
+			}).Create(&row).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("email = ?", oldEmail).Delete(&model.ClientInboundHistory{}).Error; err != nil {
+			return err
+		}
+
 		var destinations []model.ClientDestinationHour
 		if err := tx.Where("email = ?", oldEmail).Find(&destinations).Error; err != nil {
 			return err
@@ -685,10 +808,10 @@ func (s *ClientInsightService) GetReportForRange(email string, days, hours int) 
 	// with the client's last traffic time. One inbound may have several host/IP
 	// choices, and that timestamp falsely implied that every choice was used.
 
-	// Report only the exact inbounds this client is currently observed on. Do
-	// not expand host rows: one inbound may expose several host/IP choices and
-	// showing all of those as "used" was misleading. Exact attribution comes
-	// from the same email+inbound access-log record used by the inbounds page.
+	// Report inbound usage at inbound granularity only. One inbound may expose
+	// several share hosts/IPs, but those are links, not distinct connections.
+	// Show every currently-online inbound plus the three most recent offline
+	// inbounds with their last observed connection time.
 	var attachedInbounds []*model.Inbound
 	_ = db.Model(&model.Inbound{}).
 		Select("inbounds.id, inbounds.tag, inbounds.remark, inbounds.protocol, inbounds.port, inbounds.node_id, inbounds.origin_node_guid").
@@ -698,32 +821,94 @@ func (s *ClientInsightService) GetReportForRange(email string, days, hours int) 
 	inboundSvc := &InboundService{}
 	inboundSvc.annotateLocalOriginGuid(attachedInbounds)
 	onlineInbounds := inboundSvc.GetOnlineInboundsByGuid()
-	connectedInbounds := make([]ClientReportInbound, 0, len(attachedInbounds))
+	onlineByInboundID := make(map[int]bool)
 	for _, inbound := range attachedInbounds {
 		if inbound == nil || inbound.Tag == "" || inbound.OriginNodeGuid == "" {
 			continue
 		}
 		byEmail, supported := onlineInbounds[inbound.OriginNodeGuid]
 		if !supported {
-			// Old remote nodes cannot provide exact email/inbound correlation;
-			// omit them rather than falsely claiming every attached inbound is live.
 			continue
 		}
-		found := false
 		for _, tag := range byEmail[email] {
 			if tag == inbound.Tag {
-				found = true
+				onlineByInboundID[inbound.Id] = true
 				break
 			}
 		}
-		if !found {
+	}
+
+	inboundByID := make(map[int]*model.Inbound, len(attachedInbounds))
+	attachedIDs := make([]int, 0, len(attachedInbounds))
+	for _, inbound := range attachedInbounds {
+		if inbound == nil || inbound.Id <= 0 {
 			continue
 		}
-		connectedInbounds = append(connectedInbounds, ClientReportInbound{
+		inboundByID[inbound.Id] = inbound
+		attachedIDs = append(attachedIDs, inbound.Id)
+	}
+
+	var inboundHistory []model.ClientInboundHistory
+	if len(attachedIDs) > 0 {
+		_ = db.Where("email = ? AND inbound_id IN ?", email, attachedIDs).
+			Order("last_seen DESC, id DESC").Find(&inboundHistory).Error
+	}
+	lastSeenByInboundID := make(map[int]int64, len(inboundHistory))
+	for _, item := range inboundHistory {
+		if item.InboundID > 0 && item.LastSeen > lastSeenByInboundID[item.InboundID] {
+			lastSeenByInboundID[item.InboundID] = item.LastSeen
+		}
+	}
+
+	selected := make(map[int]ClientReportInbound)
+	appendInbound := func(inbound *model.Inbound, online bool, lastSeen int64) {
+		if inbound == nil || inbound.Id <= 0 {
+			return
+		}
+		if lastSeen <= 0 && online {
+			lastSeen = rangeEnd
+		}
+		selected[inbound.Id] = ClientReportInbound{
 			ID: inbound.Id, Tag: inbound.Tag, Remark: inbound.Remark,
 			Protocol: string(inbound.Protocol), Port: inbound.Port, NodeID: inbound.NodeID,
-		})
+			Online: online, LastSeen: lastSeen,
+		}
 	}
+
+	for _, inbound := range attachedInbounds {
+		if onlineByInboundID[inbound.Id] {
+			appendInbound(inbound, true, lastSeenByInboundID[inbound.Id])
+		}
+	}
+	recentCount := 0
+	for _, item := range inboundHistory {
+		if recentCount >= clientReportRecentInboundLimit {
+			break
+		}
+		if _, exists := selected[item.InboundID]; exists {
+			continue
+		}
+		inbound := inboundByID[item.InboundID]
+		if inbound == nil {
+			continue
+		}
+		appendInbound(inbound, false, item.LastSeen)
+		recentCount++
+	}
+
+	connectedInbounds := make([]ClientReportInbound, 0, len(selected))
+	for _, item := range selected {
+		connectedInbounds = append(connectedInbounds, item)
+	}
+	sort.SliceStable(connectedInbounds, func(i, j int) bool {
+		if connectedInbounds[i].Online != connectedInbounds[j].Online {
+			return connectedInbounds[i].Online
+		}
+		if connectedInbounds[i].LastSeen != connectedInbounds[j].LastSeen {
+			return connectedInbounds[i].LastSeen > connectedInbounds[j].LastSeen
+		}
+		return connectedInbounds[i].ID < connectedInbounds[j].ID
+	})
 	var events []model.ClientEvent
 	_ = db.Where("email = ? AND created_at >= ?", email, rangeStart).Order("created_at DESC, id DESC").Limit(100).Find(&events).Error
 	var anomalies []model.ClientAnomaly
@@ -1223,6 +1408,9 @@ func (s *ClientInsightService) Cleanup(historyDays int) error {
 			return err
 		}
 		if err := tx.Where("last_seen < ?", dayCutoff).Delete(&model.ClientIPHistory{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("last_seen < ?", dayCutoff).Delete(&model.ClientInboundHistory{}).Error; err != nil {
 			return err
 		}
 

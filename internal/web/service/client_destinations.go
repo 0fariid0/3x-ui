@@ -352,6 +352,7 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 	// in this bounded access-log pass, then fold them into the process grace
 	// window below.
 	liveInboundSets := make(map[string]map[string]struct{})
+	inboundLastSeen := make(map[string]map[string]int64)
 	for {
 		raw, readErr := reader.ReadString('\n')
 		if len(raw) > 0 {
@@ -370,6 +371,18 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 					liveInboundSets[email] = set
 				}
 				set[inboundTag] = struct{}{}
+				seenAt := entry.DateTime.UnixMilli()
+				if seenAt <= 0 {
+					seenAt = time.Now().UnixMilli()
+				}
+				byTag := inboundLastSeen[email]
+				if byTag == nil {
+					byTag = make(map[string]int64)
+					inboundLastSeen[email] = byTag
+				}
+				if seenAt > byTag[inboundTag] {
+					byTag[inboundTag] = seenAt
+				}
 			}
 			if len(tracked) > 0 {
 				if event, ok := parseDestinationAccessLine(raw, tracked, loc); ok {
@@ -404,6 +417,11 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 		}
 	}
 	(&InboundService{}).RefreshLocalOnlineInbounds(liveInbounds)
+	if len(inboundLastSeen) > 0 {
+		if err := s.RecordInboundActivity(inboundLastSeen); err != nil {
+			logger.Debug("[ClientDestinations] record inbound activity failed:", err)
+		}
+	}
 
 	if len(aggregated) > 0 {
 		if err := db.Transaction(func(tx *gorm.DB) error {

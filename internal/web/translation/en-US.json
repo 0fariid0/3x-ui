@@ -942,7 +942,7 @@
       "destinationResetSuccess": "Destination history cleared.",
       "destinationResetFailed": "Could not clear destination history.",
       "connectedInbounds": "Connected Inbounds",
-      "noConnectedInbounds": "No active inbound connection detected"
+      "noConnectedInbounds": "No online or recent inbound connection detected"
     },
     "groups": {
       "name": "Name",

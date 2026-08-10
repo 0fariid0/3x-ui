@@ -24,7 +24,7 @@ interface TimelineUsage { bucketStart: number; up: number; down: number; total: 
 interface ReportIP { id: number; ip: string; firstSeen: number; lastSeen: number; seenCount: number; }
 interface ReportApp { id: number; appName: string; version?: string; os?: string; userAgent?: string; format?: string; requestCount?: number; firstSeen?: number; lastSeen?: number; }
 interface ReportHost { id: number; inboundId: number; remark?: string; address?: string; port?: number; lastSeen?: number; }
-interface ReportInbound { id: number; tag: string; remark?: string; protocol?: string; port?: number; nodeId?: number; }
+interface ReportInbound { id: number; tag: string; remark?: string; protocol?: string; port?: number; nodeId?: number; online?: boolean; lastSeen?: number; }
 interface DestinationSummary { service: string; owner?: string; connections: number; destinations: number; lastSeen: number; active: boolean; activeDestinations: number; }
 interface DestinationItem { key: string; service: string; owner?: string; domain?: string; ip?: string; port?: number; protocol?: string; confidence: string; connections: number; firstSeen: number; lastSeen: number; active: boolean; }
 interface ReportEvent { id: number; kind: string; summary: string; details?: string; createdAt: number; }
@@ -369,9 +369,10 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
               <div>
                 <strong>{inbound.remark || `Inbound #${inbound.id}`}</strong>
                 <small className="client-usage-mono">{inbound.tag || `Inbound #${inbound.id}`}</small>
+                <small>{t('pages.clients.lastSeen')}: {dateLabel(inbound.lastSeen || 0)}</small>
               </div>
               <div>
-                <Tag color="green">{t('online')}</Tag>
+                <Tag color={inbound.online ? 'green' : undefined}>{inbound.online ? t('online') : t('offline')}</Tag>
                 <small>{(inbound.protocol || '—').toUpperCase()}{inbound.port ? ` · :${inbound.port}` : ''}</small>
               </div>
             </div>

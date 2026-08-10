@@ -30,6 +30,22 @@ type ClientIPHistory struct {
 
 func (ClientIPHistory) TableName() string { return "client_ip_history" }
 
+// ClientInboundHistory keeps the newest exact inbound connections observed for
+// a client. It is reporting-only: one inbound may have several share links or
+// host/IP choices, but this table stores the inbound itself exactly once.
+type ClientInboundHistory struct {
+	Id             int    `json:"id" gorm:"primaryKey;autoIncrement"`
+	Email          string `json:"email" gorm:"uniqueIndex:idx_client_inbound_history,priority:1;index:idx_client_inbound_history_email;size:255;not null"`
+	InboundID      int    `json:"inboundId" gorm:"uniqueIndex:idx_client_inbound_history,priority:2;index;not null"`
+	InboundTag     string `json:"inboundTag" gorm:"index;size:255;not null"`
+	OriginNodeGuid string `json:"originNodeGuid" gorm:"index;size:64"`
+	FirstSeen      int64  `json:"firstSeen" gorm:"index"`
+	LastSeen       int64  `json:"lastSeen" gorm:"index"`
+	SeenCount      int64  `json:"seenCount" gorm:"default:1"`
+}
+
+func (ClientInboundHistory) TableName() string { return "client_inbound_history" }
+
 // ClientEvent is an append-only client timeline used for renewals, edits,
 // attachment changes, resets, and automatic anomaly actions.
 type ClientEvent struct {
