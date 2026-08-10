@@ -668,8 +668,11 @@ type TrafficSnapshot struct {
 	// OnlineEmails so the master can attribute deeply nested clients to the real
 	// node across a chain (#4983). Empty when the node is an old build without
 	// the per-GUID endpoint — OnlineEmails is the fallback then.
-	OnlineTree    map[string][]string
-	LastOnlineMap map[string]int64
+	OnlineTree map[string][]string
+	// OnlineInboundsTree is the exact GUID -> email -> inbound-tag attribution
+	// subtree. New nodes expose it; older nodes leave it empty.
+	OnlineInboundsTree map[string]map[string][]string
+	LastOnlineMap      map[string]int64
 	// HostGroups carries the node's per-inbound host overrides (TLS/SNI/
 	// fingerprint), fetched only when the snapshot holds a not-yet-adopted tag.
 	HostGroups []*entity.HostGroup
@@ -715,6 +718,14 @@ func (r *Remote) FetchTrafficSnapshot(ctx context.Context) (*TrafficSnapshot, er
 		} else if len(envOnlines.Obj) > 0 {
 			_ = json.Unmarshal(envOnlines.Obj, &snap.OnlineEmails)
 		}
+	}
+
+	// Exact per-client inbound attribution is optional for compatibility with
+	// older nodes. A missing endpoint leaves the map empty and the master falls
+	// back to that node's email-only online signal.
+	envInboundTree, inboundTreeErr := r.do(ctx, http.MethodPost, "panel/api/clients/onlineInboundsByGuid", nil)
+	if inboundTreeErr == nil && len(envInboundTree.Obj) > 0 {
+		_ = json.Unmarshal(envInboundTree.Obj, &snap.OnlineInboundsTree)
 	}
 
 	envLastOnline, err := r.do(ctx, http.MethodPost, "panel/api/clients/lastOnline", nil)

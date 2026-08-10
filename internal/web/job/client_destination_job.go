@@ -5,9 +5,10 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 )
 
-// ClientDestinationJob ingests privacy-preserving destination aggregates for
-// clients that individually opted in. The underlying access log is already
-// size-bounded by PruneXrayLogsJob and wiped daily.
+// ClientDestinationJob tails Xray access records for two purposes: transient
+// exact email -> inbound attribution for every client, and privacy-preserving
+// destination aggregates only for clients that individually opted in. The
+// generated runtime access log is truncated after complete ingestion.
 type ClientDestinationJob struct {
 	insights service.ClientInsightService
 }

@@ -168,6 +168,12 @@ export const ActiveInboundsByNodeSchema = z
   .nullable()
   .transform((v) => v ?? {});
 
+// Exact live attribution: panelGuid -> client email -> inbound tags.
+export const OnlineInboundsByNodeSchema = z
+  .record(z.string(), z.record(z.string(), nullableStringArray))
+  .nullable()
+  .transform((v) => v ?? {});
+
 export const GroupSummarySchema = z.object({
   name: z.string(),
   clientCount: z.number(),

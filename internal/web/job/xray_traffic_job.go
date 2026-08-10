@@ -158,18 +158,11 @@ func (j *XrayTrafficJob) Run() {
 			logger.Warning("bump last online for connected clients failed:", err)
 		}
 	}
-	// Pair the email signal with the inbound tags that moved bytes this poll.
-	// Xray's user>>>email counter aggregates across every inbound a client is
-	// attached to, so an online email alone can't say which inbound it used —
-	// gating the per-inbound view on these tags keeps a multi-inbound client
-	// off inbounds that saw no traffic. See issue #4859.
-	activeInboundTags := make([]string, 0, len(traffics))
-	for _, tr := range traffics {
-		if tr != nil && tr.IsInbound && tr.Up+tr.Down > 0 {
-			activeInboundTags = append(activeInboundTags, tr.Tag)
-		}
-	}
-	j.inboundService.RefreshLocalOnlineClients(activeEmails, activeInboundTags)
+	// Refresh only the local email-online signal here. Exact email -> inbound
+	// attribution is deliberately NOT inferred from aggregate inbound counters:
+	// those counters cannot tell which online email used which tag. The runtime
+	// access-log job refreshes the exact pairs from one accepted-connection record.
+	j.inboundService.RefreshLocalOnlineClients(activeEmails, nil)
 
 	if !websocket.HasClients() {
 		return
@@ -219,12 +212,13 @@ func (j *XrayTrafficJob) Run() {
 		onlineClients = []string{}
 	}
 	websocket.BroadcastTraffic(map[string]any{
-		"traffics":       traffics,
-		"clientTraffics": movedTraffics,
-		"onlineClients":  onlineClients,
-		"onlineByGuid":   j.inboundService.GetOnlineClientsByGuid(),
-		"activeInbounds": j.inboundService.GetActiveInboundsByGuid(),
-		"lastOnlineMap":  lastOnlineMap,
+		"traffics":             traffics,
+		"clientTraffics":       movedTraffics,
+		"onlineClients":        onlineClients,
+		"onlineByGuid":         j.inboundService.GetOnlineClientsByGuid(),
+		"onlineInboundsByGuid": j.inboundService.GetOnlineInboundsByGuid(),
+		"activeInbounds":       j.inboundService.GetActiveInboundsByGuid(), // legacy payload for older frontends
+		"lastOnlineMap":        lastOnlineMap,
 	})
 
 	clientStatsPayload := map[string]any{"snapshot": snapshot}

@@ -24,6 +24,7 @@ interface TimelineUsage { bucketStart: number; up: number; down: number; total: 
 interface ReportIP { id: number; ip: string; firstSeen: number; lastSeen: number; seenCount: number; }
 interface ReportApp { id: number; appName: string; version?: string; os?: string; userAgent?: string; format?: string; requestCount?: number; firstSeen?: number; lastSeen?: number; }
 interface ReportHost { id: number; inboundId: number; remark?: string; address?: string; port?: number; lastSeen?: number; }
+interface ReportInbound { id: number; tag: string; remark?: string; protocol?: string; port?: number; nodeId?: number; }
 interface DestinationSummary { service: string; owner?: string; connections: number; destinations: number; lastSeen: number; active: boolean; activeDestinations: number; }
 interface DestinationItem { key: string; service: string; owner?: string; domain?: string; ip?: string; port?: number; protocol?: string; confidence: string; connections: number; firstSeen: number; lastSeen: number; active: boolean; }
 interface ReportEvent { id: number; kind: string; summary: string; details?: string; createdAt: number; }
@@ -51,6 +52,7 @@ export interface ClientInsightReport {
   recentIps: ReportIP[];
   apps: ReportApp[];
   hosts: ReportHost[];
+  connectedInbounds: ReportInbound[];
   dailyUsage: DailyUsage[];
   hourlyUsage: HourlyUsage[];
   timelineUsage: TimelineUsage[];
@@ -148,6 +150,7 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
           && onlinesMsg.obj.includes(email);
         setReport({
           ...msg.obj,
+          connectedInbounds: Array.isArray(msg.obj.connectedInbounds) ? msg.obj.connectedInbounds : [],
           destinations: msg.obj.destinations.map((item) => ({ ...item, active: clientOnline && item.active })),
           destinationSummaries: msg.obj.destinationSummaries.map((item) => ({
             ...item,
@@ -357,12 +360,20 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
       ),
     },
     {
-      key: 'hosts', label: <span><GlobalOutlined /> {t('pages.clients.usedHosts')}</span>, children: (
+      key: 'hosts', label: <span><GlobalOutlined /> {t('pages.clients.connectedInbounds')}</span>, children: (
         <div className="client-usage-list">
-          {report.hosts.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} /> : report.hosts.map((host) => (
-            <div className="client-usage-list-row" key={host.id}>
-              <div><strong>{host.remark || `Inbound ${host.inboundId}`}</strong><small>Inbound #{host.inboundId}</small></div>
-              <div><code>{host.address || '—'}{host.port ? `:${host.port}` : ''}</code><small>{dateLabel(host.lastSeen)}</small></div>
+          {report.connectedInbounds.length === 0 ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('pages.clients.noConnectedInbounds')} />
+          ) : report.connectedInbounds.map((inbound) => (
+            <div className="client-usage-list-row" key={inbound.id}>
+              <div>
+                <strong>{inbound.remark || `Inbound #${inbound.id}`}</strong>
+                <small className="client-usage-mono">{inbound.tag || `Inbound #${inbound.id}`}</small>
+              </div>
+              <div>
+                <Tag color="green">{t('online')}</Tag>
+                <small>{(inbound.protocol || '—').toUpperCase()}{inbound.port ? ` · :${inbound.port}` : ''}</small>
+              </div>
             </div>
           ))}
         </div>

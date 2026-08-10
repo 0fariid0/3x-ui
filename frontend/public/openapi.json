@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.6.24",
+    "version": "3.6.25",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -9040,6 +9040,46 @@
         }
       }
     },
+    "/panel/api/clients/onlineInboundsByGuid": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Exact live inbound attribution grouped as panelGuid -> client email -> inbound tags. Each tag is correlated with that client from the same Xray accepted-connection record, preventing a client attached to multiple inbounds from appearing online on sibling inbounds it did not use.",
+        "operationId": "post_panel_api_clients_onlineInboundsByGuid",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "a1b2-...": {
+                      "user1": [
+                        "in-443-tcp"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/panel/api/clients/clientIpsByGuid": {
       "post": {
         "tags": [
@@ -9088,7 +9128,7 @@
         "tags": [
           "Clients"
         ],
-        "summary": "Inbound tags that carried traffic within the heartbeat window, grouped by the hosting node's panelGuid. Pairs with onlinesByGuid so the inbounds page only marks a multi-inbound client online on the inbounds it actually used. Nodes that do not report per-inbound activity are absent.",
+        "summary": "Legacy aggregate active-inbound view retained for rolling-upgrade compatibility. New frontends use onlineInboundsByGuid for exact per-client inbound attribution.",
         "operationId": "post_panel_api_clients_activeInbounds",
         "responses": {
           "200": {

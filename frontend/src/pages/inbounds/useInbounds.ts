@@ -9,7 +9,7 @@ import { isSSMultiUser } from '@/lib/xray/protocol-capabilities';
 import { setDatepicker } from '@/hooks/useDatepicker';
 import { keys } from '@/api/queryKeys';
 import { SlimInboundListSchema, LastOnlineMapSchema, InboundDetailSchema } from '@/schemas/inbound';
-import { OnlinesSchema, OnlineByNodeSchema, ActiveInboundsByNodeSchema } from '@/schemas/client';
+import { OnlinesSchema, OnlineByNodeSchema, OnlineInboundsByNodeSchema } from '@/schemas/client';
 import { DefaultsPayloadSchema, type DefaultsPayload } from '@/schemas/defaults';
 
 import type { InboundSpeedEntry } from './list/types';
@@ -89,15 +89,17 @@ async function fetchOnlineClientsByGuid(): Promise<Record<string, string[]>> {
   return (validated.obj && typeof validated.obj === 'object') ? (validated.obj as Record<string, string[]>) : {};
 }
 
-// Inbound tags that carried traffic recently, grouped by node (local = key 0).
-// Pairs with the per-node online map so a client attached to several inbounds
-// is only marked online on the ones that actually moved bytes — Xray's
-// user-level stat can't attribute traffic to a single inbound on its own.
-async function fetchActiveInboundsByNode(): Promise<Record<string, string[]>> {
-  const msg = await HttpUtil.post('/panel/api/clients/activeInbounds', undefined, { silent: true });
-  if (!msg?.success) throw new Error(msg?.msg || 'Failed to fetch activeInbounds');
-  const validated = parseMsg(msg, ActiveInboundsByNodeSchema, 'clients/activeInbounds');
-  return (validated.obj && typeof validated.obj === 'object') ? (validated.obj as Record<string, string[]>) : {};
+// Exact live inbound attribution keyed by physical panelGuid, then client email.
+// Unlike the old aggregate active-tag set, each tag here came from the same
+// Xray access-log connection record as the email, so one client's connection
+// can never light up a sibling inbound just because another client used it.
+async function fetchOnlineInboundsByGuid(): Promise<Record<string, Record<string, string[]>>> {
+  const msg = await HttpUtil.post('/panel/api/clients/onlineInboundsByGuid', undefined, { silent: true });
+  if (!msg?.success) throw new Error(msg?.msg || 'Failed to fetch onlineInboundsByGuid');
+  const validated = parseMsg(msg, OnlineInboundsByNodeSchema, 'clients/onlineInboundsByGuid');
+  return (validated.obj && typeof validated.obj === 'object')
+    ? (validated.obj as Record<string, Record<string, string[]>>)
+    : {};
 }
 
 function toGuidOnlineMap(data: Record<string, string[]>): Map<string, Set<string>> {
@@ -105,6 +107,24 @@ function toGuidOnlineMap(data: Record<string, string[]>): Map<string, Set<string
   for (const [key, emails] of Object.entries(data)) {
     if (!Array.isArray(emails)) continue;
     map.set(key, new Set(emails));
+  }
+  return map;
+}
+
+function toGuidInboundMap(
+  data: Record<string, Record<string, string[]>>,
+): Map<string, Map<string, Set<string>>> {
+  const map = new Map<string, Map<string, Set<string>>>();
+  for (const [guid, byEmail] of Object.entries(data)) {
+    if (!byEmail || typeof byEmail !== 'object') continue;
+    const emails = new Map<string, Set<string>>();
+    for (const [email, tags] of Object.entries(byEmail)) {
+      if (!Array.isArray(tags)) continue;
+      emails.set(email, new Set(tags));
+    }
+    // Keep an empty GUID map: its presence means this node supports precise
+    // attribution and currently has no observed inbound for the client.
+    map.set(guid, emails);
   }
   return map;
 }
@@ -144,9 +164,9 @@ export function useInbounds() {
     staleTime: Infinity,
   });
 
-  const activeInboundsQuery = useQuery({
-    queryKey: keys.clients.activeInbounds(),
-    queryFn: fetchActiveInboundsByNode,
+  const onlineInboundsByGuidQuery = useQuery({
+    queryKey: keys.clients.onlineInboundsByGuid(),
+    queryFn: fetchOnlineInboundsByGuid,
     staleTime: Infinity,
   });
 
@@ -214,12 +234,11 @@ export function useInbounds() {
   // hosts it, attributing a sub-node's clients to that sub-node (#4983).
   const onlineByGuidRef = useRef<Map<string, Set<string>>>(new Map());
 
-  // Recently-active inbound tags keyed by the hosting node's panelGuid. A GUID
-  // missing from this map means "no per-inbound activity reported" (e.g. remote
-  // nodes), so the rollup leaves that node's inbounds ungated and falls back to
-  // the email signal. A present GUID gates: a client only counts online on an
-  // inbound whose tag carried traffic this window.
-  const activeByGuidRef = useRef<Map<string, Set<string>>>(new Map());
+  // Exact inbound tags per email, keyed by the physical node's panelGuid.
+  // A present GUID (even with an empty inner map) means the node supports
+  // precise attribution. A missing GUID is an old-node compatibility case and
+  // falls back to the email-only online signal.
+  const onlineInboundsByGuidRef = useRef<Map<string, Map<string, Set<string>>>>(new Map());
 
   const [lastOnlineMap, setLastOnlineMap] = useState<Record<string, number>>({});
 
@@ -243,12 +262,7 @@ export function useInbounds() {
       // the master-local synthetic id for an old-build node without one (#4983).
       const guid = dbInbound.originNodeGuid || (dbInbound.nodeId != null ? `node:${dbInbound.nodeId}` : '');
       const nodeOnline = onlineByGuidRef.current.get(guid);
-      // A node absent from the active map reports no per-inbound activity, so
-      // leave its inbounds ungated. When present, only mark a client online on
-      // this inbound if its tag actually carried traffic — that's what stops a
-      // multi-inbound client lighting up every inbound it's attached to.
-      const activeForNode = activeByGuidRef.current.get(guid);
-      const inboundActive = activeForNode === undefined || !dbInbound.tag || activeForNode.has(dbInbound.tag);
+      const preciseByEmail = onlineInboundsByGuidRef.current.get(guid);
 
       if (dbInbound.enable) {
         const statsByEmail = new Map<string, { email: string; total: number; up: number; down: number; expiryTime: number }>();
@@ -274,7 +288,11 @@ export function useInbounds() {
             continue;
           }
           active.push(client.email);
-          if (inboundActive && nodeOnline?.has(client.email)) online.push(client.email);
+          const preciseTags = preciseByEmail?.get(client.email);
+          const onlineHere = preciseByEmail !== undefined
+            ? !!dbInbound.tag && !!preciseTags?.has(dbInbound.tag) && !!nodeOnline?.has(client.email)
+            : !!nodeOnline?.has(client.email); // old remote node: legacy fallback
+          if (onlineHere) online.push(client.email);
           if (stats) {
             const expiringSoon =
               (stats.expiryTime > 0 && stats.expiryTime - now < expireDiffRef.current) ||
@@ -354,11 +372,11 @@ export function useInbounds() {
   }, [onlinesByGuidQuery.data, rebuildClientCount]);
 
   useEffect(() => {
-    if (activeInboundsQuery.data) {
-      activeByGuidRef.current = toGuidOnlineMap(activeInboundsQuery.data);
+    if (onlineInboundsByGuidQuery.data) {
+      onlineInboundsByGuidRef.current = toGuidInboundMap(onlineInboundsByGuidQuery.data);
       rebuildClientCount();
     }
-  }, [activeInboundsQuery.data, rebuildClientCount]);
+  }, [onlineInboundsByGuidQuery.data, rebuildClientCount]);
 
   useEffect(() => {
     if (lastOnlineQuery.data) setLastOnlineMap(lastOnlineQuery.data);
@@ -379,7 +397,7 @@ export function useInbounds() {
       queryClient.invalidateQueries({ queryKey: keys.inbounds.root() }),
       queryClient.invalidateQueries({ queryKey: keys.clients.onlines() }),
       queryClient.invalidateQueries({ queryKey: keys.clients.onlinesByGuid() }),
-      queryClient.invalidateQueries({ queryKey: keys.clients.activeInbounds() }),
+      queryClient.invalidateQueries({ queryKey: keys.clients.onlineInboundsByGuid() }),
       queryClient.invalidateQueries({ queryKey: keys.clients.lastOnline() }),
       queryClient.invalidateQueries({ queryKey: keys.xray.config() }),
     ]);
@@ -414,7 +432,7 @@ export function useInbounds() {
         nodeTraffics?: TrafficDelta[];
         onlineClients?: string[];
         onlineByGuid?: Record<string, string[]>;
-        activeInbounds?: Record<string, string[]>;
+        onlineInboundsByGuid?: Record<string, Record<string, string[]>>;
         lastOnlineMap?: Record<string, number>;
       };
       if (Array.isArray(p.onlineClients)) {
@@ -424,8 +442,8 @@ export function useInbounds() {
       if (p.onlineByGuid && typeof p.onlineByGuid === 'object') {
         onlineByGuidRef.current = toGuidOnlineMap(p.onlineByGuid);
       }
-      if (p.activeInbounds && typeof p.activeInbounds === 'object') {
-        activeByGuidRef.current = toGuidOnlineMap(p.activeInbounds);
+      if (p.onlineInboundsByGuid && typeof p.onlineInboundsByGuid === 'object') {
+        onlineInboundsByGuidRef.current = toGuidInboundMap(p.onlineInboundsByGuid);
       }
       if (p.lastOnlineMap && typeof p.lastOnlineMap === 'object') {
         setLastOnlineMap((prev) => ({ ...prev, ...p.lastOnlineMap! }));

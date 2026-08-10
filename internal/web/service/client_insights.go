@@ -73,6 +73,15 @@ type ClientReportHost struct {
 	LastSeen  int64  `json:"lastSeen"`
 }
 
+type ClientReportInbound struct {
+	ID       int    `json:"id"`
+	Tag      string `json:"tag"`
+	Remark   string `json:"remark"`
+	Protocol string `json:"protocol"`
+	Port     int    `json:"port"`
+	NodeID   *int   `json:"nodeId,omitempty"`
+}
+
 type ClientInsightReport struct {
 	Email                string                     `json:"email"`
 	Days                 int                        `json:"days"`
@@ -83,7 +92,8 @@ type ClientInsightReport struct {
 	RecentIPCount        int                        `json:"recentIpCount"`
 	RecentIPs            []model.ClientIPHistory    `json:"recentIps"`
 	Apps                 []ClientReportApp          `json:"apps"`
-	Hosts                []ClientReportHost         `json:"hosts"`
+	Hosts                []ClientReportHost         `json:"hosts"` // backward-compatible; UI uses ConnectedInbounds
+	ConnectedInbounds    []ClientReportInbound      `json:"connectedInbounds"`
 	DailyUsage           []ClientDailyUsage         `json:"dailyUsage"`
 	HourlyUsage          []ClientHourlyUsage        `json:"hourlyUsage"`
 	TimelineUsage        []ClientTimelineUsage      `json:"timelineUsage"`
@@ -671,8 +681,48 @@ func (s *ClientInsightService) GetReportForRange(email string, days, hours int) 
 		Joins("JOIN client_inbounds ON client_inbounds.inbound_id = hosts.inbound_id").
 		Where("client_inbounds.client_id = ? AND hosts.is_disabled = ? AND hosts.is_hidden = ?", rec.Id, false, false).
 		Order("hosts.sort_order ASC, hosts.id ASC").Scan(&hosts).Error
-	for i := range hosts {
-		hosts[i].LastSeen = lastDataAt
+	// Keep legacy host rows for API compatibility, but do not stamp every host
+	// with the client's last traffic time. One inbound may have several host/IP
+	// choices, and that timestamp falsely implied that every choice was used.
+
+	// Report only the exact inbounds this client is currently observed on. Do
+	// not expand host rows: one inbound may expose several host/IP choices and
+	// showing all of those as "used" was misleading. Exact attribution comes
+	// from the same email+inbound access-log record used by the inbounds page.
+	var attachedInbounds []*model.Inbound
+	_ = db.Model(&model.Inbound{}).
+		Select("inbounds.id, inbounds.tag, inbounds.remark, inbounds.protocol, inbounds.port, inbounds.node_id, inbounds.origin_node_guid").
+		Joins("JOIN client_inbounds ON client_inbounds.inbound_id = inbounds.id").
+		Where("client_inbounds.client_id = ?", rec.Id).
+		Order("inbounds.id ASC").Find(&attachedInbounds).Error
+	inboundSvc := &InboundService{}
+	inboundSvc.annotateLocalOriginGuid(attachedInbounds)
+	onlineInbounds := inboundSvc.GetOnlineInboundsByGuid()
+	connectedInbounds := make([]ClientReportInbound, 0, len(attachedInbounds))
+	for _, inbound := range attachedInbounds {
+		if inbound == nil || inbound.Tag == "" || inbound.OriginNodeGuid == "" {
+			continue
+		}
+		byEmail, supported := onlineInbounds[inbound.OriginNodeGuid]
+		if !supported {
+			// Old remote nodes cannot provide exact email/inbound correlation;
+			// omit them rather than falsely claiming every attached inbound is live.
+			continue
+		}
+		found := false
+		for _, tag := range byEmail[email] {
+			if tag == inbound.Tag {
+				found = true
+				break
+			}
+		}
+		if !found {
+			continue
+		}
+		connectedInbounds = append(connectedInbounds, ClientReportInbound{
+			ID: inbound.Id, Tag: inbound.Tag, Remark: inbound.Remark,
+			Protocol: string(inbound.Protocol), Port: inbound.Port, NodeID: inbound.NodeID,
+		})
 	}
 	var events []model.ClientEvent
 	_ = db.Where("email = ? AND created_at >= ?", email, rangeStart).Order("created_at DESC, id DESC").Limit(100).Find(&events).Error
@@ -686,7 +736,8 @@ func (s *ClientInsightService) GetReportForRange(email string, days, hours int) 
 	return &ClientInsightReport{
 		Email: email, Days: days, Hours: hours, RangeStart: rangeStart, RangeEnd: rangeEnd,
 		LastOnline: traffic.LastOnline, RecentIPCount: int(recentIPCount), RecentIPs: ips,
-		Apps: apps, Hosts: hosts, DailyUsage: daily, HourlyUsage: hourly, TimelineUsage: timeline,
+		Apps: apps, Hosts: hosts, ConnectedInbounds: connectedInbounds,
+		DailyUsage: daily, HourlyUsage: hourly, TimelineUsage: timeline,
 		TotalUp: totalUp, TotalDown: totalDown, TotalUsage: totalUsage, AverageDaily: averageDaily,
 		PeakDay: peakDay, PeakDayBytes: peakDayBytes, PeakHour: peakHour, PeakHourBytes: peakHourBytes,
 		PeakMinuteBytes: peakMinuteBytes, LatestMinuteBytes: latestMinuteBytes,

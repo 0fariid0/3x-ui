@@ -940,7 +940,9 @@
       "destinationResetConfirmTitle": "Clear this client’s destination history?",
       "destinationResetConfirmDesc": "All saved destination aggregates for this client will be deleted. New connections will be recorded again while tracking remains enabled.",
       "destinationResetSuccess": "Destination history cleared.",
-      "destinationResetFailed": "Could not clear destination history."
+      "destinationResetFailed": "Could not clear destination history.",
+      "connectedInbounds": "Connected Inbounds",
+      "noConnectedInbounds": "No active inbound connection detected"
     },
     "groups": {
       "name": "Name",

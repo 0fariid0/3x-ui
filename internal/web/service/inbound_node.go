@@ -1059,6 +1059,21 @@ func (s *InboundService) setRemoteTrafficLocked(nodeID int, snap *runtime.Traffi
 			}
 		}
 		process.SetNodeOnlineTree(nodeID, tree)
+
+		inboundTree := snap.OnlineInboundsTree
+		if guidShared && len(inboundTree) > 0 {
+			if _, ok := inboundTree[nodeRow.Guid]; ok {
+				remapped := make(map[string]map[string][]string, len(inboundTree))
+				for g, byEmail := range inboundTree {
+					if g == nodeRow.Guid {
+						g = selfKey
+					}
+					remapped[g] = byEmail
+				}
+				inboundTree = remapped
+			}
+		}
+		process.SetNodeOnlineInboundTree(nodeID, inboundTree)
 	}
 
 	return structuralChange, nil
@@ -1091,6 +1106,30 @@ func (s *InboundService) GetOnlineClientsByGuid() map[string][]string {
 	return out
 }
 
+// GetOnlineInboundsByGuid returns exact live inbound attribution as
+// panelGuid -> email -> inbound tags. The local panel key is emitted even when
+// the map is empty, which lets new frontends distinguish "precise attribution
+// supported, no inbound currently observed" from an older remote node that has
+// no endpoint and therefore needs the legacy email-only fallback.
+func (s *InboundService) GetOnlineInboundsByGuid() map[string]map[string][]string {
+	process := currentXrayProcess()
+	if process == nil {
+		return map[string]map[string][]string{}
+	}
+	out := process.GetMergedNodeOnlineInboundTrees()
+	if guid := s.panelGuid(); guid != "" {
+		local := process.GetLocalOnlineInbounds()
+		if existing := out[guid]; len(existing) > 0 {
+			for email, tags := range local {
+				existing[email] = mergeEmails(existing[email], tags)
+			}
+		} else {
+			out[guid] = local
+		}
+	}
+	return out
+}
+
 // GetActiveInboundsByGuid returns the inbound tags that carried traffic within
 // the grace window for THIS panel, under its own GUID. Remote nodes don't
 // report per-inbound activity, so a GUID missing from the map means "don't
@@ -1100,13 +1139,17 @@ func (s *InboundService) GetActiveInboundsByGuid() map[string][]string {
 	if process == nil {
 		return map[string][]string{}
 	}
-	active := process.GetLocalActiveInbounds()
-	if len(active) == 0 {
-		return map[string][]string{}
-	}
 	guid := s.panelGuid()
 	if guid == "" {
 		return map[string][]string{}
+	}
+	// Keep the local GUID present even when no inbound is active. Older
+	// frontends interpret a missing GUID as "this node cannot report inbound
+	// activity" and fall back to email-only online state, which would recreate
+	// the multi-inbound false-positive bug during a rolling upgrade.
+	active := process.GetLocalActiveInbounds()
+	if active == nil {
+		active = []string{}
 	}
 	return map[string][]string{guid: active}
 }
@@ -1114,6 +1157,12 @@ func (s *InboundService) GetActiveInboundsByGuid() map[string][]string {
 func (s *InboundService) SetNodeOnlineTree(nodeID int, tree map[string][]string) {
 	if process := currentXrayProcess(); process != nil {
 		process.SetNodeOnlineTree(nodeID, tree)
+	}
+}
+
+func (s *InboundService) SetNodeOnlineInboundTree(nodeID int, tree map[string]map[string][]string) {
+	if process := currentXrayProcess(); process != nil {
+		process.SetNodeOnlineInboundTree(nodeID, tree)
 	}
 }
 
@@ -1182,6 +1231,14 @@ func (s *InboundService) GetClientsLastOnline() (map[string]int64, error) {
 func (s *InboundService) RefreshLocalOnlineClients(activeEmails, activeInboundTags []string) {
 	if process := currentXrayProcess(); process != nil {
 		process.RefreshLocalOnline(activeEmails, activeInboundTags, time.Now().UnixMilli(), onlineGracePeriodMs)
+	}
+}
+
+// RefreshLocalOnlineInbounds folds exact email -> inbound-tag access-log
+// observations into the in-memory live attribution map and prunes stale pairs.
+func (s *InboundService) RefreshLocalOnlineInbounds(observed map[string][]string) {
+	if process := currentXrayProcess(); process != nil {
+		process.RefreshLocalOnlineInbounds(observed, time.Now().UnixMilli(), onlineGracePeriodMs)
 	}
 }
 

@@ -294,15 +294,17 @@ func pruneDestinationBuckets(db *gorm.DB, email string) error {
 		Delete(&model.ClientDestinationHour{}).Error
 }
 
-// AnyDestinationTrackingEnabled reports whether runtime access logging is needed.
+// AnyDestinationTrackingEnabled reports whether any client opted into persisted destination reporting.
+// Exact live inbound attribution uses the runtime access log for every client regardless of this setting.
 func AnyDestinationTrackingEnabled() bool {
 	var count int64
 	err := database.GetDB().Model(&model.ClientRecord{}).Where("destination_tracking = ?", true).Limit(1).Count(&count).Error
 	return err == nil && count > 0
 }
 
-// IngestDestinationAccessLog tails Xray's bounded access log and stores only
-// minute aggregates for clients that explicitly enabled destination tracking.
+// IngestDestinationAccessLog tails Xray's bounded access log. Every accepted
+// connection refreshes transient exact email -> inbound attribution in memory;
+// minute destination aggregates are persisted only for clients that opted in.
 func (s *ClientInsightService) IngestDestinationAccessLog() error {
 	destinationIngestMu.Lock()
 	defer destinationIngestMu.Unlock()
@@ -314,17 +316,12 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 	}
 	path, err := xray.GetAccessLogPath()
 	if err != nil || path == "" || strings.EqualFold(path, "none") {
+		(&InboundService{}).RefreshLocalOnlineInbounds(nil)
 		return err
-	}
-	if len(tracked) == 0 {
-		if filepath.Base(filepath.Clean(path)) == "client-destinations-access.log" {
-			_ = os.Truncate(path, 0)
-			_ = db.Save(&model.ClientDestinationCursor{Id: 1, Path: path, Offset: 0, ObservedSize: 0}).Error
-		}
-		return nil
 	}
 	file, err := os.Open(path)
 	if err != nil {
+		(&InboundService{}).RefreshLocalOnlineInbounds(nil)
 		if os.IsNotExist(err) {
 			return nil
 		}
@@ -351,6 +348,10 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 	reader := bufio.NewReaderSize(file, 64*1024)
 	offset := cursor.Offset
 	aggregated := make(map[string]destinationEvent)
+	// Live inbound attribution is never persisted. Keep only the pairs observed
+	// in this bounded access-log pass, then fold them into the process grace
+	// window below.
+	liveInboundSets := make(map[string]map[string]struct{})
 	for {
 		raw, readErr := reader.ReadString('\n')
 		if len(raw) > 0 {
@@ -359,19 +360,32 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 				break
 			}
 			offset += int64(len(raw))
-			if event, ok := parseDestinationAccessLine(raw, tracked, loc); ok {
-				mapKey := event.Email + "\x00" + strconv.FormatInt(event.BucketStart, 10) + "\x00" + event.Key
-				if current, exists := aggregated[mapKey]; exists {
-					current.Count++
-					if event.FirstAt < current.FirstAt {
-						current.FirstAt = event.FirstAt
+			entry := parseAccessLogFields(raw)
+			email := strings.TrimSpace(entry.Email)
+			inboundTag := strings.TrimSpace(entry.Inbound)
+			if email != "" && inboundTag != "" {
+				set := liveInboundSets[email]
+				if set == nil {
+					set = make(map[string]struct{})
+					liveInboundSets[email] = set
+				}
+				set[inboundTag] = struct{}{}
+			}
+			if len(tracked) > 0 {
+				if event, ok := parseDestinationAccessLine(raw, tracked, loc); ok {
+					mapKey := event.Email + "\x00" + strconv.FormatInt(event.BucketStart, 10) + "\x00" + event.Key
+					if current, exists := aggregated[mapKey]; exists {
+						current.Count++
+						if event.FirstAt < current.FirstAt {
+							current.FirstAt = event.FirstAt
+						}
+						if event.LastAt > current.LastAt {
+							current.LastAt = event.LastAt
+						}
+						aggregated[mapKey] = current
+					} else {
+						aggregated[mapKey] = event
 					}
-					if event.LastAt > current.LastAt {
-						current.LastAt = event.LastAt
-					}
-					aggregated[mapKey] = current
-				} else {
-					aggregated[mapKey] = event
 				}
 			}
 		}
@@ -382,6 +396,14 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 			break
 		}
 	}
+
+	liveInbounds := make(map[string][]string, len(liveInboundSets))
+	for email, tags := range liveInboundSets {
+		for tag := range tags {
+			liveInbounds[email] = append(liveInbounds[email], tag)
+		}
+	}
+	(&InboundService{}).RefreshLocalOnlineInbounds(liveInbounds)
 
 	if len(aggregated) > 0 {
 		if err := db.Transaction(func(tx *gorm.DB) error {
@@ -460,7 +482,7 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 	// aggregated, truncate this dedicated file so unselected clients are not
 	// retained as raw records. Administrator-configured access logs are never
 	// truncated here.
-	if filepath.Base(filepath.Clean(path)) == "client-destinations-access.log" {
+	if base := filepath.Base(filepath.Clean(path)); base == "client-runtime-access.log" || base == "client-destinations-access.log" {
 		if latest, statErr := os.Stat(path); statErr == nil && latest.Size() == offset {
 			if truncateErr := os.Truncate(path, 0); truncateErr != nil {
 				logger.Debug("[ClientDestinations] truncate dedicated access log failed:", truncateErr)

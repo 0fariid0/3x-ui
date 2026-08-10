@@ -226,14 +226,18 @@ func TestRefreshLocalOnline_GraceBoundaryEmails(t *testing.T) {
 	}
 }
 
-// TestRefreshLocalOnline_GraceBoundaryInbounds pins the same `<` boundary at
-// process.go:423 for inbound tags.
+// TestRefreshLocalOnline_GraceBoundaryInbounds pins the same `<` boundary for
+// exact email/inbound access-log observations.
 func TestRefreshLocalOnline_GraceBoundaryInbounds(t *testing.T) {
 	p := newOnlineTestProcess()
 	const grace = int64(20000)
 
-	p.RefreshLocalOnline(nil, []string{"in-edge"}, 0, grace)
-	p.RefreshLocalOnline(nil, nil, grace, grace)
+	p.RefreshLocalOnline([]string{"edge"}, nil, 0, grace)
+	p.RefreshLocalOnlineInbounds(map[string][]string{"edge": {"in-edge"}}, 0, grace)
+	// Keep the email online while the inbound observation lands exactly on the
+	// half-open grace boundary and therefore must be pruned.
+	p.RefreshLocalOnline([]string{"edge"}, nil, grace, grace)
+	p.RefreshLocalOnlineInbounds(nil, grace, grace)
 	for _, tag := range p.GetLocalActiveInbounds() {
 		if tag == "in-edge" {
 			t.Fatalf("inbound idle exactly graceMs must age out, got active %v", p.GetLocalActiveInbounds())
@@ -241,8 +245,10 @@ func TestRefreshLocalOnline_GraceBoundaryInbounds(t *testing.T) {
 	}
 
 	p2 := newOnlineTestProcess()
-	p2.RefreshLocalOnline(nil, []string{"in-edge"}, 0, grace)
-	p2.RefreshLocalOnline(nil, nil, grace-1, grace)
+	p2.RefreshLocalOnline([]string{"edge"}, nil, 0, grace)
+	p2.RefreshLocalOnlineInbounds(map[string][]string{"edge": {"in-edge"}}, 0, grace)
+	p2.RefreshLocalOnline([]string{"edge"}, nil, grace-1, grace)
+	p2.RefreshLocalOnlineInbounds(nil, grace-1, grace)
 	if !containsString(p2.GetLocalActiveInbounds(), "in-edge") {
 		t.Fatalf("inbound idle graceMs-1 must still be active, got %v", p2.GetLocalActiveInbounds())
 	}

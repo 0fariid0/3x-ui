@@ -299,7 +299,7 @@ func newDestinationRequest(ctx context.Context, url string) (*http.Request, erro
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "Fara-Xray/3.6.24 destination-prefix-updater")
+	req.Header.Set("User-Agent", "Fara-Xray/3.6.25 destination-prefix-updater")
 	req.Header.Set("Accept", "text/plain, application/json")
 	return req, nil
 }

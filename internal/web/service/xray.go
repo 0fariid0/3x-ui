@@ -152,7 +152,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		return nil, err
 	}
 	xrayConfig.LogConfig = resolveXrayLogPaths(xrayConfig.LogConfig)
-	xrayConfig.LogConfig = ensureDestinationTrackingAccessLog(xrayConfig.LogConfig)
+	xrayConfig.LogConfig = ensureClientRuntimeAccessLog(xrayConfig.LogConfig)
 	xrayConfig.API = ensureAPIServices(xrayConfig.API)
 	xrayConfig.Policy = ensureStatsPolicy(xrayConfig.Policy)
 	xrayConfig.RouterConfig = stripDisabledRules(xrayConfig.RouterConfig)
@@ -779,14 +779,13 @@ func ensureStatsPolicy(policy json_util.RawMessage) json_util.RawMessage {
 	return out
 }
 
-// ensureDestinationTrackingAccessLog enables a bounded access log only while at
-// least one client explicitly opts into destination aggregation. Existing admin
-// access-log settings are preserved; the generated runtime config is changed,
-// never the stored template.
-func ensureDestinationTrackingAccessLog(logCfg json_util.RawMessage) json_util.RawMessage {
-	if !AnyDestinationTrackingEnabled() {
-		return logCfg
-	}
+// ensureClientRuntimeAccessLog guarantees a transient Xray access log when the
+// administrator has not configured one. The panel tails this stream in memory
+// to correlate each client email with the exact inbound tag from the same
+// accepted-connection record. That correlation fixes false "online" badges for
+// clients attached to multiple inbounds. Existing administrator access logs are
+// preserved; only the generated runtime config is changed.
+func ensureClientRuntimeAccessLog(logCfg json_util.RawMessage) json_util.RawMessage {
 	parsed := map[string]any{}
 	if len(logCfg) > 0 {
 		if err := json.Unmarshal(logCfg, &parsed); err != nil {
@@ -797,7 +796,7 @@ func ensureDestinationTrackingAccessLog(logCfg json_util.RawMessage) json_util.R
 	if strings.TrimSpace(current) != "" && !strings.EqualFold(strings.TrimSpace(current), "none") {
 		return logCfg
 	}
-	parsed["access"] = filepath.Join(config.GetLogFolder(), "client-destinations-access.log")
+	parsed["access"] = filepath.Join(config.GetLogFolder(), "client-runtime-access.log")
 	out, err := json.Marshal(parsed)
 	if err != nil {
 		return logCfg

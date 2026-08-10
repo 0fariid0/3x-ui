@@ -1,5 +1,13 @@
 # Custom changelog
 
+## v3.6.25
+
+- Fixed multi-inbound online attribution: a client is now shown online only on the exact inbound tags observed for that client, rather than combining independent per-email and per-inbound aggregate counters.
+- Added live GUID -> email -> inbound-tag reporting and propagation across node chains, with legacy fallback only for older nodes that do not expose precise attribution.
+- Reworked the client usage "Hosts" view into "Connected Inbounds" so multiple host/IP choices for one inbound are no longer all presented as used/online.
+- Enabled a transient bounded runtime access log when no admin access log is configured; it is parsed in memory every 5 seconds for exact inbound attribution and truncated after ingestion.
+- Updated panel, OpenAPI, and destination updater version identifiers to 3.6.25.
+
 ## v3.6.24
 
 - Client usage/statistics modal now refreshes automatically every 5 seconds while it remains open.

@@ -206,10 +206,11 @@ func (j *NodeTrafficSyncJob) Run() {
 		online = []string{}
 	}
 	trafficPayload := map[string]any{
-		"onlineClients":  online,
-		"onlineByGuid":   j.inboundService.GetOnlineClientsByGuid(),
-		"activeInbounds": j.inboundService.GetActiveInboundsByGuid(),
-		"lastOnlineMap":  lastOnline,
+		"onlineClients":        online,
+		"onlineByGuid":         j.inboundService.GetOnlineClientsByGuid(),
+		"onlineInboundsByGuid": j.inboundService.GetOnlineInboundsByGuid(),
+		"activeInbounds":       j.inboundService.GetActiveInboundsByGuid(), // legacy payload for older frontends
+		"lastOnlineMap":        lastOnline,
 	}
 	// Always send the key so the dashboard clears node inbounds that went idle
 	// this tick. A nil result (query error) marshals to null and is skipped

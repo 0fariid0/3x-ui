@@ -96,25 +96,76 @@ func TestRefreshLocalOnlineGraceWindow(t *testing.T) {
 	}
 }
 
-// TestGetLocalActiveInboundsTracksGraceWindow pins #4859: a multi-inbound
-// client only counts online on inbounds that actually carried traffic, and the
-// active-inbound signal honours the same grace window as the online signal.
+// TestGetLocalActiveInboundsTracksGraceWindow pins exact email/inbound
+// attribution: a multi-inbound client counts online only on tags observed with
+// that same email in the access log, and stale tag observations age out.
 func TestGetLocalActiveInboundsTracksGraceWindow(t *testing.T) {
 	p := newOnlineTestProcess()
 	const grace = 20000
 
-	p.RefreshLocalOnline([]string{"alice"}, []string{"inbound-a"}, 1000, grace)
-	assertSameSet(t, "active after first poll", p.GetLocalActiveInbounds(), []string{"inbound-a"})
+	p.RefreshLocalOnline([]string{"alice"}, nil, 1000, grace)
+	p.RefreshLocalOnlineInbounds(map[string][]string{"alice": {"inbound-a"}}, 1000, grace)
+	assertSameSet(t, "active after first observation", p.GetLocalActiveInbounds(), []string{"inbound-a"})
 
-	p.RefreshLocalOnline([]string{"alice"}, []string{"inbound-b"}, 11000, grace)
+	p.RefreshLocalOnline([]string{"alice"}, nil, 11000, grace)
+	p.RefreshLocalOnlineInbounds(map[string][]string{"alice": {"inbound-b"}}, 11000, grace)
 	assertSameSet(t, "both within grace", p.GetLocalActiveInbounds(), []string{"inbound-a", "inbound-b"})
 
-	p.RefreshLocalOnline(nil, nil, 22000, grace)
+	// Keep the email itself online while pruning only stale inbound observations.
+	p.RefreshLocalOnline([]string{"alice"}, nil, 22000, grace)
+	p.RefreshLocalOnlineInbounds(nil, 22000, grace)
 	assertSameSet(t, "inbound-a (idle 21s) aged out, inbound-b kept", p.GetLocalActiveInbounds(), []string{"inbound-b"})
 
-	p.RefreshLocalOnline(nil, nil, 40000, grace)
+	p.RefreshLocalOnline([]string{"alice"}, nil, 40000, grace)
+	p.RefreshLocalOnlineInbounds(nil, 40000, grace)
 	if got := p.GetLocalActiveInbounds(); len(got) != 0 {
-		t.Errorf("all inbounds idle past grace, want empty, got %v", got)
+		t.Errorf("all inbound observations idle past grace, want empty, got %v", got)
+	}
+}
+
+// TestExactInboundAttributionDoesNotCrossClients is the regression test for
+// the panel bug fixed in v3.6.25. Aggregate user/inbound activity can tell us
+// that Alice and Bob are online and that A and B are active, but it cannot tell
+// which user used which inbound. The exact map must preserve those pairs.
+func TestExactInboundAttributionDoesNotCrossClients(t *testing.T) {
+	p := newOnlineTestProcess()
+	const grace = 20000
+
+	p.RefreshLocalOnline([]string{"alice", "bob"}, nil, 1000, grace)
+	p.RefreshLocalOnlineInbounds(map[string][]string{
+		"alice": {"inbound-a"},
+		"bob":   {"inbound-b"},
+	}, 1000, grace)
+
+	exact := p.GetLocalOnlineInbounds()
+	assertSameSet(t, "alice exact inbounds", exact["alice"], []string{"inbound-a"})
+	assertSameSet(t, "bob exact inbounds", exact["bob"], []string{"inbound-b"})
+	if slices.Contains(exact["alice"], "inbound-b") {
+		t.Fatalf("bob's inbound leaked onto alice: %v", exact)
+	}
+	if slices.Contains(exact["bob"], "inbound-a") {
+		t.Fatalf("alice's inbound leaked onto bob: %v", exact)
+	}
+}
+
+// TestMergedNodeOnlineInboundTreesScopesPerGuid keeps exact attribution intact
+// through a multi-node chain and deduplicates repeated tags.
+func TestMergedNodeOnlineInboundTreesScopesPerGuid(t *testing.T) {
+	p := newOnlineTestProcess()
+	p.SetNodeOnlineInboundTree(1, map[string]map[string][]string{
+		"guid-a": {"alice": {"in-a", "in-a"}},
+		"guid-b": {"bob": {"in-b"}},
+	})
+	p.SetNodeOnlineInboundTree(2, map[string]map[string][]string{
+		"guid-c": {"carol": {"in-c"}},
+	})
+
+	merged := p.GetMergedNodeOnlineInboundTrees()
+	assertSameSet(t, "guid-a/alice", merged["guid-a"]["alice"], []string{"in-a"})
+	assertSameSet(t, "guid-b/bob", merged["guid-b"]["bob"], []string{"in-b"})
+	assertSameSet(t, "guid-c/carol", merged["guid-c"]["carol"], []string{"in-c"})
+	if _, leaked := merged["guid-a"]["bob"]; leaked {
+		t.Fatalf("guid-b client leaked into guid-a: %v", merged)
 	}
 }
 
