@@ -1,3 +1,9 @@
+## v3.6.28
+
+- Removed the generated `?name=` query parameter from normal subscription, JSON subscription, and Clash subscription links.
+- Existing custom subscription URLs with stale `name` query parameters are sanitized before being shown, copied, or used in QR/deep-link flows.
+- Frontend subscription copy/QR helpers now keep plain subscription URLs and preserve only non-name query parameters.
+
 
 ## v3.6.27
 - Client usage details now show all currently online inbounds plus the three most recent previously used inbounds, with the last connection time for each inbound.

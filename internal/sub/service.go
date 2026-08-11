@@ -31,9 +31,9 @@ type SubService struct {
 	address        string
 	remarkTemplate string
 	datepicker     string
-	// nameMode is retained for compatibility with subscription URLs such as
-	// ?name=email. It names the imported subscription/profile in supporting
-	// clients and must never overwrite individual Host/config remarks.
+	// nameMode is retained for backward compatibility with manually supplied
+	// subscription URLs that still include ?name=.... The panel no longer
+	// generates name= query parameters because some clients reject them.
 	nameMode string
 	// subscriptionBody is true only when rendering the actual subscription
 	// content a client app imports (raw /sub fetch, /json, /clash). The remark
@@ -105,9 +105,9 @@ func (s *SubService) ForRequest(host string) *SubService {
 	return &req
 }
 
-// SetNameMode validates and retains the optional subscription profile name.
-// Supporting clients may use ?name=... to name the imported profile, but it
-// must not overwrite the individual configuration remarks generated below.
+// SetNameMode validates and retains the optional subscription profile name
+// for backward compatibility with manually supplied URLs. Generated panel
+// links deliberately omit ?name=... because some clients reject those URLs.
 func (s *SubService) SetNameMode(mode string) {
 	mode = strings.TrimSpace(mode)
 	if mode == "" || len(mode) > 256 || strings.ContainsAny(mode, "\r\n\x00") {
@@ -2734,14 +2734,15 @@ func (s *SubService) BuildURLs(subPath, subJsonPath, subClashPath, subId string,
 	subJsonURL = s.buildSingleURL(configuredSubJsonURI, jsonClashBase, subJsonPath, subId)
 	subClashURL = s.buildSingleURL(configuredSubClashURI, jsonClashBase, subClashPath, subId)
 
-	name := "email"
-	if len(configName) > 0 && strings.TrimSpace(configName[0]) != "" {
-		name = strings.TrimSpace(configName[0])
-	}
-	return appendSubscriptionName(subURL, name), appendSubscriptionName(subJsonURL, name), appendSubscriptionName(subClashURL, name)
+	// Do not append ?name=... to generated subscription URLs. Several
+	// client apps fail to import subscription links when the profile-name
+	// parameter is present, especially with non-ASCII values. Keep the
+	// subscription URL plain and strip a stale name parameter if it was
+	// already present in a configured custom URI.
+	return stripSubscriptionName(subURL), stripSubscriptionName(subJsonURL), stripSubscriptionName(subClashURL)
 }
 
-func appendSubscriptionName(rawURL string, name string) string {
+func stripSubscriptionName(rawURL string) string {
 	if rawURL == "" {
 		return ""
 	}
@@ -2750,10 +2751,10 @@ func appendSubscriptionName(rawURL string, name string) string {
 		return rawURL
 	}
 	q := u.Query()
-	if strings.TrimSpace(name) == "" {
-		name = "email"
+	if _, ok := q["name"]; !ok {
+		return rawURL
 	}
-	q.Set("name", name)
+	q.Del("name")
 	u.RawQuery = q.Encode()
 	return u.String()
 }

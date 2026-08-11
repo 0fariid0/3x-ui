@@ -36,8 +36,8 @@ func TestBuildURLs_NormalizesListenIP(t *testing.T) {
 	if !strings.Contains(subURL, "localhost") {
 		t.Fatalf("Copy URL = %q, want a localhost host", subURL)
 	}
-	if !strings.HasSuffix(subURL, "/sub/ABC?name=email") {
-		t.Fatalf("Copy URL = %q, want it to end with /sub/ABC?name=email", subURL)
+	if !strings.HasSuffix(subURL, "/sub/ABC") {
+		t.Fatalf("Copy URL = %q, want it to end with /sub/ABC", subURL)
 	}
 }
 
@@ -50,13 +50,13 @@ func TestBuildURLs_UsesSubscriberDomain(t *testing.T) {
 
 	subURL, jsonURL, clashURL := s.BuildURLs("/sub/", "/json/", "/clash/", "ABC")
 
-	if subURL != "http://sub.example.com:2096/sub/ABC?name=email" {
+	if subURL != "http://sub.example.com:2096/sub/ABC" {
 		t.Fatalf("subURL = %q", subURL)
 	}
-	if jsonURL != "http://sub.example.com:2096/json/ABC?name=email" {
+	if jsonURL != "http://sub.example.com:2096/json/ABC" {
 		t.Fatalf("jsonURL = %q", jsonURL)
 	}
-	if clashURL != "http://sub.example.com:2096/clash/ABC?name=email" {
+	if clashURL != "http://sub.example.com:2096/clash/ABC" {
 		t.Fatalf("clashURL = %q", clashURL)
 	}
 }
@@ -131,14 +131,14 @@ func TestBuildURLs_DerivesJsonFromConfiguredSubURI(t *testing.T) {
 
 	subURL, jsonURL, clashURL := s.BuildURLs("/sub-xxx/", "/json/", "/clash/", "ABC")
 
-	if subURL != "https://example.com/sub-xxx/ABC?name=email" {
+	if subURL != "https://example.com/sub-xxx/ABC" {
 		t.Fatalf("subURL = %q", subURL)
 	}
-	if jsonURL != "https://example.com/json/ABC?name=email" {
-		t.Fatalf("jsonURL = %q (should derive scheme+host from subURI), want %q", jsonURL, "https://example.com/json/ABC?name=email")
+	if jsonURL != "https://example.com/json/ABC" {
+		t.Fatalf("jsonURL = %q (should derive scheme+host from subURI), want %q", jsonURL, "https://example.com/json/ABC")
 	}
-	if clashURL != "https://example.com/clash/ABC?name=email" {
-		t.Fatalf("clashURL = %q (should derive scheme+host from subURI), want %q", clashURL, "https://example.com/clash/ABC?name=email")
+	if clashURL != "https://example.com/clash/ABC" {
+		t.Fatalf("clashURL = %q (should derive scheme+host from subURI), want %q", clashURL, "https://example.com/clash/ABC")
 	}
 }
 
@@ -156,31 +156,31 @@ func TestBuildURLs_MalformedSubURIFallsBackToRequestBase(t *testing.T) {
 
 	_, jsonURL, clashURL := s.BuildURLs("/sub-xxx/", "/json/", "/clash/", "ABC")
 
-	if jsonURL != "http://sub.example.com:2096/json/ABC?name=email" {
-		t.Fatalf("jsonURL = %q, want fallback to request base %q", jsonURL, "http://sub.example.com:2096/json/ABC?name=email")
+	if jsonURL != "http://sub.example.com:2096/json/ABC" {
+		t.Fatalf("jsonURL = %q, want fallback to request base %q", jsonURL, "http://sub.example.com:2096/json/ABC")
 	}
-	if clashURL != "http://sub.example.com:2096/clash/ABC?name=email" {
-		t.Fatalf("clashURL = %q, want fallback to request base %q", clashURL, "http://sub.example.com:2096/clash/ABC?name=email")
+	if clashURL != "http://sub.example.com:2096/clash/ABC" {
+		t.Fatalf("clashURL = %q, want fallback to request base %q", clashURL, "http://sub.example.com:2096/clash/ABC")
 	}
 }
 
-func TestAppendSubscriptionNamePreservesExistingQuery(t *testing.T) {
-	got := appendSubscriptionName("https://example.com/sub/ABC?view=raw", "email")
-	if got != "https://example.com/sub/ABC?name=email&view=raw" {
+func TestStripSubscriptionNamePreservesOtherQuery(t *testing.T) {
+	got := stripSubscriptionName("https://example.com/sub/ABC?name=email&view=raw")
+	if got != "https://example.com/sub/ABC?view=raw" {
 		t.Fatalf("got %q", got)
 	}
 }
 
-func TestBuildURLs_UsesActualClientName(t *testing.T) {
+func TestBuildURLs_OmitsActualClientName(t *testing.T) {
 	initSubDB(t)
 	s := &SubService{}
 	s.PrepareForRequest("sub.example.com")
 
 	subURL, jsonURL, clashURL := s.BuildURLs("/sub/", "/json/", "/clash/", "ABC", "john@example.com")
-	wantSub := "http://sub.example.com:2096/sub/ABC?name=john%40example.com"
-	wantJSON := "http://sub.example.com:2096/json/ABC?name=john%40example.com"
-	wantClash := "http://sub.example.com:2096/clash/ABC?name=john%40example.com"
+	wantSub := "http://sub.example.com:2096/sub/ABC"
+	wantJSON := "http://sub.example.com:2096/json/ABC"
+	wantClash := "http://sub.example.com:2096/clash/ABC"
 	if subURL != wantSub || jsonURL != wantJSON || clashURL != wantClash {
-		t.Fatalf("actual-name URLs = %q %q %q, want %q %q %q", subURL, jsonURL, clashURL, wantSub, wantJSON, wantClash)
+		t.Fatalf("plain subscription URLs = %q %q %q, want %q %q %q", subURL, jsonURL, clashURL, wantSub, wantJSON, wantClash)
 	}
 }

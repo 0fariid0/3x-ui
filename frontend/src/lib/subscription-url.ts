@@ -1,19 +1,25 @@
 /**
- * Adds a client-specific display name to a subscription URL.
- * Existing query parameters and fragments are preserved, and an existing
- * `name` parameter is replaced instead of duplicated. When no client name is
- * available, the legacy `email` mode is retained for backward compatibility.
+ * Returns a plain subscription URL for clients that reject profile-name
+ * query parameters. Existing non-name query parameters and fragments are
+ * preserved, while a stale `name` parameter is removed.
  */
-export function withEmailConfigNames(rawUrl: string, email?: string): string {
+export function withEmailConfigNames(rawUrl: string, _email?: string): string {
   if (!rawUrl) return '';
 
   const hashIndex = rawUrl.indexOf('#');
   const beforeHash = hashIndex >= 0 ? rawUrl.slice(0, hashIndex) : rawUrl;
   const hash = hashIndex >= 0 ? rawUrl.slice(hashIndex) : '';
   const queryIndex = beforeHash.indexOf('?');
-  const base = queryIndex >= 0 ? beforeHash.slice(0, queryIndex) : beforeHash;
-  const query = queryIndex >= 0 ? beforeHash.slice(queryIndex + 1) : '';
+
+  if (queryIndex < 0) {
+    return rawUrl;
+  }
+
+  const base = beforeHash.slice(0, queryIndex);
+  const query = beforeHash.slice(queryIndex + 1);
   const params = new URLSearchParams(query);
-  params.set('name', email?.trim() || 'email');
-  return `${base}?${params.toString()}${hash}`;
+  params.delete('name');
+
+  const nextQuery = params.toString();
+  return `${base}${nextQuery ? `?${nextQuery}` : ''}${hash}`;
 }
