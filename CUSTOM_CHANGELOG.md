@@ -1,3 +1,10 @@
+## v3.6.29
+
+- Tuned panel background refresh cadence to reduce CPU, SQLite write pressure, and UI re-render load on busy panels.
+- Batched durable recent-inbound last-seen writes while keeping live in-memory online attribution exact.
+- Disabled continuous online-dot paint animations to reduce browser CPU when many clients/inbounds are visible.
+- Raised the default Go GC target and reduced forced heap-release frequency for lower CPU usage with a modest memory tradeoff.
+
 ## v3.6.28
 
 - Removed the generated `?name=` query parameter from normal subscription, JSON subscription, and Clash subscription links.

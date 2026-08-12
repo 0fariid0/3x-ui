@@ -10,15 +10,15 @@ import (
 
 const (
 	memLimitHeadroomPercent = 90
-	defaultGCPercent        = 75
-	defaultReleaseMinutes   = 10
+	defaultGCPercent        = 125
+	defaultReleaseMinutes   = 30
 )
 
-// ApplyMemoryTuning configures the Go runtime for a lower, steadier footprint and
+// ApplyMemoryTuning configures the Go runtime for a balanced CPU/memory footprint and
 // returns one log line per decision. It does NOT derive a soft limit from total
 // system RAM: on a shared or uncontrolled host that gives no benefit (GOGC, not
 // the limit, paces GC while the heap is far below it) and risks GC thrashing, so
-// memory is kept low via GOGC plus the periodic release job instead.
+// memory is kept bounded via GOGC plus the periodic release job instead.
 func ApplyMemoryTuning() []string {
 	lines := []string{applyGCPercent()}
 	if limit, source := applyMemoryLimit(); limit > 0 {
@@ -29,8 +29,8 @@ func ApplyMemoryTuning() []string {
 	return lines
 }
 
-// applyGCPercent lowers GOGC so the heap high-water mark, and thus RSS, stays
-// smaller. An explicit GOGC env (including GOGC=off) is left to the runtime.
+// applyGCPercent sets a balanced GOGC target. An explicit GOGC env
+// (including GOGC=off) is left to the runtime.
 func applyGCPercent() string {
 	if _, ok := os.LookupEnv("GOGC"); ok {
 		return "GC percent: GOGC env (handled by the Go runtime)"

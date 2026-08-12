@@ -1,0 +1,14 @@
+v3.6.29 validation notes
+
+Scope:
+- Balanced performance tuning for lower panel CPU and fewer UI/background writes.
+- Keeps subscription and inbound logic from v3.6.28 intact.
+
+Checks performed:
+- gofmt on changed Go files.
+- bash syntax is not affected in this release.
+- JSON/OpenAPI files parse successfully.
+- Frontend TypeScript change is syntax-level checked by TypeScript parser availability where present.
+
+Not run:
+- Full Go test/build: this environment does not have the project's required Go 1.26.5 toolchain available for download.

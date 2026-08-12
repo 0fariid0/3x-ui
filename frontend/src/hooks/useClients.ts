@@ -270,8 +270,9 @@ export function useClients(options: UseClientsOptions = {}) {
     enabled: withList && query !== null,
     staleTime: Infinity,
     // List is sorted/paged server-side, so the WS patch can't add new or
-    // re-sort rows; poll the current page to keep it live (pauses when hidden).
-    refetchInterval: 5000,
+    // re-sort rows; poll the current page at a lower cadence to reduce panel CPU/DB load.
+    refetchInterval: 10000,
+    refetchIntervalInBackground: false,
     placeholderData: keepPreviousData,
   });
 
