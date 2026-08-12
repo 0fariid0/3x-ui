@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
@@ -19,18 +18,12 @@ import (
 )
 
 const (
-	insightBytesPerMB                 int64 = 1024 * 1024
-	insightRawRetention                     = 25 * time.Hour
-	insightHourlyRetention                  = 31 * 24 * time.Hour
-	insightMaxDailyRetentionDays            = 365
-	insightRollupBackfillKey                = "clientInsightRollupBackfilledV366"
-	clientReportRecentInboundLimit          = 3
-	inboundActivityWriteMinIntervalMs       = int64(15 * time.Second / time.Millisecond)
-)
-
-var (
-	inboundActivityWriteMu    sync.Mutex
-	inboundActivityWriteCache = make(map[string]int64)
+	insightBytesPerMB              int64 = 1024 * 1024
+	insightRawRetention                  = 25 * time.Hour
+	insightHourlyRetention               = 31 * 24 * time.Hour
+	insightMaxDailyRetentionDays         = 365
+	insightRollupBackfillKey             = "clientInsightRollupBackfilledV366"
+	clientReportRecentInboundLimit       = 3
 )
 
 // ClientInsightService owns durable per-client reporting and abnormal usage
@@ -295,57 +288,6 @@ func (s *ClientInsightService) RecordIPHistory(observed map[string][]model.Clien
 	})
 }
 
-// throttleInboundActivityWrites keeps the live in-memory online map exact while
-// batching durable last-seen writes for chatty clients. Without this, a busy
-// client can force an UPSERT every access-log ingestion cycle for the same
-// email/inbound pair, increasing sqlite write pressure without adding useful
-// information to the recent-inbounds report.
-func throttleInboundActivityWrites(observed map[string]map[string]int64, now int64) map[string]map[string]int64 {
-	filtered := make(map[string]map[string]int64, len(observed))
-
-	inboundActivityWriteMu.Lock()
-	defer inboundActivityWriteMu.Unlock()
-
-	if len(inboundActivityWriteCache) > 200000 {
-		cutoff := now - int64((24*time.Hour)/time.Millisecond)
-		for key, seen := range inboundActivityWriteCache {
-			if seen < cutoff {
-				delete(inboundActivityWriteCache, key)
-			}
-		}
-	}
-
-	for email, byTag := range observed {
-		email = strings.TrimSpace(email)
-		if email == "" || len(byTag) == 0 {
-			continue
-		}
-		for tag, seen := range byTag {
-			tag = strings.TrimSpace(tag)
-			if tag == "" {
-				continue
-			}
-			if seen <= 0 {
-				seen = now
-			} else if seen < 10_000_000_000 {
-				seen *= 1000
-			}
-			key := email + "\x00" + tag
-			last := inboundActivityWriteCache[key]
-			if last > 0 && seen-last < inboundActivityWriteMinIntervalMs {
-				continue
-			}
-			inboundActivityWriteCache[key] = seen
-			if filtered[email] == nil {
-				filtered[email] = make(map[string]int64)
-			}
-			filtered[email][tag] = seen
-		}
-	}
-
-	return filtered
-}
-
 // RecordInboundActivity persists exact client -> inbound observations from the
 // access log. The input is email -> inbound tag -> last observed timestamp in
 // milliseconds. Share hosts and IPs are intentionally ignored here: the report
@@ -355,13 +297,8 @@ func (s *ClientInsightService) RecordInboundActivity(observed map[string]map[str
 		return nil
 	}
 
-	now := time.Now().UnixMilli()
-	observed = throttleInboundActivityWrites(observed, now)
-	if len(observed) == 0 {
-		return nil
-	}
-
 	tagSet := make(map[string]struct{})
+	now := time.Now().UnixMilli()
 	for email, byTag := range observed {
 		if strings.TrimSpace(email) == "" {
 			continue

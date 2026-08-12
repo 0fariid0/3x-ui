@@ -172,7 +172,7 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
   // implementation only refreshed the Destinations tab every 15 seconds, so
   // traffic totals/charts and the other report tabs stayed frozen until the
   // modal was closed and opened again. Run an immediate foreground fetch, then
-  // refresh the whole report silently on a balanced cadence. Recursive timeout
+  // refresh the whole report silently every five seconds. Recursive timeout
   // scheduling avoids piling up overlapping background requests on slow links.
   useEffect(() => {
     if (!open || !email) return undefined;

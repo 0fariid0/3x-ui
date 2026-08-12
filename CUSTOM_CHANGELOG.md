@@ -1,9 +1,8 @@
-## v3.6.29
+## v3.6.30
 
-- Tuned panel background refresh cadence to reduce CPU, SQLite write pressure, and UI re-render load on busy panels.
-- Batched durable recent-inbound last-seen writes while keeping live in-memory online attribution exact.
-- Disabled continuous online-dot paint animations to reduce browser CPU when many clients/inbounds are visible.
-- Raised the default Go GC target and reduced forced heap-release frequency for lower CPU usage with a modest memory tradeoff.
+- Fixed the unstable v3.6.29 optimisation attempt by reverting the risky backend/runtime changes that could break release builds on some targets.
+- Kept only safe panel-side load reductions: slower client-page polling, less frequent modal auto-refresh, no background refresh while the tab is hidden, and lower UI animation overhead.
+- Lightly relaxed Xray/client scan traffic cadences to reduce panel CPU pressure without touching user traffic routing logic.
 
 ## v3.6.28
 
