@@ -30,7 +30,7 @@
   margin-inline-end: 5px;
   vertical-align: middle;
   background: var(--ant-color-success);
-  /* Static dots avoid dozens/hundreds of continuous paint animations on large panels. */
+  animation: online-blink 1.1s ease-in-out infinite;
 }
 
 /* For Tags that carry a status dot: inline layout aligns the dot to
@@ -61,7 +61,7 @@
   margin-inline-end: 5px;
   vertical-align: middle;
   background: #722ED1;
-  /* Static dots avoid continuous paint animations on large panels. */
+  animation: xray-error-blink 1.1s ease-in-out infinite;
 }
 
 @keyframes xray-error-blink {

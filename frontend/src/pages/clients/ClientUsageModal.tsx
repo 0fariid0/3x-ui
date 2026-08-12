@@ -87,7 +87,7 @@ interface ClientUsageModalProps {
 
 type RangeValue = '12h' | '24h' | '7d' | '14d' | '30d' | '60d' | '90d' | '180d' | '365d';
 
-const AUTO_REFRESH_INTERVAL_MS = 8_000;
+const AUTO_REFRESH_INTERVAL_MS = 5_000;
 
 const RANGE_OPTIONS: { value: RangeValue; label: string }[] = [
   { value: '12h', label: '12h' },
@@ -181,10 +181,6 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
     let timer: number | undefined;
 
     const run = async (background: boolean) => {
-      if (background && typeof document !== 'undefined' && document.hidden) {
-        timer = window.setTimeout(() => { void run(true); }, AUTO_REFRESH_INTERVAL_MS);
-        return;
-      }
       await load(background);
       if (cancelled) return;
       timer = window.setTimeout(() => { void run(true); }, AUTO_REFRESH_INTERVAL_MS);
