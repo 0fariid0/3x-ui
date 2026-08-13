@@ -1,3 +1,9 @@
+## v3.6.36
+
+- Added a new cyber-glass dark dashboard skin inspired by the requested blue neon 3X-UI layout.
+- Restyled the main panel shell, sidebar, cards, tables, controls, modals, and overview widgets without changing backend logic, inbound logic, subscription logic, or Xray configuration behavior.
+- Updated the visible panel version metadata to 3.6.36.
+
 ## v3.6.28
 
 - Removed the generated `?name=` query parameter from normal subscription, JSON subscription, and Clash subscription links.

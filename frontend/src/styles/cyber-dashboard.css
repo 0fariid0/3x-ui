@@ -1,0 +1,382 @@
+/* v3.6.36 cyber-glass dashboard skin.
+   Pure CSS skin: no backend, inbound, subscription or Xray logic changes. */
+
+:root {
+  --xui-cyber-bg-0: #01040a;
+  --xui-cyber-bg-1: #020813;
+  --xui-cyber-bg-2: #061524;
+  --xui-cyber-card: rgba(7, 22, 40, 0.78);
+  --xui-cyber-card-strong: rgba(10, 29, 50, 0.92);
+  --xui-cyber-border: rgba(70, 206, 255, 0.16);
+  --xui-cyber-border-strong: rgba(61, 220, 255, 0.34);
+  --xui-cyber-text: rgba(240, 249, 255, 0.96);
+  --xui-cyber-muted: rgba(178, 213, 232, 0.66);
+  --xui-cyber-dim: rgba(133, 173, 197, 0.52);
+  --xui-cyber-cyan: #20d9ff;
+  --xui-cyber-cyan-soft: rgba(32, 217, 255, 0.18);
+  --xui-cyber-blue: #3b82ff;
+  --xui-cyber-purple: #9a5cff;
+  --xui-cyber-green: #22f0a7;
+  --xui-cyber-radius: 18px;
+}
+
+body.dark,
+html[data-theme="ultra-dark"] body.dark {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(32, 217, 255, 0.16), transparent 28rem),
+    radial-gradient(circle at 78% 8%, rgba(154, 92, 255, 0.12), transparent 26rem),
+    linear-gradient(135deg, var(--xui-cyber-bg-0), var(--xui-cyber-bg-1) 42%, #02050b);
+  color: var(--xui-cyber-text);
+}
+
+body.dark .index-page,
+body.dark .clients-page,
+body.dark .inbounds-page,
+body.dark .xray-page,
+body.dark .settings-page,
+body.dark .nodes-page,
+body.dark .groups-page,
+body.dark .api-docs-page,
+body.dark .hosts-page,
+html[data-theme="ultra-dark"] body.dark .index-page,
+html[data-theme="ultra-dark"] body.dark .clients-page,
+html[data-theme="ultra-dark"] body.dark .inbounds-page,
+html[data-theme="ultra-dark"] body.dark .xray-page,
+html[data-theme="ultra-dark"] body.dark .settings-page,
+html[data-theme="ultra-dark"] body.dark .nodes-page,
+html[data-theme="ultra-dark"] body.dark .groups-page,
+html[data-theme="ultra-dark"] body.dark .api-docs-page,
+html[data-theme="ultra-dark"] body.dark .hosts-page {
+  --bg-page: transparent;
+  --bg-card: var(--xui-cyber-card);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 15% 9%, rgba(32, 217, 255, 0.14), transparent 30rem),
+    radial-gradient(circle at 84% 12%, rgba(154, 92, 255, 0.12), transparent 25rem),
+    linear-gradient(135deg, rgba(2, 8, 19, 0.98), rgba(1, 5, 12, 0.98));
+}
+
+body.dark .content-area {
+  position: relative;
+}
+
+body.dark .content-area::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  background-image:
+    linear-gradient(rgba(72, 191, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(72, 191, 255, 0.08) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent 78%);
+}
+
+body.dark .content-shell,
+body.dark .ant-layout,
+body.dark .ant-layout-content {
+  background: transparent !important;
+}
+
+body.dark .content-area {
+  padding: 26px 28px;
+}
+
+body.dark .ant-sidebar {
+  filter: drop-shadow(16px 0 42px rgba(0, 0, 0, 0.42));
+}
+
+body.dark .ant-sidebar > .ant-layout-sider {
+  background:
+    linear-gradient(180deg, rgba(5, 18, 33, 0.96), rgba(1, 7, 16, 0.98)) !important;
+  border-inline-end: 1px solid rgba(70, 206, 255, 0.18);
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.04),
+    0 0 55px rgba(0, 205, 255, 0.09) !important;
+  backdrop-filter: blur(18px);
+}
+
+body.dark .sider-brand,
+body.dark .drawer-header {
+  height: 72px;
+  border-bottom: 1px solid rgba(70, 206, 255, 0.14);
+}
+
+body.dark .brand-text,
+body.dark .drawer-brand {
+  position: relative;
+  padding-inline-start: 42px;
+  color: #f0fbff;
+  font-size: 20px;
+  letter-spacing: 0.4px;
+  text-shadow: 0 0 18px rgba(32, 217, 255, 0.35);
+}
+
+body.dark .brand-text::before,
+body.dark .drawer-brand::before {
+  content: '✕';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(32, 217, 255, 0.6);
+  border-radius: 10px;
+  transform: translateY(-50%) rotate(45deg);
+  color: var(--xui-cyber-cyan);
+  background: linear-gradient(135deg, rgba(32, 217, 255, 0.18), rgba(154, 92, 255, 0.16));
+  box-shadow: 0 0 24px rgba(32, 217, 255, 0.35);
+  font-size: 17px;
+}
+
+body.dark .sider-nav,
+body.dark .sider-utility,
+body.dark .drawer-menu {
+  padding: 14px 10px;
+  background: transparent !important;
+}
+
+body.dark .sider-nav .ant-menu-item,
+body.dark .sider-nav .ant-menu-submenu-title,
+body.dark .sider-utility .ant-menu-item,
+body.dark .drawer-menu .ant-menu-item,
+body.dark .drawer-menu .ant-menu-submenu-title {
+  height: 46px;
+  line-height: 46px;
+  margin: 5px 0;
+  border-radius: 14px;
+  color: rgba(224, 241, 255, 0.74);
+}
+
+body.dark .sider-nav .ant-menu-item .anticon,
+body.dark .sider-nav .ant-menu-submenu-title .anticon,
+body.dark .sider-utility .ant-menu-item .anticon,
+body.dark .drawer-menu .ant-menu-item .anticon,
+body.dark .drawer-menu .ant-menu-submenu-title .anticon {
+  color: rgba(162, 210, 235, 0.9);
+  font-size: 17px;
+}
+
+body.dark .sider-nav .ant-menu-item-selected,
+body.dark .sider-utility .ant-menu-item-selected,
+body.dark .drawer-menu .ant-menu-item-selected {
+  color: #fff !important;
+  background: linear-gradient(90deg, rgba(30, 144, 255, 0.92), rgba(32, 217, 255, 0.88)) !important;
+  border: 1px solid rgba(127, 235, 255, 0.62);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 0 32px rgba(32, 217, 255, 0.33),
+    0 10px 24px rgba(20, 144, 255, 0.22);
+}
+
+body.dark .sider-nav .ant-menu-item-selected .anticon,
+body.dark .sider-utility .ant-menu-item-selected .anticon,
+body.dark .drawer-menu .ant-menu-item-selected .anticon {
+  color: #effcff !important;
+}
+
+body.dark .sider-footer,
+body.dark .sider-utility,
+body.dark .drawer-utility {
+  border-color: rgba(70, 206, 255, 0.13);
+}
+
+body.dark .ant-card,
+body.dark .hosts-page .ant-card,
+body.dark .index-page .ant-card,
+body.dark .clients-page .ant-card,
+body.dark .inbounds-page .ant-card,
+body.dark .xray-page .ant-card,
+body.dark .settings-page .ant-card,
+body.dark .nodes-page .ant-card,
+body.dark .groups-page .ant-card,
+body.dark .api-docs-page .ant-card {
+  border-radius: var(--xui-cyber-radius);
+  border: 1px solid var(--xui-cyber-border) !important;
+  background:
+    linear-gradient(180deg, rgba(11, 30, 52, 0.92), rgba(5, 16, 30, 0.84)) !important;
+  box-shadow:
+    0 16px 42px rgba(0, 0, 0, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 0 34px rgba(32, 217, 255, 0.045) !important;
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+}
+
+body.dark .ant-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(135deg, rgba(32, 217, 255, 0.13), transparent 34%),
+    radial-gradient(circle at 100% 0%, rgba(154, 92, 255, 0.12), transparent 36%);
+  opacity: 0.72;
+}
+
+body.dark .ant-card .ant-card-body,
+body.dark .ant-card .ant-card-head,
+body.dark .ant-card .ant-card-actions {
+  position: relative;
+  z-index: 1;
+}
+
+body.dark .ant-card-head {
+  border-bottom-color: rgba(70, 206, 255, 0.12) !important;
+}
+
+body.dark .ant-table-wrapper .ant-table,
+body.dark .ant-table-wrapper .ant-table-container,
+body.dark .ant-table-wrapper .ant-table-thead > tr > th,
+body.dark .ant-table-wrapper .ant-table-tbody > tr > td {
+  background: transparent !important;
+  border-color: rgba(70, 206, 255, 0.11) !important;
+}
+
+body.dark .ant-table-wrapper .ant-table-thead > tr > th {
+  color: rgba(201, 232, 246, 0.78);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+body.dark .ant-table-wrapper .ant-table-tbody > tr:hover > td {
+  background: rgba(32, 217, 255, 0.075) !important;
+}
+
+body.dark .ant-btn-primary {
+  background: linear-gradient(90deg, #168cff, #20d9ff) !important;
+  border-color: rgba(126, 236, 255, 0.7) !important;
+  box-shadow: 0 0 22px rgba(32, 217, 255, 0.22);
+}
+
+body.dark .ant-btn-default,
+body.dark .ant-input,
+body.dark .ant-input-affix-wrapper,
+body.dark .ant-select-selector,
+body.dark .ant-picker,
+body.dark .ant-dropdown-menu,
+body.dark .ant-modal-content,
+body.dark .ant-drawer-content {
+  border-color: rgba(70, 206, 255, 0.16) !important;
+  background: rgba(5, 17, 31, 0.92) !important;
+  backdrop-filter: blur(14px);
+}
+
+body.dark .ant-modal-content,
+body.dark .ant-drawer-content {
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55), 0 0 44px rgba(32, 217, 255, 0.09) !important;
+}
+
+body.dark .ant-tag {
+  border-color: rgba(70, 206, 255, 0.22);
+  background: rgba(32, 217, 255, 0.08);
+  color: rgba(230, 248, 255, 0.9);
+}
+
+body.dark .online-dot,
+body.dark .ov-state[data-state='running'] .ov-state-dot {
+  background: var(--xui-cyber-green);
+  box-shadow: 0 0 14px rgba(34, 240, 167, 0.7);
+}
+
+body.dark .ov-page {
+  gap: 16px;
+}
+
+body.dark .ov-bar {
+  padding: 4px 0 6px;
+}
+
+body.dark .ov-state {
+  border-color: rgba(70, 206, 255, 0.22);
+  background: rgba(5, 17, 31, 0.72);
+  color: rgba(230, 248, 255, 0.86);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+body.dark .ov-rule {
+  background: linear-gradient(90deg, transparent, rgba(32, 217, 255, 0.42), rgba(154, 92, 255, 0.2), transparent);
+}
+
+body.dark .ov-vitals {
+  grid-template-columns: repeat(4, minmax(210px, 1fr));
+}
+
+body.dark .ov-tile-number {
+  color: #f4fbff;
+  text-shadow: 0 0 18px rgba(32, 217, 255, 0.16);
+}
+
+body.dark .ov-tile-head,
+body.dark .ov-kicker-icon,
+body.dark .ov-panel-version:hover {
+  color: var(--xui-cyber-cyan);
+}
+
+body.dark .ov-mid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(330px, 0.85fr);
+  gap: 16px;
+}
+
+body.dark .ov-insights-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.75fr);
+  gap: 16px;
+}
+
+body.dark .ov-tile,
+body.dark .ov-throughput-card,
+body.dark .ov-connections-card,
+body.dark .ov-system-strip {
+  min-height: 0;
+}
+
+body.dark .ov-tile-chart path,
+body.dark .ov-throughput-card path,
+body.dark .ov-connections-card path,
+body.dark .sparkline path {
+  filter: drop-shadow(0 0 6px rgba(32, 217, 255, 0.45));
+}
+
+body.dark .ov-tile-chart svg,
+body.dark .ov-throughput-card svg,
+body.dark .ov-connections-card svg {
+  opacity: 0.95;
+}
+
+body.dark .ov-system-strip .ov-strip-cell,
+body.dark .ov-strip-cell {
+  border-color: rgba(70, 206, 255, 0.12) !important;
+}
+
+@media (max-width: 1200px) {
+  body.dark .ov-vitals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  body.dark .ov-mid,
+  body.dark .ov-insights-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  body.dark .content-area {
+    padding: 12px;
+    padding-top: 68px;
+  }
+  body.dark .ov-vitals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body.dark .ant-card.ant-card-hoverable:hover {
+    transform: translateY(-2px);
+  }
+}

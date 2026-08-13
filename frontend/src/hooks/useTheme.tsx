@@ -33,50 +33,74 @@ const initialUltra = readBool(STORAGE_ULTRA, false);
 applyDom(initialDark, initialUltra);
 
 const DARK_TOKENS = {
-  colorBgBase: '#1a1b1f',
-  colorBgLayout: '#1a1b1f',
-  colorBgContainer: '#23252b',
-  colorBgElevated: '#2d2f37',
+  colorPrimary: '#20d9ff',
+  colorInfo: '#20d9ff',
+  colorSuccess: '#20f6a9',
+  colorWarning: '#f6c85f',
+  colorError: '#ff5c7a',
+  colorBgBase: '#020813',
+  colorBgLayout: '#020813',
+  colorBgContainer: 'rgba(9, 24, 43, 0.86)',
+  colorBgElevated: 'rgba(12, 31, 55, 0.98)',
+  colorBorder: 'rgba(87, 211, 255, 0.18)',
+  colorBorderSecondary: 'rgba(87, 211, 255, 0.12)',
+  colorText: 'rgba(240, 249, 255, 0.96)',
+  colorTextSecondary: 'rgba(190, 220, 235, 0.72)',
+  colorTextTertiary: 'rgba(148, 187, 206, 0.56)',
 };
 const ULTRA_DARK_TOKENS = {
-  colorBgBase: '#000',
-  colorBgLayout: '#000',
-  colorBgContainer: '#101013',
-  colorBgElevated: '#1a1a1e',
+  colorPrimary: '#20d9ff',
+  colorInfo: '#20d9ff',
+  colorSuccess: '#20f6a9',
+  colorWarning: '#f6c85f',
+  colorError: '#ff5c7a',
+  colorBgBase: '#01040a',
+  colorBgLayout: '#01040a',
+  colorBgContainer: 'rgba(5, 16, 30, 0.9)',
+  colorBgElevated: 'rgba(8, 21, 38, 0.98)',
+  colorBorder: 'rgba(87, 211, 255, 0.18)',
+  colorBorderSecondary: 'rgba(87, 211, 255, 0.10)',
+  colorText: 'rgba(240, 249, 255, 0.96)',
+  colorTextSecondary: 'rgba(190, 220, 235, 0.72)',
+  colorTextTertiary: 'rgba(148, 187, 206, 0.56)',
 };
 const DARK_LAYOUT_TOKENS = {
-  bodyBg: '#1a1b1f',
-  headerBg: '#15161a',
+  bodyBg: '#020813',
+  headerBg: 'rgba(3, 11, 22, 0.86)',
   headerColor: '#ffffff',
-  footerBg: '#1a1b1f',
-  siderBg: '#15161a',
-  triggerBg: '#23252b',
+  footerBg: '#020813',
+  siderBg: 'rgba(3, 13, 26, 0.92)',
+  triggerBg: 'rgba(11, 30, 52, 0.98)',
   triggerColor: '#ffffff',
 };
 const ULTRA_DARK_LAYOUT_TOKENS = {
-  bodyBg: '#000',
-  headerBg: '#050507',
+  bodyBg: '#01040a',
+  headerBg: 'rgba(1, 7, 14, 0.92)',
   headerColor: '#ffffff',
-  footerBg: '#000',
-  siderBg: '#050507',
-  triggerBg: '#1a1a1e',
+  footerBg: '#01040a',
+  siderBg: 'rgba(1, 8, 17, 0.94)',
+  triggerBg: 'rgba(8, 21, 38, 0.98)',
   triggerColor: '#ffffff',
 };
 const DARK_MENU_TOKENS = {
-  darkItemBg: '#15161a',
-  darkSubMenuItemBg: '#1a1b1f',
-  darkPopupBg: '#23252b',
+  darkItemBg: 'transparent',
+  darkSubMenuItemBg: 'rgba(7, 22, 40, 0.5)',
+  darkPopupBg: 'rgba(12, 31, 55, 0.98)',
+  darkItemSelectedBg: 'rgba(32, 217, 255, 0.22)',
+  darkItemSelectedColor: '#ffffff',
 };
 const ULTRA_DARK_MENU_TOKENS = {
-  darkItemBg: '#050507',
-  darkSubMenuItemBg: '#000',
-  darkPopupBg: '#101013',
+  darkItemBg: 'transparent',
+  darkSubMenuItemBg: 'rgba(4, 14, 28, 0.68)',
+  darkPopupBg: 'rgba(8, 21, 38, 0.98)',
+  darkItemSelectedBg: 'rgba(32, 217, 255, 0.22)',
+  darkItemSelectedColor: '#ffffff',
 };
 const DARK_CARD_TOKENS = {
-  colorBorderSecondary: 'rgba(255, 255, 255, 0.06)',
+  colorBorderSecondary: 'rgba(87, 211, 255, 0.14)',
 };
 const ULTRA_DARK_CARD_TOKENS = {
-  colorBorderSecondary: 'rgba(255, 255, 255, 0.04)',
+  colorBorderSecondary: 'rgba(87, 211, 255, 0.12)',
 };
 const STATISTIC_TOKENS = {
   contentFontSize: 17,
