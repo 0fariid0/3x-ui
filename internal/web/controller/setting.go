@@ -141,7 +141,14 @@ func (a *SettingController) updateSetting(c *gin.Context) {
 		LdapPassword: form.ClearLdapPassword,
 		SmtpPassword: form.ClearSmtpPassword,
 	})
-	if err == nil && twoFactorErr == nil && !oldTwoFactor && allSetting.TwoFactorEnable {
+
+	// Persist the Active IP Count API flag explicitly. This setting is
+	// consumed by the subscription server on every API request, so it
+	// takes effect immediately and survives panel reload/restart.
+	if err == nil {
+		err = a.settingService.SetSubActiveIpApiEnable(allSetting.SubActiveIpApiEnable)
+	}
+if err == nil && twoFactorErr == nil && !oldTwoFactor && allSetting.TwoFactorEnable {
 		if bumpErr := a.userService.BumpLoginEpoch(); bumpErr != nil {
 			err = bumpErr
 		}

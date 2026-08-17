@@ -851,6 +851,11 @@ func (s *SettingService) GetSubActiveIpApiEnable() (bool, error) {
 	return s.getBool("subActiveIpApiEnable")
 }
 
+func (s *SettingService) SetSubActiveIpApiEnable(value bool) error {
+	return s.setBool("subActiveIpApiEnable", value)
+}
+
+
 func (s *SettingService) GetSubJsonEnable() (bool, error) {
 	return s.getBool("subJsonEnable")
 }
