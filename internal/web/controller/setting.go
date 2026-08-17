@@ -67,9 +67,7 @@ func (a *SettingController) initRouter(g *gin.RouterGroup) {
 	g.POST("/defaultSettings", a.getDefaultSettings)
 	g.POST("/factoryDefaults", a.getFactoryDefaults)
 	g.POST("/update", a.updateSetting)
-	g.GET("/activeIpApi", a.getActiveIPApiSetting)
-	g.POST("/activeIpApi", a.setActiveIPApiSetting)
-	g.POST("/validateRegex", a.validateRegex)
+g.POST("/validateRegex", a.validateRegex)
 	g.POST("/updateUser", a.updateUser)
 	g.POST("/restartPanel", a.restartPanel)
 	g.GET("/getDefaultJsonConfig", a.getDefaultXrayConfig)
@@ -138,18 +136,27 @@ func (a *SettingController) updateSetting(c *gin.Context) {
 			return
 		}
 	}
+	requestedActiveIPApi := allSetting.SubActiveIpApiEnable
+
 	err := a.settingService.UpdateAllSetting(allSetting, service.SecretClears{
 		TgBotToken:   form.ClearTgBotToken,
 		LdapPassword: form.ClearLdapPassword,
 		SmtpPassword: form.ClearSmtpPassword,
 	})
-
-	// Persist the Active IP Count API flag explicitly. This setting is
-	// consumed by the subscription server on every API request, so it
-	// takes effect immediately and survives panel reload/restart.
 	if err == nil {
-		err = a.settingService.SetSubActiveIpApiEnable(allSetting.SubActiveIpApiEnable)
+		if saveErr := a.settingService.SetSubActiveIpApiEnable(requestedActiveIPApi); saveErr != nil {
+			err = saveErr
+		}
 	}
+	if err == nil {
+		savedActiveIPApi, readErr := a.settingService.GetSubActiveIpApiEnable()
+		if readErr != nil {
+			err = readErr
+		} else if savedActiveIPApi != requestedActiveIPApi {
+			err = errors.New("active IP count API setting was not persisted")
+		}
+	}
+
 if err == nil && twoFactorErr == nil && !oldTwoFactor && allSetting.TwoFactorEnable {
 		if bumpErr := a.userService.BumpLoginEpoch(); bumpErr != nil {
 			err = bumpErr

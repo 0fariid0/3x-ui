@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+
 import { Alert, Button, Input, InputNumber, Select, Switch, Tabs } from 'antd';
 import { BranchesOutlined, CompassOutlined, IdcardOutlined, InfoCircleOutlined, NodeIndexOutlined, SafetyCertificateOutlined, SettingOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import type { AllSetting } from '@/models/setting';
-import { HttpUtil } from '@/utils';
 import { onNumber } from '@/utils/onNumber';
 import { DefaultSettingTag, SettingListItem } from '@/components/ui';
 import { RemarkTemplateField } from '@/components/form';
@@ -21,67 +20,6 @@ export default function SubscriptionGeneralTab({ allSetting, updateSetting }: Su
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { isMobile } = useMediaQuery();
-
-const [activeIpApiEnabled, setActiveIpApiEnabled] = useState(false);
-const [activeIpApiLoading, setActiveIpApiLoading] = useState(true);
-
-useEffect(() => {
-  let cancelled = false;
-
-  const loadActiveIpApiSetting = async () => {
-    try {
-      const msg = await HttpUtil.get('/panel/api/setting/activeIpApi', undefined, { silent: true }) as {
-        success?: boolean;
-        obj?: { enabled?: boolean };
-      };
-
-      if (cancelled || !msg?.success) return;
-
-      const enabled = !!msg.obj?.enabled;
-      setActiveIpApiEnabled(enabled);
-      updateSetting({ subActiveIpApiEnable: enabled });
-    } finally {
-      if (!cancelled) setActiveIpApiLoading(false);
-    }
-  };
-
-  void loadActiveIpApiSetting();
-
-  return () => {
-    cancelled = true;
-  };
-}, []);
-
-const saveActiveIpApiSetting = async (enabled: boolean) => {
-  const previous = activeIpApiEnabled;
-
-  setActiveIpApiEnabled(enabled);
-  setActiveIpApiLoading(true);
-
-  try {
-    const msg = await HttpUtil.post(
-      '/panel/api/setting/activeIpApi',
-      { enabled },
-      { silent: true },
-    ) as {
-      success?: boolean;
-      obj?: { enabled?: boolean };
-    };
-
-    if (!msg?.success) {
-      setActiveIpApiEnabled(previous);
-      return;
-    }
-
-    const saved = !!msg.obj?.enabled;
-    setActiveIpApiEnabled(saved);
-    updateSetting({ subActiveIpApiEnable: saved });
-  } catch {
-    setActiveIpApiEnabled(previous);
-  } finally {
-    setActiveIpApiLoading(false);
-  }
-};
 
 
   return (
@@ -101,9 +39,8 @@ const saveActiveIpApiSetting = async (enabled: boolean) => {
   description="Expose only the current active IP count for each subscription. Client IP addresses are never returned."
 >
   <Switch
-    checked={activeIpApiEnabled}
-    loading={activeIpApiLoading}
-    onChange={saveActiveIpApiSetting}
+    checked={!!allSetting.subActiveIpApiEnable}
+    onChange={(v) => updateSetting({ subActiveIpApiEnable: v })}
   />
 </SettingListItem>
             <SettingListItem paddings="small" title={t('pages.settings.subJsonEnableTitle')} description={t('pages.settings.subJsonEnable')}>
