@@ -67,6 +67,8 @@ func (a *SettingController) initRouter(g *gin.RouterGroup) {
 	g.POST("/defaultSettings", a.getDefaultSettings)
 	g.POST("/factoryDefaults", a.getFactoryDefaults)
 	g.POST("/update", a.updateSetting)
+	g.GET("/activeIpApi", a.getActiveIPApiSetting)
+	g.POST("/activeIpApi", a.setActiveIPApiSetting)
 	g.POST("/validateRegex", a.validateRegex)
 	g.POST("/updateUser", a.updateUser)
 	g.POST("/restartPanel", a.restartPanel)

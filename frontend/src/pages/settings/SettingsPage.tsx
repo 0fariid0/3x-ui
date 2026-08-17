@@ -132,6 +132,9 @@ export default function SettingsPage() {
       return;
     }
     await saveAll();
+	await HttpUtil.post('/panel/api/setting/activeIpApi', {
+		enabled: !!allSetting.subActiveIpApiEnable,
+	}, { silent: true });
   }
 
   function restartPanel() {
