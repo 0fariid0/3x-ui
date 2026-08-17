@@ -68,6 +68,8 @@ type AllSetting struct {
 	TwoFactorToken  string `json:"twoFactorToken" form:"twoFactorToken"`
 
 	SubEnable                   bool   `json:"subEnable" form:"subEnable"`
+
+	SubActiveIpApiEnable bool `json:"subActiveIpApiEnable" form:"subActiveIpApiEnable"`
 	SubJsonEnable               bool   `json:"subJsonEnable" form:"subJsonEnable"`
 	SubJsonAutoDetect           bool   `json:"subJsonAutoDetect" form:"subJsonAutoDetect"`
 	SubJsonAlwaysArray          bool   `json:"subJsonAlwaysArray" form:"subJsonAlwaysArray"`

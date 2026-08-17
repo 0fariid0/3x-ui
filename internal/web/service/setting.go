@@ -85,6 +85,7 @@ var defaultValueMap = map[string]string{
 	"twoFactorEnable":               "false",
 	"twoFactorToken":                "",
 	"subEnable":                     "true",
+	"subActiveIpApiEnable": "false",
 	"subJsonEnable":                 "false",
 	"subJsonAutoDetect":             "false",
 	"subJsonAlwaysArray":            "false",
@@ -844,6 +845,10 @@ func (s *SettingService) GetTimeLocation() (*time.Location, error) {
 
 func (s *SettingService) GetSubEnable() (bool, error) {
 	return s.getBool("subEnable")
+}
+
+func (s *SettingService) GetSubActiveIpApiEnable() (bool, error) {
+	return s.getBool("subActiveIpApiEnable")
 }
 
 func (s *SettingService) GetSubJsonEnable() (bool, error) {

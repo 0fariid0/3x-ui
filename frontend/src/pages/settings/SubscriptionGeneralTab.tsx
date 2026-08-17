@@ -30,6 +30,17 @@ export default function SubscriptionGeneralTab({ allSetting, updateSetting }: Su
             <SettingListItem paddings="small" title={t('pages.settings.subEnable')} description={t('pages.settings.subEnableDesc')}>
               <Switch checked={allSetting.subEnable} onChange={(v) => updateSetting({ subEnable: v })} />
             </SettingListItem>
+
+<SettingListItem
+  paddings="small"
+  title="Active IP Count API"
+  description="Expose only the current active IP count for each subscription. Client IP addresses are never returned."
+>
+  <Switch
+    checked={!!allSetting.subActiveIpApiEnable}
+    onChange={(v) => updateSetting({ subActiveIpApiEnable: v })}
+  />
+</SettingListItem>
             <SettingListItem paddings="small" title={t('pages.settings.subJsonEnableTitle')} description={t('pages.settings.subJsonEnable')}>
               <Switch checked={allSetting.subJsonEnable} onChange={(v) => updateSetting({ subJsonEnable: v })} />
             </SettingListItem>

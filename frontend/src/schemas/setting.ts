@@ -34,6 +34,7 @@ export const AllSettingSchema = z.object({
   twoFactorToken: z.string().optional(),
   xrayTemplateConfig: z.string().optional(),
   subEnable: z.boolean().optional(),
+  subActiveIpApiEnable: z.boolean().optional(),
   subJsonEnable: z.boolean().optional(),
   subJsonAutoDetect: z.boolean().optional(),
   subJsonAlwaysArray: z.boolean().optional(),

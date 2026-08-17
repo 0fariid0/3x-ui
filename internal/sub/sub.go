@@ -213,6 +213,8 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	// set per-request localizer from headers/cookies
 	engine.Use(locale.LocalizerMiddleware())
 
+	engine.GET("/api/active-ips/:subid", activeIPCountHandler)
+
 	// Mount the Vite-built dist/assets/ so the subscription page's JS/CSS
 	// bundles load from `/assets/...`. Also mount the same FS under the
 	// subscription path prefix (LinksPath + "assets") so reverse proxies
