@@ -1311,6 +1311,9 @@ func (s *ServerService) GetDb() ([]byte, error) {
 	return os.ReadFile(backupPath)
 }
 
+// backupSQLite creates the disposable portable SQLite snapshot used by both
+// normal database downloads and SQLite migration exports. Keeping this helper
+// is required because GetMigration also calls it.
 func (s *ServerService) backupSQLite() (string, func(), error) {
 	backupDir, err := os.MkdirTemp(filepath.Dir(config.GetDBPath()), ".x-ui-backup-")
 	if err != nil {
@@ -1318,7 +1321,7 @@ func (s *ServerService) backupSQLite() (string, func(), error) {
 	}
 	cleanup := func() { _ = os.RemoveAll(backupDir) }
 	backupPath := filepath.Join(backupDir, "backup.db")
-	if err := database.BackupSQLite(backupPath); err != nil {
+	if err := database.BackupPortableSQLite(backupPath); err != nil {
 		cleanup()
 		return "", nil, err
 	}

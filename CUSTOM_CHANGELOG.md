@@ -1,3 +1,10 @@
+## v3.6.29
+
+- Backup downloads now use a consistent temporary SQLite snapshot instead of transferring the live database file directly.
+- Fork-only analytics/history tables are excluded only from the downloadable backup; the live panel database and all existing statistics remain untouched.
+- The temporary backup is vacuumed and integrity-checked so backup size stays close to upstream 3x-ui while retaining all upstream configuration/state tables.
+- Restore/import behavior remains compatible: custom fork tables are recreated empty by the normal database migrations after importing a portable backup.
+
 ## v3.6.28
 
 - Removed the generated `?name=` query parameter from normal subscription, JSON subscription, and Clash subscription links.
