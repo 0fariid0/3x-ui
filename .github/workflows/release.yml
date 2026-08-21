@@ -3,6 +3,8 @@ name: Release 3X-UI
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - "v*.*.*"
 

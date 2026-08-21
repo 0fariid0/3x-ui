@@ -54,7 +54,7 @@ function refreshBasePath() {
 
 function readPanelVersion() {
   try {
-    const versionFile = path.resolve(__dirname, '..', 'config', 'version');
+    const versionFile = path.resolve(__dirname, '..', 'internal', 'config', 'version');
     return fs.readFileSync(versionFile, 'utf8').trim();
   } catch (_e) {
     return '';

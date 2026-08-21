@@ -231,6 +231,12 @@ export function useXraySetting(): UseXraySettingResult {
     const pretty = JSON.stringify(obj.xraySetting, null, 2);
     const nextUrl = normalizeOutboundTestUrl(obj.outboundTestUrl || '');
     const nextSubJsonDns = normalizeSubJsonDns(obj.subJsonDns || '');
+    // These lists are server-derived reference data rather than editable
+    // fields. Keep them fresh even while the local JSON editor is dirty.
+    setInboundTags(obj.inboundTags || []);
+    setClientReverseTags(obj.clientReverseTags || []);
+    setSubscriptionOutbounds(obj.subscriptionOutbounds || []);
+    setSubscriptionOutboundTags(obj.subscriptionOutboundTags || []);
     const isDirty = oldXraySettingRef.current !== xraySettingRef.current
       || normalizeOutboundTestUrl(oldOutboundTestUrlRef.current) !== normalizeOutboundTestUrl(outboundTestUrlRef.current)
       || normalizeSubJsonDns(oldSubJsonDnsRef.current) !== normalizeSubJsonDns(subJsonDnsRef.current)
@@ -241,10 +247,6 @@ export function useXraySetting(): UseXraySettingResult {
     setTemplateSettingsState(obj.xraySetting);
     oldXraySettingRef.current = pretty;
     syncingRef.current = false;
-    setInboundTags(obj.inboundTags || []);
-    setClientReverseTags(obj.clientReverseTags || []);
-    setSubscriptionOutbounds(obj.subscriptionOutbounds || []);
-    setSubscriptionOutboundTags(obj.subscriptionOutboundTags || []);
     setOutboundTestUrlState(nextUrl);
     oldOutboundTestUrlRef.current = nextUrl;
     setSubJsonDnsState(nextSubJsonDns);

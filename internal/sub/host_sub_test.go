@@ -1,6 +1,7 @@
 package sub
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"path/filepath"
@@ -105,7 +106,8 @@ func TestSub_NHosts_EmitsNLinksOrdered(t *testing.T) {
 	}
 }
 
-// #3 — a disabled host is omitted; the inbound falls back to its legacy link.
+// #3 — a globally disabled managed host is omitted and suppresses the legacy
+// fallback, so a deliberately private entry is not accidentally exposed.
 func TestSub_DisabledHostSkipped(t *testing.T) {
 	seedSubDB(t)
 	ib := seedSubInbound(t, "s1", "d", 4433, 1, wsTLSStream)
@@ -119,8 +121,8 @@ func TestSub_DisabledHostSkipped(t *testing.T) {
 	if strings.Contains(joined, "off.cdn.com") {
 		t.Fatalf("disabled host must not render: %s", joined)
 	}
-	if !strings.Contains(joined, "203.0.113.5:4433") {
-		t.Fatalf("with only a disabled host, the inbound's own link should render: %s", joined)
+	if joined != "" {
+		t.Fatalf("with only a disabled managed host, no legacy link should render: %s", joined)
 	}
 }
 
@@ -634,10 +636,29 @@ func TestSub_PermanentDisplayHost_FirstAndOnceAcrossInbounds(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetJson: %v", err)
 	}
-	if strings.Count(jsonOut, `"address": "1.1.1.1"`) != 1 {
-		t.Fatalf("json display config must appear exactly once:\n%s", jsonOut)
+	var configs []struct {
+		Outbounds []struct {
+			Protocol string `json:"protocol"`
+			Settings struct {
+				Address string `json:"address"`
+			} `json:"settings"`
+		} `json:"outbounds"`
 	}
-	if displayAt, realAt := strings.Index(jsonOut, `"address": "1.1.1.1"`), strings.Index(jsonOut, `"address": "203.0.113.5"`); displayAt < 0 || realAt < 0 || displayAt > realAt {
+	if err := json.Unmarshal([]byte(jsonOut), &configs); err != nil {
+		t.Fatalf("decode JSON subscription: %v", err)
+	}
+	displayCount := 0
+	for _, config := range configs {
+		for _, outbound := range config.Outbounds {
+			if outbound.Protocol == "vless" && outbound.Settings.Address == "1.1.1.1" {
+				displayCount++
+			}
+		}
+	}
+	if displayCount != 1 {
+		t.Fatalf("json display config count = %d, want 1:\n%s", displayCount, jsonOut)
+	}
+	if displayAt, realAt := strings.Index(jsonOut, `"remarks": "NOTICE-`), strings.Index(jsonOut, `"address": "203.0.113.5"`); displayAt < 0 || realAt < 0 || displayAt > realAt {
 		t.Fatalf("json display config must be first:\n%s", jsonOut)
 	}
 }

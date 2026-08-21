@@ -1,6 +1,7 @@
 package service
 
 import (
+	"net"
 	"slices"
 	"sort"
 	"strconv"
@@ -210,6 +211,11 @@ func buildHostRows(groupId string, req *entity.HostGroup) []*model.Host {
 	for _, hostStr := range hostsToProcess {
 		addr := normalizeHostAddress(hostStr)
 		port := req.Port
+		if port == 0 {
+			if _, embeddedPort := splitHostAddressPort(hostStr); embeddedPort > 0 {
+				port = embeddedPort
+			}
+		}
 		hostHeader := req.HostHeader
 		if req.HostHeaders != nil {
 			mapped, ok := req.HostHeaders[addr]
@@ -464,6 +470,25 @@ func normalizeHostAddress(hostStr string) string {
 		return strings.TrimSpace(strings.SplitN(hostStr, ":", 2)[0])
 	}
 	return strings.Trim(hostStr, "[]")
+}
+
+// splitHostAddressPort extracts an optional port from host:port or
+// [IPv6]:port input. Callers retain their explicit group port when set and use
+// this only as a compatibility fallback for imported node snapshots.
+func splitHostAddressPort(hostStr string) (string, int) {
+	hostStr = strings.TrimSpace(hostStr)
+	if hostStr == "" {
+		return "", 0
+	}
+	host, portText, err := net.SplitHostPort(hostStr)
+	if err != nil {
+		return normalizeHostAddress(hostStr), 0
+	}
+	port, err := strconv.Atoi(portText)
+	if err != nil || port < 1 || port > 65535 {
+		return normalizeHostAddress(hostStr), 0
+	}
+	return strings.TrimSpace(host), port
 }
 
 func (s *HostService) GetSubscriptionDisplayHost() (*entity.SubscriptionDisplayHost, error) {

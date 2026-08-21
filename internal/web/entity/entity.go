@@ -97,15 +97,15 @@ type AllSetting struct {
 	ExternalTrafficInformURI    string `json:"externalTrafficInformURI" form:"externalTrafficInformURI"`
 	RestartXrayOnClientDisable  bool   `json:"restartXrayOnClientDisable" form:"restartXrayOnClientDisable"`
 	AnomalyEnable               bool   `json:"anomalyEnable" form:"anomalyEnable"`
-	AnomalySpikeMBPerMinute     int    `json:"anomalySpikeMBPerMinute" form:"anomalySpikeMBPerMinute" validate:"gte=1,lte=1048576"`
-	AnomalySustainedMBPerMinute int    `json:"anomalySustainedMBPerMinute" form:"anomalySustainedMBPerMinute" validate:"gte=1,lte=1048576"`
-	AnomalySustainedMinutes     int    `json:"anomalySustainedMinutes" form:"anomalySustainedMinutes" validate:"gte=1,lte=1440"`
-	AnomalySharedIPThreshold    int    `json:"anomalySharedIPThreshold" form:"anomalySharedIPThreshold" validate:"gte=2,lte=10000"`
+	AnomalySpikeMBPerMinute     int    `json:"anomalySpikeMBPerMinute" form:"anomalySpikeMBPerMinute" validate:"omitempty,gte=1,lte=1048576"`
+	AnomalySustainedMBPerMinute int    `json:"anomalySustainedMBPerMinute" form:"anomalySustainedMBPerMinute" validate:"omitempty,gte=1,lte=1048576"`
+	AnomalySustainedMinutes     int    `json:"anomalySustainedMinutes" form:"anomalySustainedMinutes" validate:"omitempty,gte=1,lte=1440"`
+	AnomalySharedIPThreshold    int    `json:"anomalySharedIPThreshold" form:"anomalySharedIPThreshold" validate:"omitempty,gte=2,lte=10000"`
 	AnomalyAction               string `json:"anomalyAction" form:"anomalyAction"`
-	AnomalyActionMinutes        int    `json:"anomalyActionMinutes" form:"anomalyActionMinutes" validate:"gte=1,lte=10080"`
+	AnomalyActionMinutes        int    `json:"anomalyActionMinutes" form:"anomalyActionMinutes" validate:"omitempty,gte=1,lte=10080"`
 	AnomalyThrottleInboundId    int    `json:"anomalyThrottleInboundId" form:"anomalyThrottleInboundId" validate:"gte=0"`
-	AnomalyCooldownMinutes      int    `json:"anomalyCooldownMinutes" form:"anomalyCooldownMinutes" validate:"gte=1,lte=10080"`
-	AnomalyHistoryDays          int    `json:"anomalyHistoryDays" form:"anomalyHistoryDays" validate:"gte=1,lte=3650"`
+	AnomalyCooldownMinutes      int    `json:"anomalyCooldownMinutes" form:"anomalyCooldownMinutes" validate:"omitempty,gte=1,lte=10080"`
+	AnomalyHistoryDays          int    `json:"anomalyHistoryDays" form:"anomalyHistoryDays" validate:"omitempty,gte=1,lte=3650"`
 	ScheduledRestartEnable      bool   `json:"scheduledRestartEnable" form:"scheduledRestartEnable"`
 	ScheduledRestartInterval    int    `json:"scheduledRestartInterval" form:"scheduledRestartInterval"`
 	ScheduledRestartUnit        string `json:"scheduledRestartUnit" form:"scheduledRestartUnit"`

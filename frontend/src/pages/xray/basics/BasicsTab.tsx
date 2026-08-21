@@ -375,7 +375,7 @@ export default function BasicsTab({
                       min={1}
                       value={scheduledRestartInterval}
                       style={{ width: '60%' }}
-                      onChange={(value) => onChangeScheduledRestartInterval(Math.max(1, Number(value) || 1))}
+                      onChange={onNumber((value) => onChangeScheduledRestartInterval(Math.max(1, value)))}
                     />
                     <Select
                       value={scheduledRestartUnit}
@@ -458,7 +458,7 @@ export default function BasicsTab({
                     min={1}
                     max={60}
                     value={xrayHealthFailureThreshold}
-                    onChange={(value) => onChangeXrayHealthFailureThreshold(Math.max(1, Number(value) || 1))}
+                    onChange={onNumber((value) => onChangeXrayHealthFailureThreshold(Math.max(1, value)))}
                   />
                 }
               />
@@ -472,7 +472,7 @@ export default function BasicsTab({
                     max={1440}
                     addonAfter={t('pages.xray.restartUnitMinutes')}
                     value={xrayHealthRestartCooldown}
-                    onChange={(value) => onChangeXrayHealthRestartCooldown(Math.max(1, Number(value) || 1))}
+                    onChange={onNumber((value) => onChangeXrayHealthRestartCooldown(Math.max(1, value)))}
                   />
                 }
               />
@@ -485,7 +485,7 @@ export default function BasicsTab({
                     min={1}
                     max={100}
                     value={xrayHealthMaxRestarts}
-                    onChange={(value) => onChangeXrayHealthMaxRestarts(Math.max(1, Number(value) || 1))}
+                    onChange={onNumber((value) => onChangeXrayHealthMaxRestarts(Math.max(1, value)))}
                   />
                 }
               />
@@ -499,7 +499,7 @@ export default function BasicsTab({
                     max={1440}
                     addonAfter={t('pages.xray.restartUnitMinutes')}
                     value={xrayHealthWindowMinutes}
-                    onChange={(value) => onChangeXrayHealthWindowMinutes(Math.max(1, Number(value) || 1))}
+                    onChange={onNumber((value) => onChangeXrayHealthWindowMinutes(Math.max(1, value)))}
                   />
                 }
               />

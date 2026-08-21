@@ -1,0 +1,14 @@
+پس از استخراج ZIP وارد پوشه 3x-ui-v3.6.30 شوید و اجرا کنید:
+
+git status
+git push origin main
+git tag -a v3.6.30 -m "Release v3.6.30"
+git push origin v3.6.30
+
+Push شاخه main نسخه dev-latest را می‌سازد و Push تگ v3.6.30 نسخه Stable و فایل‌های Release را می‌سازد.
+
+اگر تگ را قبلاً محلی ساخته‌اید و هنوز Push نشده است:
+
+git tag -d v3.6.30
+
+سپس دو دستور ساخت و Push تگ را دوباره اجرا کنید.

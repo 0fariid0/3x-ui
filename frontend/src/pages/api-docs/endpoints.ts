@@ -599,6 +599,21 @@ export const sections: readonly Section[] = [
         responseSchema: 'ClientInsightReport',
       },
       {
+        method: 'GET',
+        path: '/panel/api/clients/subscriptionApps/:email',
+        summary: 'List recently detected subscription applications and operating systems for one client.',
+        params: [{ name: 'email', in: 'path', type: 'string', desc: 'Client email.' }],
+      },
+      {
+        method: 'GET',
+        path: '/panel/api/clients/subscriptionLinkOptions/:email',
+        summary: 'List the inbound, Host, and external subscription links that may be enabled or disabled for one client.',
+        params: [
+          { name: 'email', in: 'path', type: 'string', desc: 'Client email.' },
+          { name: 'inboundIds', in: 'query', type: 'string', optional: true, desc: 'Optional comma-separated inbound IDs used while editing attachments.' },
+        ],
+      },
+      {
         method: 'POST',
         path: '/panel/api/clients/clearDestinations/:email',
         summary: 'Delete all privacy-preserving destination aggregates stored for one client. Complete pending access-log lines are ingested first, so pre-reset data does not reappear on the next collector run.',
@@ -690,6 +705,13 @@ export const sections: readonly Section[] = [
         ],
         body: '{\n  "externalLinks": [\n    { "kind": "link", "value": "vless://uuid@host:443?...#srv", "remark": "DE" },\n    { "kind": "subscription", "value": "https://provider.example/sub/abc", "remark": "Provider" }\n  ]\n}',
         response: '{\n  "success": true\n}',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/clients/:email/subscriptionLinkOptions',
+        summary: 'Replace the per-client set of disabled subscription-link keys.',
+        params: [{ name: 'email', in: 'path', type: 'string', desc: 'Client email.' }],
+        body: '{\n  "disabledKeys": ["inbound:3", "host:abc-123"]\n}',
       },
       {
         method: 'POST',
@@ -1111,6 +1133,12 @@ export const sections: readonly Section[] = [
         response: '{\n  "success": true,\n  "obj": ["CDN", "EU", "FAST"]\n}',
       },
       {
+        method: 'GET',
+        path: '/panel/api/hosts/displayHost',
+        summary: 'Return the permanent informational subscription entry configuration.',
+        response: '{\n  "success": true,\n  "obj": { "enable": true, "remark": "📊{{TRAFFIC_LEFT}}" }\n}',
+      },
+      {
         method: 'POST',
         path: '/panel/api/hosts/add',
         summary: 'Create a host group on inbounds.',
@@ -1171,6 +1199,12 @@ export const sections: readonly Section[] = [
         path: '/panel/api/hosts/bulk/del',
         summary: 'Delete many host groups in one call.',
         body: '{\n  "ids": ["abc-123", "def-456"]\n}',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/hosts/displayHost',
+        summary: 'Enable or update the permanent informational subscription entry.',
+        body: '{\n  "enable": true,\n  "remark": "📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D"\n}',
       },
     ],
   },
@@ -1332,6 +1366,11 @@ export const sections: readonly Section[] = [
         method: 'GET',
         path: '/panel/api/xray/getXrayResult',
         summary: 'Return the most recent Xray process stdout/stderr output. Useful to check for startup errors or runtime warnings.',
+      },
+      {
+        method: 'GET',
+        path: '/panel/api/xray/restart-status',
+        summary: 'Return server time, configured scheduler timezone, and the result of the latest scheduled restart.',
       },
       {
         method: 'POST',

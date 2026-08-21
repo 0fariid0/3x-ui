@@ -216,9 +216,9 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
   }, [email, load, resettingDestinations, t]);
 
   const dateLabel = (ts?: number) => (!ts || ts <= 0 ? '—' : panelDateTime.formatDateTime(ts));
-  const daily = report?.dailyUsage ?? [];
-  const hourly = report?.hourlyUsage ?? [];
-  const timeline = report?.timelineUsage ?? [];
+  const daily = useMemo(() => report?.dailyUsage ?? [], [report?.dailyUsage]);
+  const hourly = useMemo(() => report?.hourlyUsage ?? [], [report?.hourlyUsage]);
+  const timeline = useMemo(() => report?.timelineUsage ?? [], [report?.timelineUsage]);
   const useRollingHours = (report?.hours ?? 0) > 0;
   const labels = useMemo(
     () => useRollingHours

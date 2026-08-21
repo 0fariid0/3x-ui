@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.6.29",
+    "version": "3.6.30",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -7164,6 +7164,97 @@
         }
       }
     },
+    "/panel/api/clients/subscriptionApps/{email}": {
+      "get": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "List recently detected subscription applications and operating systems for one client.",
+        "operationId": "get_panel_api_clients_subscriptionApps_email",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "description": "Client email.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/clients/subscriptionLinkOptions/{email}": {
+      "get": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "List the inbound, Host, and external subscription links that may be enabled or disabled for one client.",
+        "operationId": "get_panel_api_clients_subscriptionLinkOptions_email",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "description": "Client email.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "inboundIds",
+            "in": "query",
+            "required": false,
+            "description": "Optional comma-separated inbound IDs used while editing attachments.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/panel/api/clients/clearDestinations/{email}": {
       "post": {
         "tags": [
@@ -7684,6 +7775,63 @@
                 },
                 "example": {
                   "success": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/clients/{email}/subscriptionLinkOptions": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Replace the per-client set of disabled subscription-link keys.",
+        "operationId": "post_panel_api_clients_email_subscriptionLinkOptions",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "description": "Client email.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "disabledKeys": [
+                  "inbound:3",
+                  "host:abc-123"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
                 }
               }
             }
@@ -10582,6 +10730,85 @@
         }
       }
     },
+    "/panel/api/hosts/displayHost": {
+      "get": {
+        "tags": [
+          "Hosts"
+        ],
+        "summary": "Return the permanent informational subscription entry configuration.",
+        "operationId": "get_panel_api_hosts_displayHost",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "enable": true,
+                    "remark": "📊{{TRAFFIC_LEFT}}"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Hosts"
+        ],
+        "summary": "Enable or update the permanent informational subscription entry.",
+        "operationId": "post_panel_api_hosts_displayHost",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "enable": true,
+                "remark": "📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/panel/api/hosts/add": {
       "post": {
         "tags": [
@@ -11906,6 +12133,36 @@
         ],
         "summary": "Return the most recent Xray process stdout/stderr output. Useful to check for startup errors or runtime warnings.",
         "operationId": "get_panel_api_xray_getXrayResult",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/xray/restart-status": {
+      "get": {
+        "tags": [
+          "Xray Settings"
+        ],
+        "summary": "Return server time, configured scheduler timezone, and the result of the latest scheduled restart.",
+        "operationId": "get_panel_api_xray_restart_status",
         "responses": {
           "200": {
             "description": "Successful response",

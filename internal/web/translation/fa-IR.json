@@ -106,9 +106,7 @@
     "routing": "مسیریابی",
     "outbounds": "خروجی‌ها",
     "apiDocs": "مستندات API",
-    "donate": "حمایت مالی",
     "hosts": "میزبان‌ها",
-    "docs": "مستندات",
     "openMenu": "باز کردن منو"
   },
   "pages": {
@@ -863,15 +861,12 @@
       "subscriptionApps": "برنامه‌های اخیر سابسکریپشن",
       "hostDisabledGlobally": "غیرفعال سراسری",
       "managedSubscriptionLinksHint": "همه لینک‌های فعال سراسری به‌صورت پیش‌فرض برای این کاربر روشن هستند. می‌توانید آن‌ها را فقط برای این کاربر مخفی کنید یا یک Host غیرفعال سراسری را فقط برای این کاربر روشن کنید. اینباندهای غیرفعال نمایش داده نمی‌شوند.",
-      "detailedReport": "گزارش دقیق کاربر",
       "noReportData": "هنوز اطلاعاتی برای گزارش ثبت نشده است",
       "recentIpCount": "تعداد IPهای اخیر",
       "peakUsageHour": "شلوغ‌ترین ساعت مصرف",
       "peakHourUsage": "مصرف در شلوغ‌ترین ساعت",
-      "dailyUsage": "نمودار مصرف روزانه",
       "recentIps": "IPهای اخیر",
       "appsAndOs": "برنامه و سیستم‌عامل",
-      "usedHosts": "Hostهای مرتبط",
       "anomalyHistory": "تاریخچه مصرف غیرعادی",
       "changeHistory": "تاریخچه تمدید و تغییرات",
       "eventKinds": {
@@ -898,18 +893,13 @@
         "sustained": "مصرف مداوم سنگین",
         "spike": "جهش ناگهانی مصرف"
       },
-      "anomalyDescriptions": {
-        "sharing": "اتصال هم‌زمان یا اخیر از {{count}} IP شناسایی شد.",
-        "sustained": "مصرف مداوم با نرخ {{rate}} در دقیقه شناسایی شد.",
-        "spike": "جهش مصرف با نرخ {{rate}} در دقیقه شناسایی شد."
-      },
+      "anomalyDescriptions": {},
       "usageDetails": "جزئیات مصرف",
       "usageTab": "مصرف",
       "usageTotal": "مصرف کل بازه",
       "usageAverageDaily": "میانگین روزانه",
       "usagePeakDay": "پرمصرف‌ترین روز",
       "usagePeakMinute": "بیشترین مصرف دقیقه‌ای",
-      "activeDays": "روزهای فعال",
       "usageChart": "نمودار مصرف آپلود و دانلود",
       "usageChartRange": "گزارش {{days}} روزه",
       "latestMinute": "آخرین دقیقه ثبت‌شده",
@@ -930,7 +920,6 @@
       "destinationActiveCount": "مقصد فعال",
       "destinationConnections": "تعداد اتصال",
       "destinationCount": "تعداد مقصد",
-      "destinationOwner": "شبکه / مالک",
       "destinationLastSeen": "آخرین اتصال",
       "destinationConfidenceDomain": "شناسایی از دامنه",
       "destinationConfidenceNetwork": "شناسایی از رنج شبکه",

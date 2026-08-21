@@ -297,6 +297,25 @@ func TestNormalizeHostAddress(t *testing.T) {
 	}
 }
 
+func TestSplitHostAddressPort(t *testing.T) {
+	tests := []struct {
+		input string
+		host  string
+		port  int
+	}{
+		{"cdn.example.com:8443", "cdn.example.com", 8443},
+		{"[2001:db8::1]:443", "2001:db8::1", 443},
+		{"2001:db8::1", "2001:db8::1", 0},
+		{"cdn.example.com:not-a-port", "cdn.example.com", 0},
+	}
+	for _, tt := range tests {
+		host, port := splitHostAddressPort(tt.input)
+		if host != tt.host || port != tt.port {
+			t.Errorf("splitHostAddressPort(%q) = (%q, %d), want (%q, %d)", tt.input, host, port, tt.host, tt.port)
+		}
+	}
+}
+
 func TestAddHostGroup_OptionalAddress(t *testing.T) {
 	setupBulkDB(t)
 	svc := &HostService{}

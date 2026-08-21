@@ -25,6 +25,8 @@ describe('BasicsTab malformed happyEyeballs', () => {
         <BasicsTab
           templateSettings={settingsWithMalformedHappyEyeballs()}
           setTemplateSettings={vi.fn()}
+          subJsonDns=""
+          onChangeSubJsonDns={vi.fn()}
           outboundTestUrl=""
           onChangeOutboundTestUrl={vi.fn()}
           scheduledRestartEnable={false}

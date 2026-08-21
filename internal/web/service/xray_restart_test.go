@@ -40,16 +40,17 @@ func TestApplyPendingRestartReArmsFlagOnFailure(t *testing.T) {
 }
 
 func TestDidXrayCrashIgnoresIntentionalRestartWindow(t *testing.T) {
-	oldProcess := p
+	oldProcess, oldResult := xrayState.snapshot()
 	oldManual := isManuallyStopped.Load()
 	oldRestarting := isRestarting.Load()
 	t.Cleanup(func() {
-		p = oldProcess
+		xrayState.replace(oldProcess)
+		xrayState.storeResult(oldProcess, oldResult)
 		isManuallyStopped.Store(oldManual)
 		isRestarting.Store(oldRestarting)
 	})
 
-	p = nil
+	xrayState.replace(nil)
 	isManuallyStopped.Store(false)
 	isRestarting.Store(true)
 	if (&XrayService{}).DidXrayCrash() {

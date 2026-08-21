@@ -66,6 +66,8 @@ func migrationModels() []any {
 		&model.ClientInboundHistory{},
 		&model.ClientEvent{},
 		&model.ClientAnomaly{},
+		&model.ClientDestinationHour{},
+		&model.ClientDestinationCursor{},
 	}
 }
 

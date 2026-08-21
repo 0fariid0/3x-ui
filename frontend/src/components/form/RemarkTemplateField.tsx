@@ -76,8 +76,7 @@ const RemarkTemplateField = forwardRef<InputRef, RemarkTemplateFieldProps>(funct
           value={undefined}
           placeholder={t('pages.hosts.remarkVars.quickTemplates')}
           options={REMARK_TEMPLATE_PRESETS.map((template) => ({ value: template, label: template }))}
-          onChange={(template) => {
-            if (typeof template !== 'string') return;
+          onChange={(template: string) => {
             onChange?.(maxLength ? template.slice(0, maxLength) : template);
           }}
           style={{ width: '100%', marginTop: 6, fontFamily: 'monospace' }}
