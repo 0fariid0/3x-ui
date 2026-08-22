@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.6.30",
+    "version": "3.6.31",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -343,6 +343,12 @@
           "subShowIdentityOnAllLinks": {
             "type": "boolean"
           },
+          "subStreisandEnableRouting": {
+            "type": "boolean"
+          },
+          "subStreisandRoutingRules": {
+            "type": "string"
+          },
           "subSupportUrl": {
             "type": "string"
           },
@@ -556,6 +562,8 @@
           "subProfileUrl",
           "subRoutingRules",
           "subShowIdentityOnAllLinks",
+          "subStreisandEnableRouting",
+          "subStreisandRoutingRules",
           "subSupportUrl",
           "subThemeDir",
           "subTitle",
@@ -930,6 +938,12 @@
           "subShowIdentityOnAllLinks": {
             "type": "boolean"
           },
+          "subStreisandEnableRouting": {
+            "type": "boolean"
+          },
+          "subStreisandRoutingRules": {
+            "type": "string"
+          },
           "subSupportUrl": {
             "type": "string"
           },
@@ -1150,6 +1164,8 @@
           "subProfileUrl",
           "subRoutingRules",
           "subShowIdentityOnAllLinks",
+          "subStreisandEnableRouting",
+          "subStreisandRoutingRules",
           "subSupportUrl",
           "subThemeDir",
           "subTitle",
@@ -1722,6 +1738,12 @@
             "format": "int64",
             "type": "integer"
           },
+          "connectedInbounds": {
+            "items": {
+              "$ref": "#/components/schemas/ClientReportInbound"
+            },
+            "type": "array"
+          },
           "dailyUsage": {
             "items": {
               "$ref": "#/components/schemas/ClientDailyUsage"
@@ -1760,6 +1782,7 @@
             "type": "integer"
           },
           "hosts": {
+            "description": "backward-compatible; UI uses ConnectedInbounds",
             "items": {
               "$ref": "#/components/schemas/ClientReportHost"
             },
@@ -1846,6 +1869,7 @@
           "anomalies",
           "apps",
           "averageDaily",
+          "connectedInbounds",
           "dailyUsage",
           "days",
           "destinationSummaries",
@@ -1925,6 +1949,9 @@
           "password": {
             "type": "string"
           },
+          "pinned": {
+            "type": "boolean"
+          },
           "preSharedKey": {
             "type": "string"
           },
@@ -1979,6 +2006,7 @@
           "keepAlive",
           "limitIp",
           "password",
+          "pinned",
           "preSharedKey",
           "privateKey",
           "publicKey",
@@ -2065,6 +2093,46 @@
           "lastSeen",
           "port",
           "remark"
+        ],
+        "type": "object"
+      },
+      "ClientReportInbound": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "lastSeen": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "nodeId": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "online": {
+            "type": "boolean"
+          },
+          "port": {
+            "type": "integer"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "remark": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "lastSeen",
+          "online",
+          "port",
+          "protocol",
+          "remark",
+          "tag"
         ],
         "type": "object"
       },
@@ -7055,6 +7123,18 @@
                       }
                     ],
                     "averageDaily": 0,
+                    "connectedInbounds": [
+                      {
+                        "id": 0,
+                        "lastSeen": 0,
+                        "nodeId": null,
+                        "online": false,
+                        "port": 0,
+                        "protocol": "",
+                        "remark": "",
+                        "tag": ""
+                      }
+                    ],
                     "dailyUsage": [
                       {
                         "day": "",
@@ -7534,6 +7614,67 @@
                 "example": {
                   "success": true,
                   "msg": "Client updated"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/clients/pin/{email}": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Pin or unpin a client in the panel list. This is a presentation preference stored in the clients table; it does not modify Xray or restart the core. Pinned rows lead the selected sort order but remain subject to every active filter.",
+        "operationId": "post_panel_api_clients_pin_email",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "path",
+            "required": true,
+            "description": "Client email (unique identifier).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "pinned": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "email": "alice@example.com",
+                    "pinned": true
+                  }
                 }
               }
             }

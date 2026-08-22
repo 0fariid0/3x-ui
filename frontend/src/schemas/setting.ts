@@ -52,6 +52,8 @@ export const AllSettingSchema = z.object({
   subRoutingRules: z.string().optional(),
   subIncyEnableRouting: z.boolean().optional(),
   subIncyRoutingRules: z.string().optional(),
+  subStreisandEnableRouting: z.boolean().optional(),
+  subStreisandRoutingRules: z.string().refine((v) => v === '' || v.startsWith('streisand://')).optional(),
   subListen: z.string().optional(),
   subPort: port.optional(),
   subPath: absolutePath.optional(),

@@ -210,6 +210,16 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 		SubIncyRoutingRules = ""
 	}
 
+	SubStreisandEnableRouting, err := s.settingService.GetSubStreisandEnableRouting()
+	if err != nil {
+		SubStreisandEnableRouting = false
+	}
+
+	SubStreisandRoutingRules, err := s.settingService.GetSubStreisandRoutingRules()
+	if err != nil {
+		SubStreisandRoutingRules = ""
+	}
+
 	// set per-request localizer from headers/cookies
 	engine.Use(locale.LocalizerMiddleware())
 
@@ -292,6 +302,8 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 		WithSUBHideSettings(SubHideSettings),
 		WithSUBIncyEnableRouting(SubIncyEnableRouting),
 		WithSUBIncyRoutingRules(SubIncyRoutingRules),
+		WithSUBStreisandEnableRouting(SubStreisandEnableRouting),
+		WithSUBStreisandRoutingRules(SubStreisandRoutingRules),
 	)
 
 	return engine, nil

@@ -112,6 +112,8 @@ export const AllSettingSchema = z.object({
   subProfileUrl: z.string(),
   subRoutingRules: z.string(),
   subShowIdentityOnAllLinks: z.boolean(),
+  subStreisandEnableRouting: z.boolean(),
+  subStreisandRoutingRules: z.string(),
   subSupportUrl: z.string(),
   subThemeDir: z.string(),
   subTitle: z.string(),
@@ -249,6 +251,8 @@ export const AllSettingViewSchema = z.object({
   subProfileUrl: z.string(),
   subRoutingRules: z.string(),
   subShowIdentityOnAllLinks: z.boolean(),
+  subStreisandEnableRouting: z.boolean(),
+  subStreisandRoutingRules: z.string(),
   subSupportUrl: z.string(),
   subThemeDir: z.string(),
   subTitle: z.string(),
@@ -431,6 +435,7 @@ export const ClientInsightReportSchema = z.object({
   anomalies: z.array(z.lazy(() => ClientAnomalySchema)),
   apps: z.array(z.lazy(() => ClientReportAppSchema)),
   averageDaily: z.number().int(),
+  connectedInbounds: z.array(z.lazy(() => ClientReportInboundSchema)),
   dailyUsage: z.array(z.lazy(() => ClientDailyUsageSchema)),
   days: z.number().int(),
   destinationSummaries: z.array(z.lazy(() => ClientDestinationSummarySchema)),
@@ -477,6 +482,7 @@ export const ClientRecordSchema = z.object({
   keepAlive: z.number().int(),
   limitIp: z.number().int(),
   password: z.string(),
+  pinned: z.boolean(),
   preSharedKey: z.string(),
   privateKey: z.string(),
   publicKey: z.string(),
@@ -514,6 +520,18 @@ export const ClientReportHostSchema = z.object({
   remark: z.string(),
 });
 export type ClientReportHost = z.infer<typeof ClientReportHostSchema>;
+
+export const ClientReportInboundSchema = z.object({
+  id: z.number().int(),
+  lastSeen: z.number().int(),
+  nodeId: z.number().int().nullable().optional(),
+  online: z.boolean(),
+  port: z.number().int(),
+  protocol: z.string(),
+  remark: z.string(),
+  tag: z.string(),
+});
+export type ClientReportInbound = z.infer<typeof ClientReportInboundSchema>;
 
 export const ClientReverseSchema = z.object({
   tag: z.string(),

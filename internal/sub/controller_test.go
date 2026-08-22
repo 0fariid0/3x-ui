@@ -85,10 +85,37 @@ func TestNewSUBControllerOptions(t *testing.T) {
 		WithSUBJsonEnabled(true),
 		WithSUBEncryption(false),
 		WithSUBUpdateInterval("24"),
+		WithSUBStreisandEnableRouting(true),
+		WithSUBStreisandRoutingRules("streisand://route-test"),
 	)
 	if configured.subPath != "/custom/" || !configured.jsonEnabled || configured.subEncrypt || configured.updateInterval != "24" {
 		t.Fatalf("configured values were not applied: path=%q json=%v encrypt=%v update=%q",
 			configured.subPath, configured.jsonEnabled, configured.subEncrypt, configured.updateInterval)
+	}
+	if !configured.subStreisandEnableRouting || configured.subStreisandRoutingRules != "streisand://route-test" {
+		t.Fatalf("Streisand routing options were not applied: enabled=%v link=%q",
+			configured.subStreisandEnableRouting, configured.subStreisandRoutingRules)
+	}
+}
+
+func TestApplyCommonHeadersDisablesCachingAndExposesMetadata(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	(&SUBController{}).ApplyCommonHeaders(c,
+		"upload=1; download=2; total=3; expire=4", "1", "Profile", "", "", "", false, "", false)
+
+	if got := w.Header().Get("Profile-Update-Interval"); got != "1" {
+		t.Fatalf("Profile-Update-Interval = %q, want 1 hour", got)
+	}
+	if got := w.Header().Get("Cache-Control"); !strings.Contains(got, "no-store") {
+		t.Fatalf("Cache-Control = %q, want no-store", got)
+	}
+	exposed := w.Header().Get("Access-Control-Expose-Headers")
+	for _, name := range []string{"Subscription-Userinfo", "Profile-Update-Interval"} {
+		if !strings.Contains(exposed, name) {
+			t.Fatalf("Access-Control-Expose-Headers = %q, missing %s", exposed, name)
+		}
 	}
 }
 

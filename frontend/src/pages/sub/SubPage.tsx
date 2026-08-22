@@ -64,6 +64,7 @@ const linkEmails: string[] = Array.isArray(subData.emails) ? subData.emails : []
 const subEmail = [...new Set(linkEmails.filter(Boolean))].join(', ');
 const datepicker = subData.datepicker || 'gregorian';
 const announce = subData.announce || '';
+const streisandRoutingUrl = subData.streisandRoutingUrl || '';
 
 const appendRawView = (url: string) => `${url}${url.includes('?') ? '&' : '?'}view=raw`;
 
@@ -214,11 +215,14 @@ export default function SubPage() {
     { key: 'ios-shadowrocket', label: 'Shadowrocket', onClick: () => open(shadowrocketUrl) },
     { key: 'ios-v2box', label: 'V2Box', onClick: () => open(v2boxUrl) },
     { key: 'ios-streisand', label: 'Streisand', onClick: () => open(streisandUrl) },
+    ...(streisandRoutingUrl
+      ? [{ key: 'ios-streisand-route', label: t('subscription.streisandRoute'), onClick: () => open(streisandRoutingUrl) }]
+      : []),
     { key: 'ios-v2raytun', label: 'V2RayTun', onClick: () => copy(subUrl) },
     { key: 'ios-npvtunnel', label: 'NPV Tunnel', onClick: () => copy(subUrl) },
     { key: 'ios-happ', label: 'Happ', onClick: () => open(happUrl) },
     { key: 'ios-incy', label: 'Incy', onClick: () => open(incyUrl) },
-  ], [copy, open, shadowrocketUrl, v2boxUrl, streisandUrl, happUrl, incyUrl]);
+  ], [copy, open, shadowrocketUrl, v2boxUrl, streisandUrl, happUrl, incyUrl, t]);
 
   const langMenuItems = useMemo(
     () => (LanguageManager.supportedLanguages as { value: string; name: string; icon: string }[]).map((l) => ({

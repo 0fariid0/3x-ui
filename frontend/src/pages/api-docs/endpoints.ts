@@ -665,6 +665,17 @@ export const sections: readonly Section[] = [
       },
       {
         method: 'POST',
+        path: '/panel/api/clients/pin/:email',
+        summary: 'Pin or unpin a client in the panel list. This is a presentation preference stored in the clients table; it does not modify Xray or restart the core. Pinned rows lead the selected sort order but remain subject to every active filter.',
+        params: [
+          { name: 'email', in: 'path', type: 'string', desc: 'Client email (unique identifier).' },
+          { name: 'pinned', in: 'body (json)', type: 'boolean', desc: 'true to pin, false to unpin.' },
+        ],
+        body: '{\n  "pinned": true\n}',
+        response: '{\n  "success": true,\n  "obj": {\n    "email": "alice@example.com",\n    "pinned": true\n  }\n}',
+      },
+      {
+        method: 'POST',
         path: '/panel/api/clients/del/:email',
         summary: 'Delete a client by email. Removes it from every attached inbound and drops its traffic record unless keepTraffic=1 is passed.',
         params: [

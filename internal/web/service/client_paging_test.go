@@ -358,6 +358,55 @@ func TestListPagedSorting(t *testing.T) {
 	}
 }
 
+func TestListPagedPinnedClientsLeadButStillRespectFilters(t *testing.T) {
+	svc, inboundSvc, settingSvc := setupPagingServices(t)
+	seedPagingClients(t)
+
+	if err := svc.SetPinned("bravo@x", true); err != nil {
+		t.Fatalf("pin active client: %v", err)
+	}
+	if err := svc.SetPinned("delta@x", true); err != nil {
+		t.Fatalf("pin expired client: %v", err)
+	}
+
+	all, err := svc.ListPaged(inboundSvc, settingSvc, ClientPageParams{PageSize: 20, Sort: "email", Order: "ascend"})
+	if err != nil {
+		t.Fatalf("ListPaged all: %v", err)
+	}
+	wantPrefix := []string{"bravo@x", "delta@x"}
+	if got := pagedEmails(all.Items); len(got) < 2 || !slices.Equal(got[:2], wantPrefix) {
+		t.Fatalf("pinned prefix = %v, want %v", got, wantPrefix)
+	}
+	if !all.Items[0].Pinned || !all.Items[1].Pinned {
+		t.Fatalf("pinned flag missing from slim rows: %+v", all.Items[:2])
+	}
+
+	depleted, err := svc.ListPaged(inboundSvc, settingSvc, ClientPageParams{
+		PageSize: 20, Filter: "depleted", Sort: "email", Order: "ascend",
+	})
+	if err != nil {
+		t.Fatalf("ListPaged depleted: %v", err)
+	}
+	want := []string{"delta@x", "charlie@x", "foxtrot@x"}
+	if got := pagedEmails(depleted.Items); !slices.Equal(got, want) {
+		t.Fatalf("filtered pinned order = %v, want %v (active pinned client must not leak)", got, want)
+	}
+
+	if err := svc.SetPinned("delta@x", false); err != nil {
+		t.Fatalf("unpin expired client: %v", err)
+	}
+	depleted, err = svc.ListPaged(inboundSvc, settingSvc, ClientPageParams{
+		PageSize: 20, Filter: "depleted", Sort: "email", Order: "ascend",
+	})
+	if err != nil {
+		t.Fatalf("ListPaged depleted after unpin: %v", err)
+	}
+	want = []string{"charlie@x", "delta@x", "foxtrot@x"}
+	if got := pagedEmails(depleted.Items); !slices.Equal(got, want) {
+		t.Fatalf("unpin order = %v, want %v", got, want)
+	}
+}
+
 func TestListPagedPagination(t *testing.T) {
 	svc, inboundSvc, settingSvc := setupPagingServices(t)
 	seedPagingClients(t)

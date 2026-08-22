@@ -317,6 +317,12 @@ export const SCHEMAS: Record<string, unknown> = {
       "subShowIdentityOnAllLinks": {
         "type": "boolean"
       },
+      "subStreisandEnableRouting": {
+        "type": "boolean"
+      },
+      "subStreisandRoutingRules": {
+        "type": "string"
+      },
       "subSupportUrl": {
         "type": "string"
       },
@@ -530,6 +536,8 @@ export const SCHEMAS: Record<string, unknown> = {
       "subProfileUrl",
       "subRoutingRules",
       "subShowIdentityOnAllLinks",
+      "subStreisandEnableRouting",
+      "subStreisandRoutingRules",
       "subSupportUrl",
       "subThemeDir",
       "subTitle",
@@ -904,6 +912,12 @@ export const SCHEMAS: Record<string, unknown> = {
       "subShowIdentityOnAllLinks": {
         "type": "boolean"
       },
+      "subStreisandEnableRouting": {
+        "type": "boolean"
+      },
+      "subStreisandRoutingRules": {
+        "type": "string"
+      },
       "subSupportUrl": {
         "type": "string"
       },
@@ -1124,6 +1138,8 @@ export const SCHEMAS: Record<string, unknown> = {
       "subProfileUrl",
       "subRoutingRules",
       "subShowIdentityOnAllLinks",
+      "subStreisandEnableRouting",
+      "subStreisandRoutingRules",
       "subSupportUrl",
       "subThemeDir",
       "subTitle",
@@ -1696,6 +1712,12 @@ export const SCHEMAS: Record<string, unknown> = {
         "format": "int64",
         "type": "integer"
       },
+      "connectedInbounds": {
+        "items": {
+          "$ref": "#/components/schemas/ClientReportInbound"
+        },
+        "type": "array"
+      },
       "dailyUsage": {
         "items": {
           "$ref": "#/components/schemas/ClientDailyUsage"
@@ -1734,6 +1756,7 @@ export const SCHEMAS: Record<string, unknown> = {
         "type": "integer"
       },
       "hosts": {
+        "description": "backward-compatible; UI uses ConnectedInbounds",
         "items": {
           "$ref": "#/components/schemas/ClientReportHost"
         },
@@ -1820,6 +1843,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "anomalies",
       "apps",
       "averageDaily",
+      "connectedInbounds",
       "dailyUsage",
       "days",
       "destinationSummaries",
@@ -1899,6 +1923,9 @@ export const SCHEMAS: Record<string, unknown> = {
       "password": {
         "type": "string"
       },
+      "pinned": {
+        "type": "boolean"
+      },
       "preSharedKey": {
         "type": "string"
       },
@@ -1953,6 +1980,7 @@ export const SCHEMAS: Record<string, unknown> = {
       "keepAlive",
       "limitIp",
       "password",
+      "pinned",
       "preSharedKey",
       "privateKey",
       "publicKey",
@@ -2039,6 +2067,46 @@ export const SCHEMAS: Record<string, unknown> = {
       "lastSeen",
       "port",
       "remark"
+    ],
+    "type": "object"
+  },
+  "ClientReportInbound": {
+    "properties": {
+      "id": {
+        "type": "integer"
+      },
+      "lastSeen": {
+        "format": "int64",
+        "type": "integer"
+      },
+      "nodeId": {
+        "nullable": true,
+        "type": "integer"
+      },
+      "online": {
+        "type": "boolean"
+      },
+      "port": {
+        "type": "integer"
+      },
+      "protocol": {
+        "type": "string"
+      },
+      "remark": {
+        "type": "string"
+      },
+      "tag": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "lastSeen",
+      "online",
+      "port",
+      "protocol",
+      "remark",
+      "tag"
     ],
     "type": "object"
   },

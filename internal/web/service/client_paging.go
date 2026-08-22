@@ -27,6 +27,7 @@ type ClientSlim struct {
 	Reset      int                 `json:"reset"`
 	Group      string              `json:"group,omitempty"`
 	Comment    string              `json:"comment,omitempty"`
+	Pinned     bool                `json:"pinned"`
 	InboundIds []int               `json:"inboundIds"`
 	Traffic    *xray.ClientTraffic `json:"traffic,omitempty"`
 	CreatedAt  int64               `json:"createdAt"`
@@ -294,6 +295,10 @@ func (q clientQuery) bucketCond(buckets, onlines []string) (string, []any) {
 }
 
 func (q clientQuery) applyOrder(tx *gorm.DB, sortKey, order string) *gorm.DB {
+	// Pinned clients lead every result set, but are still selected by the same
+	// WHERE predicates as every other row. Consequently an active/expired/etc.
+	// filter never leaks a pinned client that does not actually match it.
+	tx = tx.Order("COALESCE(c.pinned, FALSE) DESC")
 	dir := " ASC"
 	if order == "descend" {
 		dir = " DESC"
@@ -467,6 +472,7 @@ func (q clientQuery) pageRows(params ClientPageParams, onlines []string, offset,
 			Reset:      rec.Reset,
 			Group:      rec.Group,
 			Comment:    rec.Comment,
+			Pinned:     rec.Pinned,
 			InboundIds: attachments[rec.Id],
 			Traffic:    trafficByEmail[rec.Email],
 			CreatedAt:  rec.CreatedAt,

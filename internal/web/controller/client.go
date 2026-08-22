@@ -66,6 +66,7 @@ func (a *ClientController) initRouter(g *gin.RouterGroup) {
 
 	g.POST("/add", a.create)
 	g.POST("/update/:email", a.update)
+	g.POST("/pin/:email", a.pin)
 	g.POST("/del/:email", a.delete)
 	g.POST("/:email/attach", a.attach)
 	g.POST("/:email/detach", a.detach)
@@ -95,6 +96,25 @@ func (a *ClientController) initRouter(g *gin.RouterGroup) {
 	g.POST("/clientIpsByGuid", a.clientIpsByGuid)
 	g.POST("/activeInbounds", a.activeInbounds)
 	g.POST("/lastOnline", a.lastOnline)
+}
+
+type pinClientRequest struct {
+	Pinned bool `json:"pinned"`
+}
+
+func (a *ClientController) pin(c *gin.Context) {
+	email := c.Param("email")
+	var req pinClientRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	if err := a.clientService.SetPinned(email, req.Pinned); err != nil {
+		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+		return
+	}
+	jsonObj(c, gin.H{"email": email, "pinned": req.Pinned}, nil)
+	notifyClientsChanged()
 }
 
 func (a *ClientController) list(c *gin.Context) {

@@ -94,6 +94,8 @@ export const EXAMPLES: Record<string, unknown> = {
     "subProfileUrl": "",
     "subRoutingRules": "",
     "subShowIdentityOnAllLinks": false,
+    "subStreisandEnableRouting": false,
+    "subStreisandRoutingRules": "",
     "subSupportUrl": "",
     "subThemeDir": "",
     "subTitle": "",
@@ -229,6 +231,8 @@ export const EXAMPLES: Record<string, unknown> = {
     "subProfileUrl": "",
     "subRoutingRules": "",
     "subShowIdentityOnAllLinks": false,
+    "subStreisandEnableRouting": false,
+    "subStreisandRoutingRules": "",
     "subSupportUrl": "",
     "subThemeDir": "",
     "subTitle": "",
@@ -420,6 +424,18 @@ export const EXAMPLES: Record<string, unknown> = {
       }
     ],
     "averageDaily": 0,
+    "connectedInbounds": [
+      {
+        "id": 0,
+        "lastSeen": 0,
+        "nodeId": null,
+        "online": false,
+        "port": 0,
+        "protocol": "",
+        "remark": "",
+        "tag": ""
+      }
+    ],
     "dailyUsage": [
       {
         "day": "",
@@ -538,6 +554,7 @@ export const EXAMPLES: Record<string, unknown> = {
     "keepAlive": 0,
     "limitIp": 0,
     "password": "",
+    "pinned": false,
     "preSharedKey": "",
     "privateKey": "",
     "publicKey": "",
@@ -569,6 +586,16 @@ export const EXAMPLES: Record<string, unknown> = {
     "lastSeen": 0,
     "port": 0,
     "remark": ""
+  },
+  "ClientReportInbound": {
+    "id": 0,
+    "lastSeen": 0,
+    "nodeId": null,
+    "online": false,
+    "port": 0,
+    "protocol": "",
+    "remark": "",
+    "tag": ""
   },
   "ClientReverse": {
     "tag": ""

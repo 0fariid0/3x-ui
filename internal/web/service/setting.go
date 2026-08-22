@@ -104,6 +104,8 @@ var defaultValueMap = map[string]string{
 	"subHideSettings":               "false",
 	"subIncyEnableRouting":          "false",
 	"subIncyRoutingRules":           "",
+	"subStreisandEnableRouting":     "true",
+	"subStreisandRoutingRules":      "streisand://aW1wb3J0L3JvdXRlOi8vWW5Cc2FYTjBNRERVQVFJREJBVUdCd2hVYm1GdFpWUjFkV2xrWG1SdmJXRnBibE4wY21GMFpXZDVWWEoxYkdWelcwbHlZVzRnUkdseVpXTjBYeEFrTkRkRE5ETTFNa010UmpJeE1TMDBPVVE1TFRreVFqQXRPVEZFTUVSRlJEVXdNalk1WEVsUVNXWk9iMjVOWVhSamFLVUpFQlVaSGRNS0N3d05EZzlYYm1WMGQyOXlhMVJ3YjNKMFcyOTFkR0p2ZFc1a1ZHRm5VM1ZrY0ZNME5ETlZZbXh2WTJ2U0VRd1NGRkpwY0tFVFhXZGxiMmx3T25CeWFYWmhkR1ZXWkdseVpXTjAwaFlNRnhSV1pHOXRZV2x1b1JoZkVBOW5aVzl6YVhSbE9uQnlhWFpoZEdYU0Znd2FGS0liSEZsa2IyMWhhVzQ2YVhKZkVCTm5aVzl6YVhSbE9tTmhkR1ZuYjNKNUxXbHkwaEVNSGhTaEgxaG5aVzlwY0RwcGNnQUlBQkVBRmdBYkFDb0FNQUE4QUdNQWNBQjJBSDBBaFFDS0FKWUFtZ0NlQUtRQXFRQ3NBSzRBdkFEREFNZ0F6d0RSQU9NQTZBRHJBUFVCQ3dFUUFSSUFBQUFBQUFBQ0FRQUFBQUFBQUFBZ0FBQUFBQUFBQUFBQUFBQUFBQUFCR3c9PQ==",
 	"subListen":                     "",
 	"subPort":                       "2096",
 	"subPath":                       "/sub/",
@@ -924,6 +926,14 @@ func (s *SettingService) GetSubIncyRoutingRules() (string, error) {
 	return s.getString("subIncyRoutingRules")
 }
 
+func (s *SettingService) GetSubStreisandEnableRouting() (bool, error) {
+	return s.getBool("subStreisandEnableRouting")
+}
+
+func (s *SettingService) GetSubStreisandRoutingRules() (string, error) {
+	return s.getString("subStreisandRoutingRules")
+}
+
 func (s *SettingService) GetSubListen() (string, error) {
 	return s.getString("subListen")
 }
@@ -1687,27 +1697,29 @@ func (s *SettingService) BuildSubURIBase(host string) string {
 func (s *SettingService) GetDefaultSettings(host string) (any, error) {
 	type settingFunc func() (any, error)
 	settings := map[string]settingFunc{
-		"expireDiff":       func() (any, error) { return s.GetExpireDiff() },
-		"trafficDiff":      func() (any, error) { return s.GetTrafficDiff() },
-		"pageSize":         func() (any, error) { return s.GetPageSize() },
-		"defaultCert":      func() (any, error) { return s.GetCertFile() },
-		"defaultKey":       func() (any, error) { return s.GetKeyFile() },
-		"tgBotEnable":      func() (any, error) { return s.GetTgbotEnabled() },
-		"subThemeDir":      func() (any, error) { return s.GetSubThemeDir() },
-		"subEnable":        func() (any, error) { return s.GetSubEnable() },
-		"subJsonEnable":    func() (any, error) { return s.GetSubJsonEnable() },
-		"subClashEnable":   func() (any, error) { return s.GetSubClashEnable() },
-		"subTitle":         func() (any, error) { return s.GetSubTitle() },
-		"subURI":           func() (any, error) { return s.GetSubURI() },
-		"subJsonURI":       func() (any, error) { return s.GetSubJsonURI() },
-		"subClashURI":      func() (any, error) { return s.GetSubClashURI() },
-		"datepicker":       func() (any, error) { return s.GetDatepicker() },
-		"ipLimitEnable":    func() (any, error) { return s.GetIpLimitEnable() },
-		"accessLogEnable":  func() (any, error) { return s.GetAccessLogEnable() },
-		"webDomain":        func() (any, error) { return s.GetWebDomain() },
-		"subDomain":        func() (any, error) { return s.GetSubDomain() },
-		"devChannelEnable": func() (any, error) { return s.GetDevChannelEnable() },
-		"isDevBuild":       func() (any, error) { return config.IsDevBuild(), nil },
+		"expireDiff":                func() (any, error) { return s.GetExpireDiff() },
+		"trafficDiff":               func() (any, error) { return s.GetTrafficDiff() },
+		"pageSize":                  func() (any, error) { return s.GetPageSize() },
+		"defaultCert":               func() (any, error) { return s.GetCertFile() },
+		"defaultKey":                func() (any, error) { return s.GetKeyFile() },
+		"tgBotEnable":               func() (any, error) { return s.GetTgbotEnabled() },
+		"subThemeDir":               func() (any, error) { return s.GetSubThemeDir() },
+		"subEnable":                 func() (any, error) { return s.GetSubEnable() },
+		"subJsonEnable":             func() (any, error) { return s.GetSubJsonEnable() },
+		"subClashEnable":            func() (any, error) { return s.GetSubClashEnable() },
+		"subTitle":                  func() (any, error) { return s.GetSubTitle() },
+		"subURI":                    func() (any, error) { return s.GetSubURI() },
+		"subJsonURI":                func() (any, error) { return s.GetSubJsonURI() },
+		"subClashURI":               func() (any, error) { return s.GetSubClashURI() },
+		"subStreisandEnableRouting": func() (any, error) { return s.GetSubStreisandEnableRouting() },
+		"subStreisandRoutingRules":  func() (any, error) { return s.GetSubStreisandRoutingRules() },
+		"datepicker":                func() (any, error) { return s.GetDatepicker() },
+		"ipLimitEnable":             func() (any, error) { return s.GetIpLimitEnable() },
+		"accessLogEnable":           func() (any, error) { return s.GetAccessLogEnable() },
+		"webDomain":                 func() (any, error) { return s.GetWebDomain() },
+		"subDomain":                 func() (any, error) { return s.GetSubDomain() },
+		"devChannelEnable":          func() (any, error) { return s.GetDevChannelEnable() },
+		"isDevBuild":                func() (any, error) { return config.IsDevBuild(), nil },
 	}
 
 	result := make(map[string]any)

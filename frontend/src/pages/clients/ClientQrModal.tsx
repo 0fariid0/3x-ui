@@ -15,6 +15,7 @@ interface SubSettings {
   subJsonURI: string;
   subJsonEnable: boolean;
   publicHost?: string;
+  streisandRoutingUrl?: string;
 }
 
 interface ClientQrModalProps {
@@ -30,7 +31,7 @@ interface ApiMsg<T = unknown> {
   obj?: T;
 }
 
-const DEFAULT_SUB: SubSettings = { enable: false, subURI: '', subJsonURI: '', subJsonEnable: false, publicHost: '' };
+const DEFAULT_SUB: SubSettings = { enable: false, subURI: '', subJsonURI: '', subJsonEnable: false, publicHost: '', streisandRoutingUrl: '' };
 
 export default function ClientQrModal({
   open,
@@ -60,7 +61,7 @@ export default function ClientQrModal({
     return buildWireguardClientConfig(client, wgInbound, window.location.hostname, subSettings?.publicHost ?? '');
   }, [client, wgInbound, subSettings?.publicHost]);
 
-  const hasAnything = !!subLink || !!subJsonLink || !!wgConfigText || links.length > 0;
+  const hasAnything = !!subLink || !!subJsonLink || !!subSettings.streisandRoutingUrl || !!wgConfigText || links.length > 0;
 
   useEffect(() => {
     if (!open || !client?.subId) {
@@ -102,6 +103,13 @@ export default function ClientQrModal({
         children: <QrPanel value={subJsonLink} remark={`${client?.email || ''} — JSON`} />,
       });
     }
+    if (subSettings.streisandRoutingUrl) {
+      out.push({
+        key: 'streisand-route',
+        label: <Tag color="blue" style={{ margin: 0 }}>{t('subscription.streisandRoute')}</Tag>,
+        children: <QrPanel value={subSettings.streisandRoutingUrl} remark={t('subscription.streisandRoute')} />,
+      });
+    }
     links.forEach((link, idx) => {
       const parts = parseLinkParts(link);
       const meta = parts ? linkMetaText(parts) : '';
@@ -137,7 +145,7 @@ export default function ClientQrModal({
       });
     }
     return out;
-  }, [subLink, subJsonLink, wgConfigText, links, client?.email, t]);
+  }, [subLink, subJsonLink, subSettings.streisandRoutingUrl, wgConfigText, links, client?.email, t]);
 
   useEffect(() => {
     if (!open) {

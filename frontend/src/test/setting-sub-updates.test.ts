@@ -15,3 +15,11 @@ describe('subUpdates range', () => {
     }
   });
 });
+
+describe('Streisand routing setting', () => {
+  it('accepts an empty value or a Streisand deep link only', () => {
+    expect(AllSettingSchema.safeParse({ subStreisandRoutingRules: '' }).success).toBe(true);
+    expect(AllSettingSchema.safeParse({ subStreisandRoutingRules: 'streisand://import/route://abc' }).success).toBe(true);
+    expect(AllSettingSchema.safeParse({ subStreisandRoutingRules: 'https://example.com/route' }).success).toBe(false);
+  });
+});

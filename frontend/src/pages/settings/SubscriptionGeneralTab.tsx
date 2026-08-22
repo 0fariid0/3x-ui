@@ -248,6 +248,25 @@ export default function SubscriptionGeneralTab({ allSetting, updateSetting }: Su
           </>
         ),
       },
+      {
+        key: '8',
+        label: catTabLabel(<CompassOutlined />, 'Streisand', isMobile),
+        children: (
+          <>
+            <SettingListItem paddings="small" title={t('pages.settings.subStreisandEnableRouting')} description={t('pages.settings.subStreisandEnableRoutingDesc')}>
+              <Switch checked={allSetting.subStreisandEnableRouting} onChange={(v) => updateSetting({ subStreisandEnableRouting: v })} />
+            </SettingListItem>
+            <SettingListItem paddings="small" title={t('pages.settings.subStreisandRoutingRules')} description={t('pages.settings.subStreisandRoutingRulesDesc')}>
+              <Input.TextArea
+                value={allSetting.subStreisandRoutingRules}
+                rows={5}
+                placeholder="streisand://import/route://..."
+                onChange={(e) => updateSetting({ subStreisandRoutingRules: e.target.value.trim() })}
+              />
+            </SettingListItem>
+          </>
+        ),
+      },
     ]} />
   );
 }

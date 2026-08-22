@@ -477,8 +477,12 @@ func (p *Process) RefreshLocalOnline(activeEmails, _ []string, now, graceMs int6
 }
 
 // RefreshLocalOnlineInbounds records exact email -> inbound-tag connection
-// observations and prunes pairs that have not been seen inside graceMs. Passing
-// nil/empty only prunes, which keeps the map fresh even during an idle log tick.
+// observations. An access log reports a connection once, when it is accepted;
+// it does not repeat that line while a tunnel sits idle. Therefore an observed
+// tag is retained for the lifetime of the connection-level online email and is
+// removed when RefreshLocalOnline drops that email. The timestamp-based prune
+// remains only for observations collected before the online API/delta signal
+// has caught up, so failed handshakes cannot leave orphaned tags behind.
 func (p *Process) RefreshLocalOnlineInbounds(observed map[string][]string, now, graceMs int64) {
 	p.onlineMu.Lock()
 	defer p.onlineMu.Unlock()
@@ -500,7 +504,14 @@ func (p *Process) RefreshLocalOnlineInbounds(observed map[string][]string, now, 
 			}
 		}
 	}
+	online := make(map[string]struct{}, len(p.onlineClients))
+	for _, email := range p.onlineClients {
+		online[email] = struct{}{}
+	}
 	for email, tags := range p.localOnlineInbounds {
+		if _, connected := online[email]; connected {
+			continue
+		}
 		for tag, ts := range tags {
 			if now-ts >= graceMs {
 				delete(tags, tag)

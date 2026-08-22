@@ -913,6 +913,7 @@ type ClientRecord struct {
 	Comment             string `json:"comment"`
 	Reset               int    `json:"reset" gorm:"default:0"`
 	DestinationTracking bool   `json:"destinationTracking" gorm:"column:destination_tracking;default:false;index:idx_clients_destination_tracking"`
+	Pinned              bool   `json:"pinned" gorm:"column:pinned;default:false;index:idx_clients_pinned"`
 	CreatedAt           int64  `json:"createdAt" gorm:"autoCreateTime:milli"`
 	UpdatedAt           int64  `json:"updatedAt" gorm:"autoUpdateTime:milli"`
 }

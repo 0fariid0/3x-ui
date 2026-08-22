@@ -100,6 +100,8 @@ export interface AllSetting {
   subProfileUrl: string;
   subRoutingRules: string;
   subShowIdentityOnAllLinks: boolean;
+  subStreisandEnableRouting: boolean;
+  subStreisandRoutingRules: string;
   subSupportUrl: string;
   subThemeDir: string;
   subTitle: string;
@@ -236,6 +238,8 @@ export interface AllSettingView {
   subProfileUrl: string;
   subRoutingRules: string;
   subShowIdentityOnAllLinks: boolean;
+  subStreisandEnableRouting: boolean;
+  subStreisandRoutingRules: string;
   subSupportUrl: string;
   subThemeDir: string;
   subTitle: string;
@@ -406,6 +410,7 @@ export interface ClientInsightReport {
   anomalies: ClientAnomaly[];
   apps: ClientReportApp[];
   averageDaily: number;
+  connectedInbounds: ClientReportInbound[];
   dailyUsage: ClientDailyUsage[];
   days: number;
   destinationSummaries: ClientDestinationSummary[];
@@ -451,6 +456,7 @@ export interface ClientRecord {
   keepAlive: number;
   limitIp: number;
   password: string;
+  pinned: boolean;
   preSharedKey: string;
   privateKey: string;
   publicKey: string;
@@ -484,6 +490,17 @@ export interface ClientReportHost {
   lastSeen: number;
   port: number;
   remark: string;
+}
+
+export interface ClientReportInbound {
+  id: number;
+  lastSeen: number;
+  nodeId?: number | null;
+  online: boolean;
+  port: number;
+  protocol: string;
+  remark: string;
+  tag: string;
 }
 
 export interface ClientReverse {

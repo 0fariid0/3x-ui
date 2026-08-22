@@ -39,6 +39,8 @@ import {
   LinkOutlined,
   MoreOutlined,
   PlusOutlined,
+  PushpinFilled,
+  PushpinOutlined,
   QrcodeOutlined,
   RestOutlined,
   RetweetOutlined,
@@ -171,6 +173,31 @@ const INBOUND_CHIP_LIMIT = 1;
 // A shared empty array keeps the memoised chip cell from seeing a fresh prop for
 // every unattached client on every render.
 const EMPTY_INBOUND_IDS: number[] = [];
+const EMPTY_INBOUND_TAGS: string[] = [];
+
+function ConnectedInboundTags({ tags, labels }: { tags: string[]; labels: Record<string, string> }) {
+  if (tags.length === 0) return <span className="cell-empty">—</span>;
+  const label = (tag: string) => labels[tag] || tag;
+  const chip = (tag: string) => (
+    <Tooltip key={tag} title={label(tag)}>
+      <Tag color="green" style={{ margin: 2 }}>{label(tag)}</Tag>
+    </Tooltip>
+  );
+  return (
+    <>
+      {chip(tags[0])}
+      {tags.length > 1 && (
+        <Popover
+          trigger="click"
+          placement="bottomRight"
+          content={<div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>{tags.slice(1).map(chip)}</div>}
+        >
+          <Tag color="green" style={{ margin: 2, cursor: 'pointer' }}>+{tags.length - 1}</Tag>
+        </Popover>
+      )}
+    </>
+  );
+}
 
 function readFilterState(): PersistedFilterState {
   try {
@@ -234,9 +261,9 @@ export default function ClientsPage() {
     summary,
     allGroups,
     setQuery,
-    inbounds, onlines, transitioning, fetched, fetchError, subSettings,
+    inbounds, onlines, onlineInboundsByEmail, transitioning, fetched, fetchError, subSettings,
     tgBotEnable, expireDiff, trafficDiff, pageSize, settingsReady,
-    create, update, remove, bulkDelete, bulkAdjust, bulkEnable, bulkDisable, bulkAddToGroup, bulkRemoveFromGroup, attach, setExternalLinks, bulkAttach, detach, bulkDetach,
+    create, update, setPinned, remove, bulkDelete, bulkAdjust, bulkEnable, bulkDisable, bulkAddToGroup, bulkRemoveFromGroup, attach, setExternalLinks, bulkAttach, detach, bulkDetach,
     resetTraffic, resetAllTraffics, delDepleted, delOrphans, exportClients, importClients, setEnable,
     clientSpeed,
     applyTrafficEvent, applyClientStatsEvent,
@@ -254,6 +281,7 @@ export default function ClientsPage() {
   const { nodes } = useNodesQuery();
 
   const [togglingEmail, setTogglingEmail] = useState<string | null>(null);
+  const [pinningEmail, setPinningEmail] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
   const [editingClient, setEditingClient] = useState<ClientRecord | null>(null);
@@ -391,6 +419,13 @@ export default function ClientsPage() {
     for (const ib of inbounds) out[ib.id] = ib;
     return out;
   }, [inbounds]);
+  const inboundLabelsByTag = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const ib of inbounds) {
+      if (ib.tag) out[ib.tag] = formatInboundLabel(ib.tag, ib.remark);
+    }
+    return out;
+  }, [inbounds]);
 
   const protocolOptions = useMemo(() => {
     const values = new Set<string>((inbounds || []).map((i) => i.protocol).filter((x): x is string => !!x));
@@ -501,6 +536,16 @@ export default function ClientsPage() {
       setTogglingEmail(null);
     }
   }
+
+  const onTogglePin = useCallback(async (row: ClientRecord) => {
+    setPinningEmail(row.email);
+    try {
+      const msg = await setPinned(row.email, !row.pinned);
+      if (!msg?.success) messageApi.error(msg?.msg || t('somethingWentWrong'));
+    } finally {
+      setPinningEmail(null);
+    }
+  }, [setPinned, messageApi, t]);
 
   function onAdd() {
     setFormMode('add');
@@ -856,6 +901,24 @@ export default function ClientsPage() {
 
   const columns = useMemo<ColumnsType<ClientRecord>>(() => [
     {
+      title: t('pages.clients.pin'),
+      key: 'pinned',
+      width: 54,
+      align: 'center',
+      render: (_v, record) => (
+        <Tooltip title={t(record.pinned ? 'pages.clients.unpin' : 'pages.clients.pin')}>
+          <Button
+            type="text"
+            size="small"
+            loading={pinningEmail === record.email}
+            icon={record.pinned ? <PushpinFilled /> : <PushpinOutlined />}
+            aria-label={t(record.pinned ? 'pages.clients.unpin' : 'pages.clients.pin')}
+            onClick={() => void onTogglePin(record)}
+          />
+        </Tooltip>
+      ),
+    },
+    {
       title: t('pages.clients.actions'),
       key: 'actions',
       width: 235,
@@ -919,6 +982,19 @@ export default function ClientsPage() {
           {record.subId && <span className="sub" title={record.subId}>{record.subId}</span>}
           <ClientCardComment comment={record.comment} className="sub" />
         </div>
+      ),
+    },
+    {
+      title: t('pages.clients.connectedInbound'),
+      key: 'connectedInbound',
+      width: 180,
+      render: (_v, record) => (
+        <ConnectedInboundTags
+          tags={record.enable && isOnline(record.email)
+            ? (onlineInboundsByEmail[record.email] || EMPTY_INBOUND_TAGS)
+            : EMPTY_INBOUND_TAGS}
+          labels={inboundLabelsByTag}
+        />
       ),
     },
     {
@@ -1004,7 +1080,7 @@ export default function ClientsPage() {
       ),
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [t, togglingEmail, clientBucket, isOnline, inboundsById, filters, allGroups, datepicker, trafficDiff, clientSpeed]);
+  ], [t, pinningEmail, onTogglePin, togglingEmail, clientBucket, isOnline, onlineInboundsByEmail, inboundLabelsByTag, inboundsById, filters, allGroups, datepicker, trafficDiff, clientSpeed]);
 
   const tablePagination = {
     current: currentPage,
@@ -1453,6 +1529,16 @@ export default function ClientsPage() {
                                       ? <span className="online-dot" style={{ marginInlineEnd: 0 }} />
                                       : <Badge status={bucketBadgeStatus(bucket)} />}
                                     <span className="tag-name">{row.email}</span>
+                                    <Tooltip title={t(row.pinned ? 'pages.clients.unpin' : 'pages.clients.pin')}>
+                                      <Button
+                                        type="text"
+                                        size="small"
+                                        loading={pinningEmail === row.email}
+                                        icon={row.pinned ? <PushpinFilled /> : <PushpinOutlined />}
+                                        aria-label={t(row.pinned ? 'pages.clients.unpin' : 'pages.clients.pin')}
+                                        onClick={() => void onTogglePin(row)}
+                                      />
+                                    </Tooltip>
                                     {bucket === 'depleted' && <Tag color="red" className="status-tag">{t('depleted')}</Tag>}
                                     {bucket === 'expiring' && <Tag color="orange" className="status-tag">{t('depletingSoon')}</Tag>}
                                     <div className="card-actions">
@@ -1516,6 +1602,14 @@ export default function ClientsPage() {
                                     </div>
                                   </div>
                                   <ClientCardComment comment={row.comment} />
+                                  {row.enable && isOnline(row.email) && (
+                                    <div style={{ marginBlock: 4 }}>
+                                      <ConnectedInboundTags
+                                        tags={onlineInboundsByEmail[row.email] || EMPTY_INBOUND_TAGS}
+                                        labels={inboundLabelsByTag}
+                                      />
+                                    </div>
+                                  )}
                                   <ClientTrafficCell
                                     compact
                                     up={row.traffic?.up}

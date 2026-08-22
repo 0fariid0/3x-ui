@@ -226,22 +226,25 @@ func TestRefreshLocalOnline_GraceBoundaryEmails(t *testing.T) {
 	}
 }
 
-// TestRefreshLocalOnline_GraceBoundaryInbounds pins the same `<` boundary for
-// exact email/inbound access-log observations.
+// TestRefreshLocalOnline_GraceBoundaryInbounds pins the split lifetime rule:
+// an accepted-connection tag survives while its email is online, then clears
+// when the connection-level email reaches its own grace boundary.
 func TestRefreshLocalOnline_GraceBoundaryInbounds(t *testing.T) {
 	p := newOnlineTestProcess()
 	const grace = int64(20000)
 
 	p.RefreshLocalOnline([]string{"edge"}, nil, 0, grace)
 	p.RefreshLocalOnlineInbounds(map[string][]string{"edge": {"in-edge"}}, 0, grace)
-	// Keep the email online while the inbound observation lands exactly on the
-	// half-open grace boundary and therefore must be pruned.
+	// Keep the email online at the old tag boundary. The one-shot access log line
+	// must remain associated with the live connection.
 	p.RefreshLocalOnline([]string{"edge"}, nil, grace, grace)
 	p.RefreshLocalOnlineInbounds(nil, grace, grace)
-	for _, tag := range p.GetLocalActiveInbounds() {
-		if tag == "in-edge" {
-			t.Fatalf("inbound idle exactly graceMs must age out, got active %v", p.GetLocalActiveInbounds())
-		}
+	if !containsString(p.GetLocalActiveInbounds(), "in-edge") {
+		t.Fatalf("inbound must survive while email is online, got %v", p.GetLocalActiveInbounds())
+	}
+	p.RefreshLocalOnline(nil, nil, 2*grace, grace)
+	if got := p.GetLocalActiveInbounds(); len(got) != 0 {
+		t.Fatalf("inbound must clear when email ages out, got active %v", got)
 	}
 
 	p2 := newOnlineTestProcess()

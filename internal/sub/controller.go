@@ -56,6 +56,9 @@ type SUBController struct {
 	subIncyEnableRouting bool
 	subIncyRoutingRules  string
 
+	subStreisandEnableRouting bool
+	subStreisandRoutingRules  string
+
 	subPath            string
 	subJsonPath        string
 	subClashPath       string
@@ -112,6 +115,9 @@ type subControllerConfig struct {
 
 	subIncyEnableRouting bool
 	subIncyRoutingRules  string
+
+	subStreisandEnableRouting bool
+	subStreisandRoutingRules  string
 }
 
 type SUBControllerOption func(*subControllerConfig)
@@ -224,6 +230,14 @@ func WithSUBIncyRoutingRules(value string) SUBControllerOption {
 	return func(config *subControllerConfig) { config.subIncyRoutingRules = value }
 }
 
+func WithSUBStreisandEnableRouting(value bool) SUBControllerOption {
+	return func(config *subControllerConfig) { config.subStreisandEnableRouting = value }
+}
+
+func WithSUBStreisandRoutingRules(value string) SUBControllerOption {
+	return func(config *subControllerConfig) { config.subStreisandRoutingRules = value }
+}
+
 func defaultSUBControllerConfig() subControllerConfig {
 	return subControllerConfig{
 		subPath:        "/sub/",
@@ -254,6 +268,9 @@ func NewSUBController(g *gin.RouterGroup, options ...SUBControllerOption) *SUBCo
 
 		subIncyEnableRouting: config.subIncyEnableRouting,
 		subIncyRoutingRules:  config.subIncyRoutingRules,
+
+		subStreisandEnableRouting: config.subStreisandEnableRouting,
+		subStreisandRoutingRules:  config.subStreisandRoutingRules,
 
 		subPath:            config.subPath,
 		subJsonPath:        config.subJsonPath,
@@ -601,6 +618,12 @@ func (a *SUBController) subPageContext(page PageData) map[string]any {
 		"emails":        page.Emails,
 		"datepicker":    datepicker,
 		"announce":      a.subAnnounce,
+		"streisandRoutingUrl": func() string {
+			if a.subStreisandEnableRouting && strings.HasPrefix(strings.TrimSpace(a.subStreisandRoutingRules), "streisand://") {
+				return strings.TrimSpace(a.subStreisandRoutingRules)
+			}
+			return ""
+		}(),
 	}
 }
 
@@ -766,6 +789,11 @@ func (a *SUBController) ApplyCommonHeaders(
 ) {
 	c.Writer.Header().Set("Subscription-Userinfo", header)
 	c.Writer.Header().Set("Profile-Update-Interval", updateInterval)
+	// A subscription refresh must reach the panel instead of being satisfied by
+	// a browser/proxy cache. Native apps ignore CORS, while web-based importers
+	// need the explicit expose list to read the standard subscription metadata.
+	setNoCacheHeaders(c)
+	c.Writer.Header().Set("Access-Control-Expose-Headers", "Subscription-Userinfo, Profile-Update-Interval, Profile-Title, Profile-Web-Page-Url, Support-Url, Announce")
 
 	// Basics
 	if profileTitle != "" {

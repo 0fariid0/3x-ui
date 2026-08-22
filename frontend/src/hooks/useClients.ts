@@ -10,6 +10,7 @@ import {
   ClientPageResponseSchema,
   InboundOptionsSchema,
   OnlinesSchema,
+  OnlineInboundsByNodeSchema,
   BulkAdjustResultSchema,
   BulkAttachResultSchema,
   BulkCreateResultSchema,
@@ -49,6 +50,7 @@ interface SubSettings {
   subClashURI: string;
   subClashEnable: boolean;
   publicHost: string;
+  streisandRoutingUrl: string;
 }
 
 export interface ClientQueryParams {
@@ -173,6 +175,30 @@ export function pickClientsSummary(
   if (serverSummary.total > allClientStats.length) return serverSummary;
   const live = computeClientsSummary(allClientStats, onlineSet, expireDiffMs, trafficDiffBytes);
   return { ...live, total: serverSummary.total || live.total };
+}
+
+// Collapse the node-aware wire shape into the client-centric view used by the
+// clients page. Tags are deduplicated because a shared account can be online
+// through multiple nodes that use the same inbound tag.
+export function flattenOnlineInboundsByEmail(
+  tree: Record<string, Record<string, string[]>>,
+): Record<string, string[]> {
+  const sets = new Map<string, Set<string>>();
+  for (const byEmail of Object.values(tree || {})) {
+    if (!byEmail || typeof byEmail !== 'object') continue;
+    for (const [email, tags] of Object.entries(byEmail)) {
+      if (!email || !Array.isArray(tags)) continue;
+      let set = sets.get(email);
+      if (!set) {
+        set = new Set<string>();
+        sets.set(email, set);
+      }
+      for (const tag of tags) if (tag) set.add(tag);
+    }
+  }
+  const out: Record<string, string[]> = {};
+  for (const [email, tags] of sets) out[email] = [...tags].sort();
+  return out;
 }
 
 function buildQS(p: ClientQueryParams): string {
@@ -300,6 +326,18 @@ export function useClients(options: UseClientsOptions = {}) {
     staleTime: Infinity,
   });
 
+  const onlineInboundsQuery = useQuery({
+    queryKey: keys.clients.onlineInboundsByGuid(),
+    queryFn: async () => {
+      const msg = await HttpUtil.post('/panel/api/clients/onlineInboundsByGuid', undefined, { silent: true });
+      if (!msg?.success) throw new Error(msg?.msg || 'Failed to fetch online inbound attribution');
+      const validated = parseMsg(msg, OnlineInboundsByNodeSchema, 'clients/onlineInboundsByGuid');
+      return validated.obj ?? {};
+    },
+    enabled: withList,
+    staleTime: Infinity,
+  });
+
   const clients = listQuery.data?.items ?? [];
   const total = listQuery.data?.total ?? 0;
   const filtered = listQuery.data?.filtered ?? 0;
@@ -317,6 +355,10 @@ export function useClients(options: UseClientsOptions = {}) {
 
   const inbounds = inboundOptionsQuery.data ?? [];
   const onlines = useMemo(() => onlinesQuery.data ?? [], [onlinesQuery.data]);
+  const onlineInboundsByEmail = useMemo(
+    () => flattenOnlineInboundsByEmail(onlineInboundsQuery.data ?? {}),
+    [onlineInboundsQuery.data],
+  );
 
   const defaults = defaultsQuery.data ?? {};
   const subSettings: SubSettings = useMemo(() => ({
@@ -327,6 +369,9 @@ export function useClients(options: UseClientsOptions = {}) {
     subClashURI: (defaults.subClashURI as string) || '',
     subClashEnable: !!defaults.subClashEnable,
     publicHost: (defaults.subDomain as string) || (defaults.webDomain as string) || '',
+    streisandRoutingUrl: defaults.subStreisandEnableRouting && typeof defaults.subStreisandRoutingRules === 'string'
+      ? defaults.subStreisandRoutingRules
+      : '',
   }), [
     defaults.subEnable,
     defaults.subURI,
@@ -336,6 +381,8 @@ export function useClients(options: UseClientsOptions = {}) {
     defaults.subClashEnable,
     defaults.subDomain,
     defaults.webDomain,
+    defaults.subStreisandEnableRouting,
+    defaults.subStreisandRoutingRules,
   ]);
 
   const ipLimitEnable = !!defaults.ipLimitEnable;
@@ -402,6 +449,12 @@ export function useClients(options: UseClientsOptions = {}) {
   const updateMut = useMutation({
     mutationFn: ({ email, client }: { email: string; client: unknown }) =>
       HttpUtil.post(`/panel/api/clients/update/${encodeURIComponent(email)}`, client, JSON_HEADERS),
+    onSuccess: (msg) => { if (msg?.success) invalidateAll(); },
+  });
+
+  const pinMut = useMutation({
+    mutationFn: ({ email, pinned }: { email: string; pinned: boolean }) =>
+      HttpUtil.post(`/panel/api/clients/pin/${encodeURIComponent(email)}`, { pinned }, JSON_HEADERS),
     onSuccess: (msg) => { if (msg?.success) invalidateAll(); },
   });
 
@@ -523,6 +576,10 @@ export function useClients(options: UseClientsOptions = {}) {
     if (!email) return Promise.resolve(null as unknown as Msg<unknown>);
     return updateMut.mutateAsync({ email, client });
   }, [updateMut]);
+  const setPinned = useCallback((email: string, pinned: boolean) => {
+    if (!email) return Promise.resolve(null as unknown as Msg<unknown>);
+    return pinMut.mutateAsync({ email, pinned });
+  }, [pinMut]);
   const remove = useCallback((email: string, keepTraffic = false) => {
     if (!email) return Promise.resolve(null as unknown as Msg<unknown>);
     return removeMut.mutateAsync({ email, keepTraffic });
@@ -630,10 +687,14 @@ export function useClients(options: UseClientsOptions = {}) {
     if (!payload || typeof payload !== 'object') return;
     const p = payload as {
       onlineClients?: string[];
+      onlineInboundsByGuid?: Record<string, Record<string, string[]>>;
       clientTraffics?: { email: string; up: number; down: number }[];
     };
     if (Array.isArray(p.onlineClients)) {
       queryClient.setQueryData(keys.clients.onlines(), p.onlineClients);
+    }
+    if (p.onlineInboundsByGuid && typeof p.onlineInboundsByGuid === 'object') {
+      queryClient.setQueryData(keys.clients.onlineInboundsByGuid(), p.onlineInboundsByGuid);
     }
     if (Array.isArray(p.clientTraffics)) {
       // Xray reports a row per client whether or not it moved a byte, so most of
@@ -708,6 +769,7 @@ export function useClients(options: UseClientsOptions = {}) {
     setQuery,
     inbounds,
     onlines,
+    onlineInboundsByEmail,
     transitioning,
     fetched,
     fetchError,
@@ -722,6 +784,7 @@ export function useClients(options: UseClientsOptions = {}) {
     create,
     bulkCreate,
     update,
+    setPinned,
     remove,
     bulkDelete,
     bulkAdjust,

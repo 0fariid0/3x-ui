@@ -94,6 +94,7 @@ func run(root, outDir string) error {
 				"ClientTimelineUsage",
 				"ClientReportApp",
 				"ClientReportHost",
+				"ClientReportInbound",
 				"ClientInsightReport",
 				"ClientUsageAlert",
 				"ClientUsageAlerts",

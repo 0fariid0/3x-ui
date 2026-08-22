@@ -97,8 +97,8 @@ func TestRefreshLocalOnlineGraceWindow(t *testing.T) {
 }
 
 // TestGetLocalActiveInboundsTracksGraceWindow pins exact email/inbound
-// attribution: a multi-inbound client counts online only on tags observed with
-// that same email in the access log, and stale tag observations age out.
+// attribution across an idle connection. Xray writes the access record only
+// once, so its inbound tag must survive while the email remains online.
 func TestGetLocalActiveInboundsTracksGraceWindow(t *testing.T) {
 	p := newOnlineTestProcess()
 	const grace = 20000
@@ -111,15 +111,18 @@ func TestGetLocalActiveInboundsTracksGraceWindow(t *testing.T) {
 	p.RefreshLocalOnlineInbounds(map[string][]string{"alice": {"inbound-b"}}, 11000, grace)
 	assertSameSet(t, "both within grace", p.GetLocalActiveInbounds(), []string{"inbound-a", "inbound-b"})
 
-	// Keep the email itself online while pruning only stale inbound observations.
+	// Keep the email itself online past the log grace window. Both tags belong to
+	// live/recent connections and must remain visible without repeated traffic.
 	p.RefreshLocalOnline([]string{"alice"}, nil, 22000, grace)
 	p.RefreshLocalOnlineInbounds(nil, 22000, grace)
-	assertSameSet(t, "inbound-a (idle 21s) aged out, inbound-b kept", p.GetLocalActiveInbounds(), []string{"inbound-b"})
+	assertSameSet(t, "idle connected inbounds retained", p.GetLocalActiveInbounds(), []string{"inbound-a", "inbound-b"})
 
-	p.RefreshLocalOnline([]string{"alice"}, nil, 40000, grace)
-	p.RefreshLocalOnlineInbounds(nil, 40000, grace)
+	// Once the connection-level signal itself expires, every inbound association
+	// is removed with it.
+	p.RefreshLocalOnline(nil, nil, 45000, grace)
+	p.RefreshLocalOnlineInbounds(nil, 45000, grace)
 	if got := p.GetLocalActiveInbounds(); len(got) != 0 {
-		t.Errorf("all inbound observations idle past grace, want empty, got %v", got)
+		t.Errorf("offline email must clear all inbound observations, got %v", got)
 	}
 }
 

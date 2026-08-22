@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { computeClientsSummary, pickClientsSummary, sameSpeedMap, sameSummaryInputs } from '@/hooks/useClients';
+import { computeClientsSummary, flattenOnlineInboundsByEmail, pickClientsSummary, sameSpeedMap, sameSummaryInputs } from '@/hooks/useClients';
 import type { ClientTraffic, ClientsSummary } from '@/schemas/client';
 
 // Parity with web/service/client.go buildClientsSummary: the same client must
@@ -76,6 +76,18 @@ describe('computeClientsSummary', () => {
     expect(s.active).toBe(1);
     expect(s.expiring).toEqual([]);
     expect(s.depleted).toEqual([]);
+  });
+});
+
+describe('flattenOnlineInboundsByEmail', () => {
+  it('merges node trees by email and deduplicates inbound tags', () => {
+    expect(flattenOnlineInboundsByEmail({
+      local: { 'alice@x': ['in-b', 'in-a'] },
+      remote: { 'alice@x': ['in-a'], 'bob@x': ['node-in'] },
+    })).toEqual({
+      'alice@x': ['in-a', 'in-b'],
+      'bob@x': ['node-in'],
+    });
   });
 });
 

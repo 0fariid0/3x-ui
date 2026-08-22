@@ -86,6 +86,8 @@ type AllSetting struct {
 	SubRoutingRules             string `json:"subRoutingRules" form:"subRoutingRules"`
 	SubIncyEnableRouting        bool   `json:"subIncyEnableRouting" form:"subIncyEnableRouting"`
 	SubIncyRoutingRules         string `json:"subIncyRoutingRules" form:"subIncyRoutingRules"`
+	SubStreisandEnableRouting   bool   `json:"subStreisandEnableRouting" form:"subStreisandEnableRouting"`
+	SubStreisandRoutingRules    string `json:"subStreisandRoutingRules" form:"subStreisandRoutingRules"`
 	SubListen                   string `json:"subListen" form:"subListen"`
 	SubPort                     int    `json:"subPort" form:"subPort" validate:"gte=1,lte=65535"`
 	SubPath                     string `json:"subPath" form:"subPath"`
