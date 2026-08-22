@@ -1,0 +1,12 @@
+Fara Xray 3.6.32 validation
+
+- Go regression: internal/xray PASS
+- Go service tests: internal/web/service PASS
+- Frontend unit/component tests: 1046 PASS
+- Frontend production build: PASS
+- ESLint: PASS
+- ZIP extraction/integrity: verified during packaging
+
+Note: the optional Playwright browser suite could not launch in the build
+environment because its Chromium binary is not installed. All 1046 non-browser
+frontend tests completed successfully before that environment-only launcher error.

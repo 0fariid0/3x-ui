@@ -477,12 +477,12 @@ func (p *Process) RefreshLocalOnline(activeEmails, _ []string, now, graceMs int6
 }
 
 // RefreshLocalOnlineInbounds records exact email -> inbound-tag connection
-// observations. An access log reports a connection once, when it is accepted;
-// it does not repeat that line while a tunnel sits idle. Therefore an observed
-// tag is retained for the lifetime of the connection-level online email and is
-// removed when RefreshLocalOnline drops that email. The timestamp-based prune
-// remains only for observations collected before the online API/delta signal
-// has caught up, so failed handshakes cannot leave orphaned tags behind.
+// observations. A newly observed batch replaces the previous attribution for
+// that email. Keeping a union here made every inbound ever used during one
+// continuously-online session look live (for example fast + plus + vip even
+// after the client had moved to vip only). An empty observation batch still
+// keeps the last exact attribution while the connection-level signal is live,
+// which preserves idle connections because Xray logs acceptance only once.
 func (p *Process) RefreshLocalOnlineInbounds(observed map[string][]string, now, graceMs int64) {
 	p.onlineMu.Lock()
 	defer p.onlineMu.Unlock()
@@ -493,15 +493,14 @@ func (p *Process) RefreshLocalOnlineInbounds(observed map[string][]string, now, 
 		if email == "" {
 			continue
 		}
-		tags := p.localOnlineInbounds[email]
-		if tags == nil {
-			tags = make(map[string]int64, len(inboundTags))
-			p.localOnlineInbounds[email] = tags
-		}
+		tags := make(map[string]int64, len(inboundTags))
 		for _, tag := range inboundTags {
 			if tag != "" {
 				tags[tag] = now
 			}
+		}
+		if len(tags) > 0 {
+			p.localOnlineInbounds[email] = tags
 		}
 	}
 	online := make(map[string]struct{}, len(p.onlineClients))

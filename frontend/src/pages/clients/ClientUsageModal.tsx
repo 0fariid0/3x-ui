@@ -15,6 +15,8 @@ import { HttpUtil, SizeFormatter } from '@/utils';
 import { Sparkline } from '@/components/viz';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { usePanelDateTime } from '@/hooks/usePanelDateTime';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import { TRAFFIC_POLL_INTERVAL_S } from '@/lib/traffic/poll-interval';
 import './ClientUsageModal.css';
 
 interface ApiMsg<T> { success?: boolean; msg?: string; obj?: T; }
@@ -25,6 +27,8 @@ interface ReportIP { id: number; ip: string; firstSeen: number; lastSeen: number
 interface ReportApp { id: number; appName: string; version?: string; os?: string; userAgent?: string; format?: string; requestCount?: number; firstSeen?: number; lastSeen?: number; }
 interface ReportHost { id: number; inboundId: number; remark?: string; address?: string; port?: number; lastSeen?: number; }
 interface ReportInbound { id: number; tag: string; remark?: string; protocol?: string; port?: number; nodeId?: number; online?: boolean; lastSeen?: number; }
+interface InboundSpeed { up: number; down: number; seenAt: number; }
+interface TrafficDelta { Tag?: string; Up?: number; Down?: number; IsInbound?: boolean; }
 interface DestinationSummary { service: string; owner?: string; connections: number; destinations: number; lastSeen: number; active: boolean; activeDestinations: number; }
 interface DestinationItem { key: string; service: string; owner?: string; domain?: string; ip?: string; port?: number; protocol?: string; confidence: string; connections: number; firstSeen: number; lastSeen: number; active: boolean; }
 interface ReportEvent { id: number; kind: string; summary: string; details?: string; createdAt: number; }
@@ -123,6 +127,30 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
   const [report, setReport] = useState<ClientInsightReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [resettingDestinations, setResettingDestinations] = useState(false);
+  const [inboundSpeeds, setInboundSpeeds] = useState<Record<string, InboundSpeed>>({});
+
+  useWebSocket({
+    traffic: (payload) => {
+      if (!payload || typeof payload !== 'object') return;
+      const event = payload as { traffics?: TrafficDelta[]; nodeTraffics?: TrafficDelta[] };
+      const deltas = [...(Array.isArray(event.traffics) ? event.traffics : []), ...(Array.isArray(event.nodeTraffics) ? event.nodeTraffics : [])];
+      if (deltas.length === 0) return;
+      const seenAt = Date.now();
+      setInboundSpeeds((previous) => {
+        const next = { ...previous };
+        for (const delta of deltas) {
+          const tag = typeof delta?.Tag === 'string' ? delta.Tag : '';
+          if (!tag || delta.IsInbound === false) continue;
+          next[tag] = {
+            up: Math.max(0, Number(delta.Up) || 0) / TRAFFIC_POLL_INTERVAL_S,
+            down: Math.max(0, Number(delta.Down) || 0) / TRAFFIC_POLL_INTERVAL_S,
+            seenAt,
+          };
+        }
+        return next;
+      });
+    },
+  });
 
   useEffect(() => {
     if (open) {
@@ -374,6 +402,17 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
               <div>
                 <Tag color={inbound.online ? 'green' : undefined}>{inbound.online ? t('online') : t('offline')}</Tag>
                 <small>{(inbound.protocol || '—').toUpperCase()}{inbound.port ? ` · :${inbound.port}` : ''}</small>
+                {(() => {
+                  const speed = inboundSpeeds[inbound.tag];
+                  const fresh = speed && Date.now() - speed.seenAt <= 2 * TRAFFIC_POLL_INTERVAL_S * 1000;
+                  const up = fresh ? speed.up : 0;
+                  const down = fresh ? speed.down : 0;
+                  return (
+                    <small className="client-usage-mono">
+                      ↑ {SizeFormatter.speedFormat(up)} · ↓ {SizeFormatter.speedFormat(down)} · Σ {SizeFormatter.speedFormat(up + down)}
+                    </small>
+                  );
+                })()}
               </div>
             </div>
           ))}

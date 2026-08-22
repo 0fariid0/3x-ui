@@ -109,13 +109,13 @@ func TestGetLocalActiveInboundsTracksGraceWindow(t *testing.T) {
 
 	p.RefreshLocalOnline([]string{"alice"}, nil, 11000, grace)
 	p.RefreshLocalOnlineInbounds(map[string][]string{"alice": {"inbound-b"}}, 11000, grace)
-	assertSameSet(t, "both within grace", p.GetLocalActiveInbounds(), []string{"inbound-a", "inbound-b"})
+	assertSameSet(t, "new observation replaces stale inbound", p.GetLocalActiveInbounds(), []string{"inbound-b"})
 
-	// Keep the email itself online past the log grace window. Both tags belong to
-	// live/recent connections and must remain visible without repeated traffic.
+	// Keep the email itself online past the log grace window. The latest exact
+	// attribution must remain visible without repeated traffic.
 	p.RefreshLocalOnline([]string{"alice"}, nil, 22000, grace)
 	p.RefreshLocalOnlineInbounds(nil, 22000, grace)
-	assertSameSet(t, "idle connected inbounds retained", p.GetLocalActiveInbounds(), []string{"inbound-a", "inbound-b"})
+	assertSameSet(t, "idle connected inbound retained", p.GetLocalActiveInbounds(), []string{"inbound-b"})
 
 	// Once the connection-level signal itself expires, every inbound association
 	// is removed with it.
