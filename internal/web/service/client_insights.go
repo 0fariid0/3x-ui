@@ -1102,7 +1102,7 @@ func (s *ClientInsightService) createAnomaly(email, kind string, observed, thres
 	case "disable":
 		updated := rec.ToClient()
 		updated.Enable = false
-		needRestart, updateErr := clientSvc.UpdateByEmail(inboundSvc, email, *updated)
+		needRestart, updateErr := clientSvc.UpdateByEmail(inboundSvc, email, *updated, rec.LimitHwid)
 		if updateErr != nil {
 			db.Model(&row).Updates(map[string]any{"status": "action_failed", "details": row.Details + ": " + updateErr.Error()})
 			return updateErr
@@ -1172,7 +1172,7 @@ func (s *ClientInsightService) RestoreExpiredActions(inboundSvc *InboundService,
 			if row.PreviousEnable && !rec.Enable {
 				updated := rec.ToClient()
 				updated.Enable = true
-				if needRestart, err := clientSvc.UpdateByEmail(inboundSvc, row.Email, *updated); err != nil {
+				if needRestart, err := clientSvc.UpdateByEmail(inboundSvc, row.Email, *updated, rec.LimitHwid); err != nil {
 					logger.Warning("restore anomaly disabled client failed:", err)
 					continue
 				} else if needRestart {

@@ -1,3 +1,16 @@
+## v3.7.1
+
+- Selectively integrated the requested stability fixes from official 3x-ui v3.7.0 without replacing the fork's custom client, subscription, analytics, routing, online-attribution, and live-speed features.
+- Hardened node synchronization against transient empty snapshots, stale expiry state, accidental client deletion, orphaned clients, disabled-inbound loss, and stale IP data after edits.
+- Made traffic maintenance and bulk runtime effects occur only after the database transaction commits; migrations now fail atomically instead of leaving a partially migrated database.
+- Added per-client calendar renewal day, independent traffic-reset cycle/day, and maximum automatic-renewal count while preserving legacy interval behavior when the new fields are disabled.
+- Added per-client subscription HWID limits, registered-device inspection, deletion of one selected device, and full reset controls.
+- Added durable last-subscription-fetch timestamps for client reporting and API consumers.
+- Added routing-rule client selection, geosite/geoip browsing, and routing rules loaded from a validated remote URL. PIA account/WireGuard integration was intentionally excluded.
+- Hardened Hysteria2 limit enforcement, Hysteria2/TLS subscription generation, fail2ban uncertainty handling, mTLS bundle validation, atomic credential persistence, and live client-certificate reload.
+- Preserved user-managed files under `bin/` during panel updates.
+- Kept the fork's Pin ordering/filter behavior, Streisand route, exact email-to-inbound online attribution, live inbound speeds, destination analytics, WARP/NordVPN routing, and custom subscription behavior.
+
 ## v3.6.29
 
 - Backup downloads now use a consistent temporary SQLite snapshot instead of transferring the live database file directly.

@@ -50,7 +50,7 @@ func TestSetRemoteTraffic_AttributesOriginNodeGuid(t *testing.T) {
 	}
 
 	svc := InboundService{}
-	if _, err := svc.setRemoteTrafficLocked(nodeID, snap, false); err != nil {
+	if _, err := svc.setRemoteTrafficLocked(nodeID, snap, false, false); err != nil {
 		t.Fatalf("setRemoteTrafficLocked: %v", err)
 	}
 
@@ -111,7 +111,7 @@ func TestSetRemoteTraffic_RemapsClonedNodeOwnGuidOrigin(t *testing.T) {
 	}
 
 	svc := InboundService{}
-	if _, err := svc.setRemoteTrafficLocked(1, snap, false); err != nil {
+	if _, err := svc.setRemoteTrafficLocked(1, snap, false, false); err != nil {
 		t.Fatalf("setRemoteTrafficLocked: %v", err)
 	}
 
@@ -155,7 +155,7 @@ func TestSetRemoteTraffic_EmptySnapshotKeepsCentralInbounds(t *testing.T) {
 
 	// Empty snapshot — the node reported no inbounds this cycle.
 	svc := InboundService{}
-	if _, err := svc.setRemoteTrafficLocked(nodeID, &runtime.TrafficSnapshot{}, false); err != nil {
+	if _, err := svc.setRemoteTrafficLocked(nodeID, &runtime.TrafficSnapshot{}, false, false); err != nil {
 		t.Fatalf("setRemoteTrafficLocked: %v", err)
 	}
 
@@ -210,7 +210,7 @@ func TestSetRemoteTraffic_PreservesLocalShareAddressStrategy(t *testing.T) {
 	}
 
 	svc := InboundService{}
-	if _, err := svc.setRemoteTrafficLocked(nodeID, snap, false); err != nil {
+	if _, err := svc.setRemoteTrafficLocked(nodeID, snap, false, false); err != nil {
 		t.Fatalf("setRemoteTrafficLocked: %v", err)
 	}
 
@@ -255,7 +255,7 @@ func TestSetRemoteTraffic_DefaultsShareAddressFieldsForNewCentralInbound(t *test
 	}
 
 	svc := InboundService{}
-	if _, err := svc.setRemoteTrafficLocked(nodeID, snap, false); err != nil {
+	if _, err := svc.setRemoteTrafficLocked(nodeID, snap, false, false); err != nil {
 		t.Fatalf("setRemoteTrafficLocked: %v", err)
 	}
 

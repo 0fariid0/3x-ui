@@ -25,17 +25,21 @@ import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { FormProvider, useForm, useWatch, useFieldArray } from 'react-hook-form';
 
-import { HttpUtil, RandomUtil, Wireguard } from '@/utils';
+import { HttpUtil, IntlUtil, RandomUtil, Wireguard } from '@/utils';
 import { formatInboundLabel } from '@/lib/inbounds/label';
 import { generateMtprotoSecret } from '@/lib/xray/inbound-defaults';
 import { normalizeClientIps, type ClientIpInfo } from '@/lib/clients/ip-log';
+import { useDatepicker } from '@/hooks/useDatepicker';
+import { useClientHwids } from '@/hooks/useClientHwids';
 import { DateTimePicker, SelectAllClearButtons } from '@/components/form';
 import { FormField } from '@/components/form/rhf';
-import { TLS_FLOW_CONTROL } from '@/schemas/primitives';
+import ClientHwidListModal from '@/components/clients/ClientHwidList';
+import { TLS_FLOW_CONTROL, TRAFFIC_RESETS } from '@/schemas/primitives';
 import type { ClientRecord, InboundOption, ExternalLink, ExternalLinkInput } from '@/hooks/useClients';
 import { useFail2banStatusQuery, getLimitIpNotice } from '@/api/queries/useFail2banStatusQuery';
 import { ClientFormSchema, ClientCreateFormSchema, type ClientFormValues } from '@/schemas/client';
 import './ClientFormModal.css';
+
 
 const FLOW_OPTIONS = Object.values(TLS_FLOW_CONTROL);
 const VMESS_SECURITY_OPTIONS = ['auto', 'aes-128-gcm', 'chacha20-poly1305'] as const;
@@ -115,6 +119,7 @@ interface ClientFormModalProps {
 
 type Values = ClientFormValues & {
   expiryDate: number;
+  limitHwid: number;
   externalLinks: ExternalLinkRow[];
   wgPrivateKey: string;
   wgPublicKey: string;
@@ -138,7 +143,12 @@ const EMPTY: Values = {
   delayedStart: false,
   delayedDays: 0,
   reset: 0,
+  resetDay: 0,
+  resetMax: 0,
+  trafficReset: 'never' as const,
+  trafficResetDay: 1,
   limitIp: 0,
+  limitHwid: 0,
   tgId: 0,
   group: '',
   comment: '',
@@ -206,8 +216,10 @@ export default function ClientFormModal({
   const secret = useWatch({ control: methods.control, name: 'secret' });
   const email = useWatch({ control: methods.control, name: 'email' });
   const uuid = useWatch({ control: methods.control, name: 'uuid' });
+  const trafficReset = useWatch({ control: methods.control, name: 'trafficReset' });
   const password = useWatch({ control: methods.control, name: 'password' });
   const subId = useWatch({ control: methods.control, name: 'subId' });
+  const limitHwid = useWatch({ control: methods.control, name: 'limitHwid' });
   const auth = useWatch({ control: methods.control, name: 'auth' });
   const wgPrivateKey = useWatch({ control: methods.control, name: 'wgPrivateKey' });
   const limitIp = useWatch({ control: methods.control, name: 'limitIp' });
@@ -226,6 +238,19 @@ export default function ClientFormModal({
   const [subscriptionLinkOptions, setSubscriptionLinkOptions] = useState<SubscriptionLinkOption[]>([]);
   const [disabledSubscriptionLinkKeys, setDisabledSubscriptionLinkKeys] = useState<Set<string>>(new Set());
   const [subscriptionLinksLoading, setSubscriptionLinksLoading] = useState(false);
+  const {
+    clientHwids,
+    hwidsLoading,
+    hwidsClearing,
+    deletingHwidId,
+    loadHwids,
+    clearHwids,
+    deleteHwid,
+  } = useClientHwids(client?.email);
+  const [hwidsModalOpen, setHwidsModalOpen] = useState(false);
+  const { datepicker } = useDatepicker();
+  const hwidDateLabel = (ts: number) =>
+    !ts || ts <= 0 ? '-' : IntlUtil.formatDate(ts, datepicker);
   const fail2ban = useFail2banStatusQuery();
   const limitIpDisabled = !fail2ban.usable;
   const limitIpNotice = getLimitIpNotice(fail2ban, t);
@@ -237,6 +262,7 @@ export default function ClientFormModal({
   useEffect(() => {
     if (!open) return;
     setIpsModalOpen(false);
+    setHwidsModalOpen(false);
 
     if (isEdit && client) {
       const et = Number(client.expiryTime) || 0;
@@ -254,7 +280,12 @@ export default function ClientFormModal({
         reverseTag: client.reverse?.tag || '',
         totalGB: bytesToGB(client.totalGB || 0),
         reset: Number(client.reset) || 0,
+        resetDay: Number(client.resetDay) || 0,
+        resetMax: Number(client.resetMax) || 0,
+        trafficReset: (client.trafficReset as ClientFormValues['trafficReset']) || 'never',
+        trafficResetDay: Number(client.trafficResetDay) || 1,
         limitIp: client.limitIp || 0,
+        limitHwid: client.limitHwid || 0,
         tgId: Number(client.tgId) || 0,
         group: client.group || '',
         comment: client.comment || '',
@@ -280,6 +311,7 @@ export default function ClientFormModal({
       }
       methods.reset(seed);
       void loadIps();
+      void loadHwids();
     } else {
       const wgKeypair = Wireguard.generateKeypair();
       methods.reset({
@@ -516,6 +548,11 @@ export default function ClientFormModal({
     }
   }
 
+  function openHwidsModal() {
+    setHwidsModalOpen(true);
+    if (clientHwids.length === 0) void loadHwids();
+  }
+
   function close() {
     onOpenChange(false);
   }
@@ -539,7 +576,7 @@ export default function ClientFormModal({
     const values = methods.getValues();
     const schema = isEdit ? ClientFormSchema : ClientCreateFormSchema;
     const validated = schema.safeParse({
-      email: values.email,
+email: values.email,
       subId: values.subId,
       uuid: values.uuid,
       password: values.password,
@@ -551,7 +588,12 @@ export default function ClientFormModal({
       delayedStart: values.delayedStart,
       delayedDays: values.delayedDays,
       reset: values.reset,
+      resetDay: values.resetDay,
+      resetMax: values.resetMax,
+      trafficReset: values.trafficReset,
+      trafficResetDay: values.trafficResetDay,
       limitIp: values.limitIp,
+      limitHwid: values.limitHwid,
       tgId: values.tgId,
       group: values.group,
       comment: values.comment,
@@ -578,8 +620,13 @@ export default function ClientFormModal({
       security: showSecurity ? (values.security || 'auto') : 'auto',
       totalGB: totalBytes,
       expiryTime,
-      reset: Number(values.reset) || 0,
+reset: Number(values.reset) || 0,
+      resetDay: Number(values.resetDay) || 0,
+      resetMax: Number(values.resetMax) || 0,
+      trafficReset: values.trafficReset || 'never',
+      trafficResetDay: Number(values.trafficResetDay) || 1,
       limitIp: Number(values.limitIp) || 0,
+      limitHwid: Number(values.limitHwid) || 0,
       tgId: Number(values.tgId) || 0,
       group: values.group,
       comment: values.comment,
@@ -690,7 +737,7 @@ export default function ClientFormModal({
           </div>
         }
       >
-        <FormProvider {...methods}>
+<FormProvider {...methods}>
           <Form layout="vertical">
             <Tabs
               defaultActiveKey="basic"
@@ -746,6 +793,21 @@ export default function ClientFormModal({
                             </Tooltip>
                           </Form.Item>
                         </Col>
+                        <Col xs={24} md={6}>
+                          <Form.Item label={t('pages.clients.limitHwid')} tooltip={t('pages.clients.limitHwidDesc')}>
+                            <Space.Compact style={{ display: 'flex' }}>
+                              <InputNumber value={limitHwid} min={0} style={{ flex: 1 }}
+                                onChange={(v) => methods.setValue('limitHwid', Number(v) || 0)} />
+                              {isEdit && (
+                                <Tooltip title={t('pages.clients.hwidLog')}>
+                                  <Button aria-label={t('pages.clients.hwidLog')} icon={<EyeOutlined />} loading={hwidsLoading} onClick={openHwidsModal}>
+                                    {clientHwids.length > 0 ? clientHwids.length : ''}
+                                  </Button>
+                                </Tooltip>
+                              )}
+                            </Space.Compact>
+                          </Form.Item>
+                        </Col>
                       </Row>
 
                       <Row gutter={16}>
@@ -789,6 +851,50 @@ export default function ClientFormModal({
                             <InputNumber min={0} style={{ width: '100%' }} />
                           </FormField>
                         </Col>
+                        <Col xs={12} md={6}>
+                          <FormField
+                            name="resetDay"
+                            label={t('pages.clients.renewOnDay')}
+                            tooltip={t('pages.clients.renewOnDayDesc')}
+                            transform={{ output: (v) => Number(v) || 0 }}
+                          >
+                            <InputNumber min={0} max={31} style={{ width: '100%' }} />
+                          </FormField>
+                        </Col>
+                        <Col xs={12} md={6}>
+                          <FormField
+                            name="resetMax"
+                            label={t('pages.clients.renewMax')}
+                            tooltip={t('pages.clients.renewMaxDesc')}
+                            transform={{ output: (v) => Number(v) || 0 }}
+                          >
+                            <InputNumber min={0} style={{ width: '100%' }} />
+                          </FormField>
+                        </Col>
+                        <Col xs={12} md={6}>
+                          <FormField
+                            name="trafficReset"
+                            label={t('pages.inbounds.periodicTrafficResetTitle')}
+                          >
+                            <Select
+                              options={TRAFFIC_RESETS.map((r) => ({
+                                value: r,
+                                label: t(`pages.inbounds.periodicTrafficReset.${r}`),
+                              }))}
+                            />
+                          </FormField>
+                        </Col>
+                        {trafficReset === 'monthly' && (
+                          <Col xs={12} md={6}>
+                            <FormField
+                              name="trafficResetDay"
+                              label={t('pages.inbounds.periodicTrafficResetDay')}
+                              transform={{ output: (v) => Number(v) || 1 }}
+                            >
+                              <InputNumber min={1} max={31} style={{ width: '100%' }} />
+                            </FormField>
+                          </Col>
+                        )}
                       </Row>
 
                       <Row gutter={16}>
@@ -1161,6 +1267,21 @@ export default function ClientFormModal({
           <Tag>{t('tgbot.noIpRecord')}</Tag>
         )}
       </Modal>
+
+      <ClientHwidListModal
+        open={hwidsModalOpen}
+        email={client?.email}
+        zIndex={CLIENT_IP_LOG_MODAL_Z_INDEX}
+        hwids={clientHwids}
+        loading={hwidsLoading}
+        clearing={hwidsClearing}
+        deletingId={deletingHwidId}
+        formatDate={hwidDateLabel}
+        onRefresh={loadHwids}
+        onClearAll={clearHwids}
+        onDelete={deleteHwid}
+        onClose={() => setHwidsModalOpen(false)}
+      />
     </>
   );
 }
