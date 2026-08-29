@@ -293,6 +293,30 @@
   text-align: end;
 }
 
+.ov-traffic-range {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-inline-start: auto;
+}
+
+.ov-traffic-range .ant-select {
+  min-width: 138px;
+}
+
+.ov-traffic-range + .ov-wide-legend {
+  margin-inline-start: 0;
+}
+
+@media (max-width: 760px) {
+  .ov-traffic-range,
+  .ov-wide-legend {
+    width: 100%;
+    margin-inline-start: 0;
+  }
+}
+
 .ov-legend-label {
   display: flex;
   align-items: center;

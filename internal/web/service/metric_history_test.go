@@ -58,7 +58,7 @@ func TestMetricMemoryFootprint(t *testing.T) {
 
 	t.Logf("metric history footprint (16 system metrics, full):")
 	t.Logf("  before (flat 48h@2s): %d KiB", oldFlat/1024)
-	t.Logf("  after  (tiered 7d):   %d KiB", newTiered/1024)
+	t.Logf("  after  (tiered 31d):  %d KiB", newTiered/1024)
 	if newTiered >= oldFlat {
 		t.Fatalf("expected tiered footprint smaller: old=%d new=%d", oldFlat, newTiered)
 	}
@@ -105,7 +105,8 @@ func TestSeriesPickTierBySpan(t *testing.T) {
 		{7200, 60},
 		{172800, 60},
 		{604800, 600},
-		{9999999, 600},
+		{2592000, 3600},
+		{9999999, 3600},
 	}
 	for _, c := range cases {
 		if got := s.pickTier(c.span); got.resolution != c.res {
@@ -163,5 +164,40 @@ func TestAggregateMissingMetricIsEmpty(t *testing.T) {
 	h := newMetricHistory()
 	if out := h.aggregate("nope", 2, 60); len(out) != 0 {
 		t.Fatalf("expected empty result for unknown metric, got %d points", len(out))
+	}
+}
+
+func TestSumSeriesPreservesTrafficAcrossRollups(t *testing.T) {
+	h := newMetricHistory()
+	base := time.Now().Add(-2 * time.Hour).Truncate(time.Hour)
+	for i := range 120 {
+		h.appendSum("trafficSentBytes", base.Add(time.Duration(i)*time.Minute), 1024)
+	}
+
+	total, points := h.aggregateSumRange(
+		"trafficSentBytes",
+		base.Unix(),
+		base.Add(2*time.Hour).Unix(),
+		3600,
+	)
+	if total != 120*1024 {
+		t.Fatalf("traffic total = %.0f, want %d", total, 120*1024)
+	}
+	if len(points) != 2 {
+		t.Fatalf("chart points = %d, want 2", len(points))
+	}
+}
+
+func TestSumSeriesSnapshotRestoreKeepsMode(t *testing.T) {
+	h := newMetricHistory()
+	now := time.Now().Truncate(time.Minute)
+	h.appendSum("trafficRecvBytes", now.Add(-time.Minute), 400)
+	h.appendSum("trafficRecvBytes", now, 600) // closes the previous minute tier
+
+	h2 := newMetricHistory()
+	h2.restore(h.snapshot())
+	total, _ := h2.aggregateSumRange("trafficRecvBytes", now.Add(-time.Minute).Unix(), now.Unix(), 60)
+	if total != 400 {
+		t.Fatalf("restored traffic total = %.0f, want 400", total)
 	}
 }

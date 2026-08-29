@@ -29,11 +29,12 @@ type tierSpec struct {
 // metricTiers is the rollup ladder applied to every series. High resolution is
 // kept only for the recent past; older samples roll up into progressively
 // coarser, cheaper layers (RRDtool-style). Per series this totals ~5700 samples
-// (~90 KiB) yet spans a live 2s view through ~7 days of history.
+// (~100 KiB) yet spans a live 2s view through ~31 days of history.
 var metricTiers = []tierSpec{
 	{resolution: 2, capacity: 1800},   // 1h at 2s
 	{resolution: 60, capacity: 2880},  // 48h at 1m
 	{resolution: 600, capacity: 1008}, // 7d at 10m
+	{resolution: 3600, capacity: 744}, // 31d at 1h
 }
 
 // tierBuf is one fixed-resolution ring of a series. Samples land in an open
@@ -42,6 +43,7 @@ var metricTiers = []tierSpec{
 type tierBuf struct {
 	resolution int
 	capacity   int
+	sumValues  bool
 	samples    []MetricSample
 	open       bool
 	openStart  int64
@@ -66,7 +68,11 @@ func (tb *tierBuf) flush() {
 		tb.open = false
 		return
 	}
-	tb.samples = append(tb.samples, MetricSample{T: tb.openStart, V: tb.openSum / float64(tb.openCount)})
+	value := tb.openSum
+	if !tb.sumValues {
+		value /= float64(tb.openCount)
+	}
+	tb.samples = append(tb.samples, MetricSample{T: tb.openStart, V: value})
 	if len(tb.samples) > tb.capacity {
 		tb.samples = tb.samples[len(tb.samples)-tb.capacity:]
 	}
@@ -82,20 +88,26 @@ func (tb *tierBuf) readSamples() []MetricSample {
 	out := make([]MetricSample, len(tb.samples), len(tb.samples)+1)
 	copy(out, tb.samples)
 	if tb.openCount > 0 {
-		out = append(out, MetricSample{T: tb.openStart, V: tb.openSum / float64(tb.openCount)})
+		value := tb.openSum
+		if !tb.sumValues {
+			value /= float64(tb.openCount)
+		}
+		out = append(out, MetricSample{T: tb.openStart, V: value})
 	}
 	return out
 }
 
 // series is the rollup ladder for one metric: a sample is fed to every tier.
 type series struct {
-	tiers []*tierBuf
+	tiers     []*tierBuf
+	sumValues bool
 }
 
-func newSeries() *series {
-	s := &series{tiers: make([]*tierBuf, len(metricTiers))}
+func newSeries(sumValues ...bool) *series {
+	isSum := len(sumValues) > 0 && sumValues[0]
+	s := &series{tiers: make([]*tierBuf, len(metricTiers)), sumValues: isSum}
 	for i, spec := range metricTiers {
-		s.tiers[i] = &tierBuf{resolution: spec.resolution, capacity: spec.capacity}
+		s.tiers[i] = &tierBuf{resolution: spec.resolution, capacity: spec.capacity, sumValues: isSum}
 	}
 	return s
 }
@@ -131,14 +143,92 @@ func newMetricHistory() *metricHistory {
 
 // append stores a single sample for the given metric across all tiers.
 func (h *metricHistory) append(metric string, t time.Time, v float64) {
+	h.appendValue(metric, t, v, false)
+}
+
+// appendSum stores an increment rather than a gauge. Rollup tiers add these
+// values instead of averaging them, which preserves traffic byte totals even
+// in the 31-day archive.
+func (h *metricHistory) appendSum(metric string, t time.Time, v float64) {
+	h.appendValue(metric, t, v, true)
+}
+
+func (h *metricHistory) appendValue(metric string, t time.Time, v float64, sumValues bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	s := h.series[metric]
 	if s == nil {
-		s = newSeries()
+		s = newSeries(sumValues)
 		h.series[metric] = s
 	}
 	s.add(t.Unix(), v)
+}
+
+// aggregateSumRange returns byte totals and chart-rate points for an increment
+// series over [from,to). Coarse archive buckets that only partially overlap a
+// requested boundary are prorated; this limits rolling-window boundary error
+// without inventing traffic outside the retained samples.
+func (h *metricHistory) aggregateSumRange(metric string, from, to int64, bucketSeconds int) (float64, []MetricSample) {
+	if from >= to || bucketSeconds <= 0 {
+		return 0, []MetricSample{}
+	}
+
+	h.mu.Lock()
+	s := h.series[metric]
+	if s == nil || !s.sumValues {
+		h.mu.Unlock()
+		return 0, []MetricSample{}
+	}
+	tier := s.pickTier(to - from)
+	raw := tier.readSamples()
+	resolution := int64(tier.resolution)
+	openStart := int64(-1)
+	openEnd := int64(0)
+	if tier.openCount > 0 {
+		openStart = tier.openStart
+		openEnd = time.Now().Unix()
+		if openEnd > openStart+resolution {
+			openEnd = openStart + resolution
+		}
+	}
+	h.mu.Unlock()
+
+	values := make(map[int64]float64)
+	var total float64
+	for _, p := range raw {
+		pointEnd := p.T + resolution
+		if p.T == openStart && openEnd > p.T {
+			pointEnd = openEnd
+		}
+		start := max(p.T, from)
+		end := min(pointEnd, to)
+		if start >= end || pointEnd <= p.T {
+			continue
+		}
+		weighted := p.V * float64(end-start) / float64(pointEnd-p.T)
+		total += weighted
+
+		// A retained tier is always finer than the display buckets used by the
+		// traffic endpoint, so one source point normally maps to one chart point.
+		// Split defensively in case a future caller asks for a smaller bucket.
+		cursor := start
+		for cursor < end {
+			bucketStart := from + ((cursor - from) / int64(bucketSeconds) * int64(bucketSeconds))
+			bucketEnd := min(bucketStart+int64(bucketSeconds), end)
+			part := weighted * float64(bucketEnd-cursor) / float64(end-start)
+			values[bucketStart] += part
+			cursor = bucketEnd
+		}
+	}
+
+	points := make([]MetricSample, 0, len(values))
+	for ts := from; ts < to; ts += int64(bucketSeconds) {
+		if value, ok := values[ts]; ok {
+			duration := min(int64(bucketSeconds), to-ts)
+			points = append(points, MetricSample{T: ts, V: value / float64(duration)})
+		}
+	}
+	return total, points
 }
 
 // drop removes the entire history for one metric. Used when a node is deleted so
@@ -224,7 +314,8 @@ type persistedTier struct {
 }
 
 type persistedSeries struct {
-	Tiers []persistedTier
+	Tiers     []persistedTier
+	SumValues bool
 }
 
 // snapshot returns a deep copy of every series' closed buckets, safe to
@@ -234,10 +325,17 @@ func (h *metricHistory) snapshot() map[string]persistedSeries {
 	defer h.mu.Unlock()
 	out := make(map[string]persistedSeries, len(h.series))
 	for k, s := range h.series {
-		ps := persistedSeries{Tiers: make([]persistedTier, len(s.tiers))}
+		ps := persistedSeries{Tiers: make([]persistedTier, len(s.tiers)), SumValues: s.sumValues}
 		for i, tb := range s.tiers {
-			cp := make([]MetricSample, len(tb.samples))
-			copy(cp, tb.samples)
+			stored := tb.samples
+			// Persist the current partial traffic bucket as well, limiting
+			// restart loss to the most recent 2-second collection interval.
+			// Gauge series keep their historical closed-bucket behavior.
+			if s.sumValues {
+				stored = tb.readSamples()
+			}
+			cp := make([]MetricSample, len(stored))
+			copy(cp, stored)
 			ps.Tiers[i] = persistedTier{Resolution: tb.resolution, Samples: cp}
 		}
 		out[k] = ps
@@ -252,7 +350,7 @@ func (h *metricHistory) restore(data map[string]persistedSeries) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for k, ps := range data {
-		s := newSeries()
+		s := newSeries(ps.SumValues)
 		for _, pt := range ps.Tiers {
 			for _, tb := range s.tiers {
 				if tb.resolution != pt.Resolution {

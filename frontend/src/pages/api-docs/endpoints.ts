@@ -291,6 +291,17 @@ export const sections: readonly Section[] = [
       },
       {
         method: 'GET',
+        path: '/panel/api/server/trafficHistory',
+        summary: 'Observed upload/download totals and average-speed chart points for an explicit range. History is retained for 31 days and survives panel restarts.',
+        params: [
+          { name: 'from', in: 'query', type: 'number', desc: 'Inclusive Unix timestamp in seconds.' },
+          { name: 'to', in: 'query', type: 'number', desc: 'Exclusive Unix timestamp in seconds.' },
+          { name: 'bucket', in: 'query', type: 'number', desc: 'Chart bucket seconds (60–86400); the result may contain at most 120 buckets.' },
+        ],
+        response: '{\n  "success": true,\n  "obj": {\n    "from": 1700000000,\n    "to": 1700086400,\n    "sent": 1073741824,\n    "recv": 2147483648,\n    "up": [{ "t": 1700000000, "v": 12427 }],\n    "down": [{ "t": 1700000000, "v": 24855 }]\n  }\n}',
+      },
+      {
+        method: 'GET',
         path: '/panel/api/server/xrayMetricsState',
         summary: 'Xray runtime metrics state — whether the xray config has a `metrics` block, which expvar keys are flowing, and the current snapshot values for each. Returns an empty state when metrics are not configured.',
       },

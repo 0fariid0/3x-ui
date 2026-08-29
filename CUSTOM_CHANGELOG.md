@@ -1,3 +1,11 @@
+## v3.7.2
+
+- Added selectable 24-hour, 7-day, and 30-day traffic ranges to the dashboard throughput card.
+- Added an optional panel-timezone midnight alignment so daily reports can start at 00:00 instead of using a rolling 24-hour window.
+- Added persistent, sum-preserving upload/download history with 31-day retention; totals, chart data, and range averages now use the selected interval and survive panel restarts.
+- Prevented network-counter resets from producing unsigned overflow spikes in live throughput and traffic history.
+- Added the authenticated traffic-history API, API documentation, responsive controls, and translations for every supported panel language.
+
 ## v3.7.1
 
 - Selectively integrated the requested stability fixes from official 3x-ui v3.7.0 without replacing the fork's custom client, subscription, analytics, routing, online-attribution, and live-speed features.

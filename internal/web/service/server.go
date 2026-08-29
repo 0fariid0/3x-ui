@@ -106,6 +106,10 @@ type Status struct {
 		PktSent uint64 `json:"pktSent"`
 		PktRecv uint64 `json:"pktRecv"`
 	} `json:"netTraffic"`
+	NetTrafficDelta struct {
+		Sent uint64 `json:"-"`
+		Recv uint64 `json:"-"`
+	} `json:"-"`
 	PublicIP struct {
 		IPv4 string `json:"ipv4"`
 		IPv6 string `json:"ipv6"`
@@ -338,6 +342,33 @@ func (s *ServerService) AggregateSystemMetric(metric string, bucketSeconds int, 
 	return systemMetrics.aggregate(metric, bucketSeconds, maxPoints)
 }
 
+// TrafficRange is the dashboard traffic report for one explicit Unix-second
+// interval. Sent/Recv are observed bytes; Up/Down are average byte-per-second
+// chart points aligned to From.
+type TrafficRange struct {
+	From int64          `json:"from"`
+	To   int64          `json:"to"`
+	Sent uint64         `json:"sent"`
+	Recv uint64         `json:"recv"`
+	Up   []MetricSample `json:"up"`
+	Down []MetricSample `json:"down"`
+}
+
+// AggregateTrafficRange builds one range report from sum-preserving traffic
+// tiers. Rounding is intentionally deferred until the final byte totals.
+func (s *ServerService) AggregateTrafficRange(from, to int64, bucketSeconds int) TrafficRange {
+	sent, up := systemMetrics.aggregateSumRange("trafficSentBytes", from, to, bucketSeconds)
+	recv, down := systemMetrics.aggregateSumRange("trafficRecvBytes", from, to, bucketSeconds)
+	return TrafficRange{
+		From: from,
+		To:   to,
+		Sent: uint64(sent + 0.5),
+		Recv: uint64(recv + 0.5),
+		Up:   up,
+		Down: down,
+	}
+}
+
 type LogEntry struct {
 	DateTime    time.Time
 	FromAddress string
@@ -568,10 +599,14 @@ func (s *ServerService) GetStatus(lastStatus *Status) *Status {
 		if lastStatus != nil {
 			duration := now.Sub(lastStatus.T)
 			seconds := float64(duration) / float64(time.Second)
-			up := uint64(float64(status.NetTraffic.Sent-lastStatus.NetTraffic.Sent) / seconds)
-			down := uint64(float64(status.NetTraffic.Recv-lastStatus.NetTraffic.Recv) / seconds)
-			status.NetIO.Up = up
-			status.NetIO.Down = down
+			if seconds > 0 && status.NetTraffic.Sent >= lastStatus.NetTraffic.Sent {
+				status.NetTrafficDelta.Sent = status.NetTraffic.Sent - lastStatus.NetTraffic.Sent
+				status.NetIO.Up = uint64(float64(status.NetTrafficDelta.Sent) / seconds)
+			}
+			if seconds > 0 && status.NetTraffic.Recv >= lastStatus.NetTraffic.Recv {
+				status.NetTrafficDelta.Recv = status.NetTraffic.Recv - lastStatus.NetTraffic.Recv
+				status.NetIO.Down = uint64(float64(status.NetTrafficDelta.Recv) / seconds)
+			}
 			if seconds > 0 && status.NetTraffic.PktSent >= lastStatus.NetTraffic.PktSent {
 				status.NetIO.PktUp = uint64(float64(status.NetTraffic.PktSent-lastStatus.NetTraffic.PktSent) / seconds)
 			}
@@ -658,6 +693,8 @@ func (s *ServerService) AppendStatusSample(t time.Time, status *Status) {
 	}
 	systemMetrics.append("netUp", t, float64(status.NetIO.Up))
 	systemMetrics.append("netDown", t, float64(status.NetIO.Down))
+	systemMetrics.appendSum("trafficSentBytes", t, float64(status.NetTrafficDelta.Sent))
+	systemMetrics.appendSum("trafficRecvBytes", t, float64(status.NetTrafficDelta.Recv))
 	systemMetrics.append("diskRead", t, float64(status.DiskIO.Read))
 	systemMetrics.append("diskWrite", t, float64(status.DiskIO.Write))
 	if status.Disk.Total > 0 {

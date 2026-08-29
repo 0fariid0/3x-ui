@@ -45,6 +45,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.GET("/status", a.status)
 	g.GET("/cpuHistory/:bucket", a.getCpuHistoryBucket)
 	g.GET("/history/:metric/:bucket", a.getMetricHistoryBucket)
+	g.GET("/trafficHistory", a.getTrafficHistory)
 	g.GET("/xrayMetricsState", a.getXrayMetricsState)
 	g.GET("/xrayMetricsHistory/:metric/:bucket", a.getXrayMetricsHistoryBucket)
 	g.GET("/xrayObservatory", a.getXrayObservatory)
@@ -145,6 +146,23 @@ func (a *ServerController) getMetricHistoryBucket(c *gin.Context) {
 		return
 	}
 	jsonObj(c, a.serverService.AggregateSystemMetric(metric, bucket, 60), nil)
+}
+
+// getTrafficHistory returns observed interface traffic for an explicit range.
+// The 31-day bound matches the longest persisted rollup tier; the point limit
+// keeps both response size and aggregation work predictable.
+func (a *ServerController) getTrafficHistory(c *gin.Context) {
+	from, fromErr := strconv.ParseInt(c.Query("from"), 10, 64)
+	to, toErr := strconv.ParseInt(c.Query("to"), 10, 64)
+	bucket, bucketErr := strconv.Atoi(c.Query("bucket"))
+	span := to - from
+	if fromErr != nil || toErr != nil || bucketErr != nil || from <= 0 || to <= from ||
+		span > int64(31*24*time.Hour/time.Second) || bucket < 60 || bucket > 24*60*60 ||
+		(span+int64(bucket)-1)/int64(bucket) > 120 {
+		jsonMsg(c, "invalid traffic range", fmt.Errorf("range must be within 31 days and at most 120 buckets"))
+		return
+	}
+	jsonObj(c, a.serverService.AggregateTrafficRange(from, to, bucket), nil)
 }
 
 func (a *ServerController) getXrayMetricsState(c *gin.Context) {

@@ -970,7 +970,7 @@ export class IntlUtil {
     }
   }
 
-  private static savedPanelOffsetSeconds(): number {
+  static savedPanelOffsetSeconds(): number {
     try {
       const value = Number(globalThis.localStorage?.getItem(IntlUtil.panelOffsetStorageKey) || 0);
       return Number.isFinite(value) ? Math.trunc(value) : 0;

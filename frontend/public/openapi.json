@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.7.1",
+    "version": "3.7.2",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -5591,6 +5591,86 @@
                       "v": 13.1
                     }
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/server/trafficHistory": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Observed upload/download totals and average-speed chart points for an explicit range. History is retained for 31 days and survives panel restarts.",
+        "operationId": "get_panel_api_server_trafficHistory",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "description": "Inclusive Unix timestamp in seconds.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "description": "Exclusive Unix timestamp in seconds.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": true,
+            "description": "Chart bucket seconds (60–86400); the result may contain at most 120 buckets.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "from": 1700000000,
+                    "to": 1700086400,
+                    "sent": 1073741824,
+                    "recv": 2147483648,
+                    "up": [
+                      {
+                        "t": 1700000000,
+                        "v": 12427
+                      }
+                    ],
+                    "down": [
+                      {
+                        "t": 1700000000,
+                        "v": 24855
+                      }
+                    ]
+                  }
                 }
               }
             }
