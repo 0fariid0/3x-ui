@@ -63,7 +63,14 @@ func applyClientRecordMerge(row *model.ClientRecord, incoming *model.ClientRecor
 	}
 	row.Comment = incoming.Comment
 	row.Reset = incoming.Reset
-	row.DestinationTracking = incoming.DestinationTracking
+	// Destination tracking is a client-level operator preference. Inbound JSON
+	// and node snapshots can be older than the canonical client row, so a stale
+	// false value must never switch an enabled client back off. The editor writes
+	// both true and false explicitly in ClientService.Update after all attached
+	// inbounds have been updated.
+	if incoming.DestinationTracking {
+		row.DestinationTracking = true
+	}
 	row.ResetDay = incoming.ResetDay
 	row.ResetMax = incoming.ResetMax
 	// Guarded like Group and AdTag: a node snapshot rebuilt from settings that

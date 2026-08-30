@@ -606,6 +606,16 @@ func (s *ClientService) Update(inboundSvc *InboundService, id int, updated model
 		return needRestart, err
 	}
 
+	// Destination tracking is canonical on the normalized client row. Inbound
+	// snapshots only opt a client in; they cannot safely opt it out because one
+	// sibling inbound or node may still carry an older false value. Apply the
+	// editor's explicit choice last so both enabling and disabling persist.
+	if err := database.GetDB().Model(&model.ClientRecord{}).
+		Where("id = ?", id).
+		UpdateColumn("destination_tracking", updated.DestinationTracking).Error; err != nil {
+		return needRestart, err
+	}
+
 	if err := s.setClientLimitHwidByEmail(nil, updated.Email, limitHwid); err != nil {
 		return needRestart, err
 	}

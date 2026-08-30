@@ -58,6 +58,12 @@ func TestUpdate_PersistsFields_NoInbound(t *testing.T) {
 			want:     30,
 		},
 		{
+			name:     "destination tracking enabled",
+			mutate:   func(c *model.Client) { c.DestinationTracking = true },
+			readBack: func(rec *model.ClientRecord) any { return rec.DestinationTracking },
+			want:     true,
+		},
+		{
 			name:     "flow",
 			mutate:   func(c *model.Client) { c.Flow = "xtls-rprx-vision" },
 			readBack: func(rec *model.ClientRecord) any { return rec.Flow },

@@ -1,3 +1,10 @@
+## v3.7.5
+
+- Fixed per-client destination tracking turning itself back off after it was enabled.
+- Made the normalized client row authoritative for the operator's destination-tracking choice, so stale sibling-inbound and node snapshots can no longer overwrite an enabled setting with `false`.
+- Persisted explicit destination-tracking changes for clients with or without attached inbounds, while preserving the ability to turn the option off intentionally.
+- Added regression coverage for enabling, stale multi-inbound synchronization, explicit disabling, and clients without an inbound.
+
 ## v3.7.4
 
 - Simplified the traffic-range controls: the 00:00 option is shown only for the 24-hour report, while the Jalali option is shown only for the 30-day report.
