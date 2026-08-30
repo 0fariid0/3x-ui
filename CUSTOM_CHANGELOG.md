@@ -1,3 +1,9 @@
+## v3.7.3
+
+- Restored the original live dashboard mode as the default traffic-card range, including live chart data, interface counters since boot, and the live-window average.
+- Added a dedicated current Jalali-month report from 00:00 on day one of the active Persian month through the current panel time.
+- Disabled the midnight toggle for Live mode and fixed it on for the Jalali-month report so the controls always describe the active calculation.
+
 ## v3.7.2
 
 - Added selectable 24-hour, 7-day, and 30-day traffic ranges to the dashboard throughput card.
