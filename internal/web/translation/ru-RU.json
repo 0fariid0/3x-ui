@@ -255,7 +255,7 @@
       "last24Hours": "Последние 24 часа",
       "last7Days": "Последние 7 дней",
       "last30Days": "Последние 30 дней",
-      "currentJalaliMonth": "Текущий месяц Джалали",
+      "jalaliCalendar": "Джалали",
       "fromMidnight": "Считать с 00:00",
       "healthWarm": "{list} — повышенная нагрузка",
       "healthCritical": "{list} — критический уровень",

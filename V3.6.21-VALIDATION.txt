@@ -1,0 +1,36 @@
+Fara Xray v3.6.21 validation
+============================
+
+Build failure diagnosis
+-----------------------
+GitHub Actions reported:
+internal/web/service/client_destinations.go:443:2: declared and not used: now
+
+Applied fix
+-----------
+Removed the unused local declaration:
+now := time.Now().UnixMilli()
+
+The cursor cleanup timestamp continues to use destinationLastPurge.UnixMilli(),
+so removing this variable does not change runtime behavior.
+
+Validation performed
+--------------------
+- Parsed all 495 Go source files successfully with the standard Go parser.
+- gofmt check passed for both modified Go files.
+- Confirmed the compile-breaking declaration is absent.
+- Parsed English and Persian translation JSON successfully.
+- Parsed frontend and documentation OpenAPI JSON successfully.
+- Regenerated OpenAPI successfully and confirmed version 3.6.21.
+- Confirmed internal/config/version is exactly 3.6.21.
+- Confirmed frontend implementation files are unchanged from v3.6.20;
+  the GitHub Actions screenshots show the v3.6.20 frontend bundle completed
+  successfully before the Go compiler stopped on the single unused variable.
+- Confirmed the source archive contains no .git directory, node_modules,
+  frontend dist, temporary build output, or downloaded binaries.
+
+Scope
+-----
+v3.6.21 is a focused build-fix release based on v3.6.20. The destination
+window, mobile statistics button, report placement, 24-hour defaults, chart
+colors, and edit shortcut are preserved without behavioral changes.

@@ -255,7 +255,7 @@
       "last24Hours": "24 jam terakhir",
       "last7Days": "7 hari terakhir",
       "last30Days": "30 hari terakhir",
-      "currentJalaliMonth": "Bulan Jalali saat ini",
+      "jalaliCalendar": "Jalali",
       "fromMidnight": "Hitung dari 00:00",
       "healthWarm": "{list} — mulai tinggi",
       "healthCritical": "{list} — kritis",

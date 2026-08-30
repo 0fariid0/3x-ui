@@ -255,7 +255,7 @@
       "last24Hours": "過去24小時",
       "last7Days": "過去7天",
       "last30Days": "過去30天",
-      "currentJalaliMonth": "目前賈拉利月",
+      "jalaliCalendar": "波斯曆",
       "fromMidnight": "從00:00開始統計",
       "healthWarm": "{list} — 偏高",
       "healthCritical": "{list} — 危險",

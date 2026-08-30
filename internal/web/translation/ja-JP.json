@@ -255,7 +255,7 @@
       "last24Hours": "過去24時間",
       "last7Days": "過去7日間",
       "last30Days": "過去30日間",
-      "currentJalaliMonth": "現在のジャラーリー月",
+      "jalaliCalendar": "ジャラーリー暦",
       "fromMidnight": "00:00から集計",
       "healthWarm": "{list} — 高めです",
       "healthCritical": "{list} — 危険水準",

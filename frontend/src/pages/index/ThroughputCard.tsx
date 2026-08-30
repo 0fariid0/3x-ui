@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Card, Checkbox, Select, theme } from 'antd';
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
 
-import { HttpUtil, IntlUtil, SizeFormatter, TimeFormatter } from '@/utils';
+import { HttpUtil, SizeFormatter, TimeFormatter } from '@/utils';
 import { Sparkline } from '@/components/viz';
 import type { Status } from '@/models/status';
+import { requestedRange, type TrafficRangeKey } from './trafficRange';
 import { mean, peak } from './useOverviewHistory';
 
 interface ThroughputCardProps {
@@ -16,8 +17,7 @@ interface ThroughputCardProps {
   isMobile: boolean;
 }
 
-type RangeKey = 'live' | '24h' | '7d' | '30d' | 'jalaliMonth';
-type FixedRangeKey = Exclude<RangeKey, 'live' | 'jalaliMonth'>;
+type RangeKey = 'live' | TrafficRangeKey;
 
 interface TrafficPoint {
   t: number;
@@ -33,54 +33,7 @@ interface TrafficRange {
   down: TrafficPoint[];
 }
 
-const RANGE_CONFIG: Record<FixedRangeKey, { days: number; seconds: number; bucket: number }> = {
-  '24h': { days: 1, seconds: 24 * 60 * 60, bucket: 30 * 60 },
-  '7d': { days: 7, seconds: 7 * 24 * 60 * 60, bucket: 3 * 60 * 60 },
-  '30d': { days: 30, seconds: 30 * 24 * 60 * 60, bucket: 12 * 60 * 60 },
-};
-
 const EMPTY_TRAFFIC: TrafficRange = { from: 0, to: 0, sent: 0, recv: 0, up: [], down: [] };
-
-function jalaliMonthStart(to: number, offset: number): number {
-  const panelMidnight = new Date((to + offset) * 1000);
-  panelMidnight.setUTCHours(0, 0, 0, 0);
-  const dayFormatter = new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn', {
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
-
-  // A Jalali month has at most 31 days. Searching panel-local midnights keeps
-  // this independent of the administrator browser timezone and avoids any
-  // Gregorian/Jalali conversion ambiguity around day boundaries.
-  for (let daysBack = 0; daysBack < 31; daysBack += 1) {
-    const candidate = new Date(panelMidnight);
-    candidate.setUTCDate(candidate.getUTCDate() - daysBack);
-    const day = Number(dayFormatter.formatToParts(candidate).find((part) => part.type === 'day')?.value);
-    if (day === 1) return Math.floor(candidate.getTime() / 1000) - offset;
-  }
-
-  // Modern browsers used by the panel support the Persian calendar. Keep a
-  // bounded fallback for unusual Intl builds instead of issuing an invalid API
-  // range.
-  return to - 30 * 24 * 60 * 60;
-}
-
-function requestedRange(key: Exclude<RangeKey, 'live'>, fromMidnight: boolean) {
-  const to = Math.floor(Date.now() / 1000);
-  const offset = IntlUtil.savedPanelOffsetSeconds();
-  if (key === 'jalaliMonth') {
-    return { from: jalaliMonthStart(to, offset), to, bucket: 12 * 60 * 60 };
-  }
-
-  const config = RANGE_CONFIG[key];
-  if (!fromMidnight) return { from: to - config.seconds, to, bucket: config.bucket };
-
-  // Align midnight to the panel clock, not the administrator browser clock.
-  const panelDate = new Date((to + offset) * 1000);
-  panelDate.setUTCHours(0, 0, 0, 0);
-  panelDate.setUTCDate(panelDate.getUTCDate() - (config.days - 1));
-  return { from: Math.floor(panelDate.getTime() / 1000) - offset, to, bucket: config.bucket };
-}
 
 function alignedSeries(report: TrafficRange) {
   const times = Array.from(new Set([...report.up, ...report.down].map((p) => p.t))).sort((a, b) => a - b);
@@ -101,12 +54,13 @@ export default function ThroughputCard({ status, up, down, labels, isMobile }: T
 
   const [rangeKey, setRangeKey] = useState<RangeKey>('live');
   const [fromMidnight, setFromMidnight] = useState(false);
+  const [useJalaliMonth, setUseJalaliMonth] = useState(false);
   const [traffic, setTraffic] = useState<TrafficRange>(EMPTY_TRAFFIC);
   const [loading, setLoading] = useState(false);
 
   const loadTraffic = useCallback(async (signal?: AbortSignal) => {
     if (rangeKey === 'live') return;
-    const range = requestedRange(rangeKey, fromMidnight);
+    const range = requestedRange(rangeKey, fromMidnight, useJalaliMonth);
     setLoading(true);
     try {
       const msg = await HttpUtil.get<TrafficRange>('/panel/api/server/trafficHistory', range, { signal, silent: true });
@@ -114,7 +68,7 @@ export default function ThroughputCard({ status, up, down, labels, isMobile }: T
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [rangeKey, fromMidnight]);
+  }, [rangeKey, fromMidnight, useJalaliMonth]);
 
   useEffect(() => {
     if (rangeKey === 'live') return undefined;
@@ -171,16 +125,18 @@ export default function ThroughputCard({ status, up, down, labels, isMobile }: T
               { value: '24h', label: t('pages.index.last24Hours') },
               { value: '7d', label: t('pages.index.last7Days') },
               { value: '30d', label: t('pages.index.last30Days') },
-              { value: 'jalaliMonth', label: t('pages.index.currentJalaliMonth') },
             ]}
           />
-          <Checkbox
-            checked={rangeKey === 'jalaliMonth' || (rangeKey !== 'live' && fromMidnight)}
-            disabled={rangeKey === 'live' || rangeKey === 'jalaliMonth'}
-            onChange={(event) => setFromMidnight(event.target.checked)}
-          >
-            {t('pages.index.fromMidnight')}
-          </Checkbox>
+          {rangeKey === '24h' && (
+            <Checkbox checked={fromMidnight} onChange={(event) => setFromMidnight(event.target.checked)}>
+              {t('pages.index.fromMidnight')}
+            </Checkbox>
+          )}
+          {rangeKey === '30d' && (
+            <Checkbox checked={useJalaliMonth} onChange={(event) => setUseJalaliMonth(event.target.checked)}>
+              {t('pages.index.jalaliCalendar')}
+            </Checkbox>
+          )}
         </div>
         <div className="ov-wide-legend">
           <div className="ov-legend-label">

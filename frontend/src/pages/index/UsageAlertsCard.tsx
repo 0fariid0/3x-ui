@@ -46,7 +46,7 @@ const RANGE_OPTIONS = [
 ];
 
 export default function UsageAlertsCard({ onOpenClient }: UsageAlertsCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const panelDateTime = usePanelDateTime();
   const [days, setDays] = useState(1);
   const [items, setItems] = useState<ClientUsageAlert[]>([]);
@@ -77,7 +77,7 @@ export default function UsageAlertsCard({ onOpenClient }: UsageAlertsCardProps) 
   };
 
   return (
-    <Card hoverable styles={{ body: { padding: 0 } }} className="ov-usage-alerts">
+    <Card hoverable styles={{ body: { padding: 0 } }} className="ov-usage-alerts" dir={i18n.dir()}>
       <div className="ov-usage-alerts-head">
         <div className="ov-usage-alerts-title">
           <div className="ov-kicker ov-kicker-icon"><AlertOutlined /> {t('pages.index.usageAlerts')}</div>
@@ -100,19 +100,32 @@ export default function UsageAlertsCard({ onOpenClient }: UsageAlertsCardProps) 
               <span className="ov-usage-rank">{index + 1}</span>
               <span className="ov-usage-main">
                 <span className="ov-usage-user-line">
-                  <strong>{item.email}</strong>
+                  <strong><bdi dir="ltr">{item.email}</bdi></strong>
                   {tagFor(item)}
                 </span>
                 <span className="ov-usage-meta">
-                  <span>{t('pages.clients.recentIpCount')}: {item.recentIpCount}</span>
-                  <span>{t('pages.clients.usagePeakMinute')}: {SizeFormatter.sizeFormat(item.peakMinuteBytes || 0)}/min</span>
-                  {item.anomalyCount > 0 && <span>{t('pages.index.usageAlertCount', { count: item.anomalyCount })}</span>}
-                  {item.lastOnline > 0 && <span>{t('lastOnline')}: {panelDateTime.formatDateTime(item.lastOnline)}</span>}
+                  <span className="ov-usage-meta-item">
+                    <span>{t('pages.clients.recentIpCount')}:</span>
+                    <bdi dir="ltr">{item.recentIpCount}</bdi>
+                  </span>
+                  <span className="ov-usage-meta-item">
+                    <span>{t('pages.clients.usagePeakMinute')}:</span>
+                    <bdi dir="ltr">{SizeFormatter.sizeFormat(item.peakMinuteBytes || 0)}/min</bdi>
+                  </span>
+                  {item.anomalyCount > 0 && (
+                    <span className="ov-usage-meta-item"><bdi>{t('pages.index.usageAlertCount', { count: item.anomalyCount })}</bdi></span>
+                  )}
+                  {item.lastOnline > 0 && (
+                    <span className="ov-usage-meta-item">
+                      <span>{t('lastOnline')}:</span>
+                      <bdi dir="ltr">{panelDateTime.formatDateTime(item.lastOnline)}</bdi>
+                    </span>
+                  )}
                 </span>
               </span>
               <span className="ov-usage-values">
-                <strong>{SizeFormatter.sizeFormat(item.totalUsage || 0)}</strong>
-                <small>{SizeFormatter.sizeFormat(item.averageDaily || 0)}/{t('pages.index.day')}</small>
+                <strong><bdi dir="ltr">{SizeFormatter.sizeFormat(item.totalUsage || 0)}</bdi></strong>
+                <small><bdi dir="ltr">{SizeFormatter.sizeFormat(item.averageDaily || 0)}</bdi>/{t('pages.index.day')}</small>
                 <AreaChartOutlined />
               </span>
             </button>

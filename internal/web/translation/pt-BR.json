@@ -255,7 +255,7 @@
       "last24Hours": "Últimas 24 horas",
       "last7Days": "Últimos 7 dias",
       "last30Days": "Últimos 30 dias",
-      "currentJalaliMonth": "Mês jalali atual",
+      "jalaliCalendar": "Jalali",
       "fromMidnight": "Contar desde 00:00",
       "healthWarm": "{list} — um pouco alto",
       "healthCritical": "{list} — crítico",

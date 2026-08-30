@@ -1,0 +1,23 @@
+Fara Xray v3.6.22 validation
+================================
+
+Validated behavior:
+- Destination events are grouped by BucketStart = current time truncated to one minute.
+- Each client is limited to the five newest distinct minute buckets.
+- Pruning runs only after new destination events are committed.
+- A sixth activity bucket deletes only buckets older than the fifth newest bucket.
+- Offline clients are not affected by ingestion runs with no events.
+- The general ClientInsightService.Cleanup job no longer deletes destination rows.
+- Destination reports query the five newest stored bucket starts and do not clamp them to the selected traffic range or wall clock.
+- Manual destination reset remains available.
+
+Checks performed:
+- gofmt completed for every changed Go file.
+- All 495 Go source files parsed successfully with go/parser.
+- Persian and English translation JSON files parsed successfully.
+- Both OpenAPI files contain version 3.6.22 and are byte-identical.
+- Static search found no remaining destinationRetention, wall-clock destination purge, or cleanup deletion path.
+- SQLite behavior simulation confirmed 5 buckets remain after bucket 6 and offline time alone removes nothing.
+
+Environment note:
+- The full project requires Go 1.26.5 and Node 24. The source package includes a regression test that GitHub Actions runs with the project's declared toolchains.

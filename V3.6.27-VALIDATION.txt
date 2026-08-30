@@ -1,0 +1,6 @@
+v3.6.27 validation notes
+
+- Added client_inbound_history to persist exact email+inbound last-seen timestamps from Xray access-log observations.
+- Client usage Connected Inbounds now includes every currently online inbound plus the three newest historical inbounds, sorted with online inbounds first.
+- The report remains inbound-level only and does not expand multiple hosts/IP links for one inbound.
+- gofmt and JSON validation were run locally.

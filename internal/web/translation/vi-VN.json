@@ -255,7 +255,7 @@
       "last24Hours": "24 giờ qua",
       "last7Days": "7 ngày qua",
       "last30Days": "30 ngày qua",
-      "currentJalaliMonth": "Tháng Jalali hiện tại",
+      "jalaliCalendar": "Jalali",
       "fromMidnight": "Tính từ 00:00",
       "healthWarm": "{list} — đang cao",
       "healthCritical": "{list} — nguy cấp",

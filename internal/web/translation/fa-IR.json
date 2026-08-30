@@ -255,7 +255,7 @@
       "last24Hours": "۲۴ ساعت گذشته",
       "last7Days": "۷ روز گذشته",
       "last30Days": "۳۰ روز گذشته",
-      "currentJalaliMonth": "ماه شمسی جاری",
+      "jalaliCalendar": "شمسی",
       "fromMidnight": "محاسبه از ساعت ۰۰:۰۰",
       "healthWarm": "{list} — رو به گرم شدن",
       "healthCritical": "{list} — بحرانی",

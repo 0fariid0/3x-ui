@@ -1,0 +1,20 @@
+Fara Xray v3.6.12 validation
+================================
+
+Implemented:
+- Basic Routing now includes a NordVPN selector for the active NordLynx outbound.
+- The WARP routing label is exactly `warp`.
+- New NordVPN outbounds use the stable `NordVPN` tag.
+- Legacy `nord-*` outbound tags remain discoverable and are migrated on reset.
+- NordVPN routing is disabled until a NordVPN outbound exists.
+- Only the tag-triggered release workflow remains.
+
+Static validation:
+- TypeScript/TSX parser validation completed for modified files.
+- JSON parsing completed for both OpenAPI documents.
+- YAML parsing completed for release.yml.
+- Whitespace validation completed.
+- Regression test added for stable and legacy NordVPN tags.
+
+Environment:
+- Full production build requires the repository Go/Node toolchain and dependencies and is executed by the tag-triggered GitHub Actions release workflow.

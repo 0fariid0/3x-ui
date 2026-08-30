@@ -255,7 +255,7 @@
       "last24Hours": "Son 24 saat",
       "last7Days": "Son 7 gün",
       "last30Days": "Son 30 gün",
-      "currentJalaliMonth": "Geçerli Celali ayı",
+      "jalaliCalendar": "Celali",
       "fromMidnight": "00:00'dan itibaren say",
       "healthWarm": "{list} — yükseliyor",
       "healthCritical": "{list} — kritik",

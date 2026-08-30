@@ -1,0 +1,46 @@
+Fara Xray v3.6.11 validation report
+===================================
+
+Base
+----
+- Built directly from the delivered Fara Xray v3.6.10 full source.
+- All v3.6.10 destination-reset and per-client privacy controls are preserved.
+
+Implemented
+-----------
+- Bundled the complete current Google public IPv4/IPv6 prefix snapshot from
+  https://www.gstatic.com/ipranges/goog.json (114 valid unique prefixes).
+- 142.251.20.113 is matched by bundled prefix 142.250.0.0/15 and classified as
+  Google / Google network with network confidence.
+- Added automatic 12-hour Google prefix refresh from the official JSON feed.
+- Kept Telegram refresh from its official CIDR feed and Meta refresh from
+  current AS32934/AS63293 RIPEstat announced prefixes.
+- Provider downloads now run concurrently with independent 15-second timeouts.
+- Immutable bundled Telegram, Meta and Google prefixes are checked before
+  refreshable data, so partial/failed online responses cannot remove known
+  classifications.
+- Existing Other rows are reclassified when reports open; stored IP strings are
+  normalized for whitespace, brackets, IPv6 zones and host:port forms.
+- Added Google reverse-DNS suffix 1e100.net to domain classification.
+
+Validation completed
+--------------------
+- All 493 Go source files parsed successfully with the standard Go parser.
+- Modified Go files are gofmt-clean.
+- Isolated compile/unit tests passed for Telegram, Meta and Google IPv4/IPv6
+  matching and for parsing Google's official JSON range format.
+- Exact sample test passed: 142.251.20.113 -> 142.250.0.0/15 -> Google.
+- 104 strict JSON files parsed successfully (VS Code JSONC excluded).
+- 15 GitHub Actions YAML files parsed successfully.
+- install.sh, update.sh and x-ui.sh pass bash syntax validation.
+- frontend/public/openapi.json and docs/public/openapi.json match and report
+  version 3.6.11.
+- git diff --cached --check passed.
+
+Environment limitation
+----------------------
+- Full dependency-aware project build was not run locally because this runtime
+  provides Go 1.23 and Node 22 while the project requires Go 1.26.5 and Node 24,
+  and project dependencies are not available offline.
+- GitHub Actions is the final full-toolchain multi-architecture build check after
+  pushing tag v3.6.11.

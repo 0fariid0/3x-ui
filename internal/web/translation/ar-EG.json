@@ -255,7 +255,7 @@
       "last24Hours": "آخر 24 ساعة",
       "last7Days": "آخر 7 أيام",
       "last30Days": "آخر 30 يومًا",
-      "currentJalaliMonth": "الشهر الجلالي الحالي",
+      "jalaliCalendar": "جلالي",
       "fromMidnight": "الحساب من 00:00",
       "healthWarm": "{list} — مرتفع قليلاً",
       "healthCritical": "{list} — حرج",

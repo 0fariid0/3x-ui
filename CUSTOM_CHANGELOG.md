@@ -1,3 +1,9 @@
+## v3.7.4
+
+- Simplified the traffic-range controls: the 00:00 option is shown only for the 24-hour report, while the Jalali option is shown only for the 30-day report.
+- Replaced the separate current-Jalali-month range with a compact Jalali checkbox that switches the 30-day report to day one of the current Persian month through now.
+- Fixed the client usage-alert card in Persian with explicit RTL layout, isolated LTR email/date/number segments, and cleanly separated metadata fields.
+
 ## v3.7.3
 
 - Restored the original live dashboard mode as the default traffic-card range, including live chart data, interface counters since boot, and the live-window average.

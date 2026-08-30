@@ -1,0 +1,27 @@
+Fara Xray v3.6.24 - validation report
+
+Scope
+- Client usage/statistics modal live refresh while open.
+- Version identifier bump from 3.6.23 to 3.6.24.
+
+Checks performed
+1. TypeScript TSX syntax/transpile check for frontend/src/pages/clients/ClientUsageModal.tsx: PASS
+2. Polling static checks: PASS
+   - 5-second interval constant present.
+   - recursive setTimeout background refresh present.
+   - old Destinations-only 15-second polling removed.
+3. OpenAPI JSON parse and version check: PASS
+   - docs/public/openapi.json = 3.6.24
+   - frontend/public/openapi.json = 3.6.24
+4. Go formatting check for internal/web/service/destination_networks.go: PASS
+5. internal/config/version = 3.6.24: PASS
+
+Behavior
+- Opening Client Usage / Statistics triggers an immediate foreground load.
+- While the modal remains open, the whole report refreshes silently every 5 seconds.
+- The next refresh is scheduled only after the previous background refresh completes, avoiding stacked interval requests.
+- Closing the modal cancels the refresh timer.
+- Changing client/range rebuilds the refresh loop using the new request parameters.
+
+Environment limitation
+- Full Go test execution was not available in the build sandbox because go.mod requires Go 1.26.5 and the sandbox cannot download that toolchain. The only Go source change in this release is the version string in the destination-prefix updater User-Agent.
