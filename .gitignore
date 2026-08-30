@@ -45,3 +45,11 @@ docker-compose.override.yml
 
 # Ignore .env (Environment Variables) file
 .env
+
+# Per-release scratch notes belong in CUSTOM_CHANGELOG.md, not the repository root
+
+/V*-CHANGES-FA.md
+
+/V*-VALIDATION.txt
+
+/V*-GIT-RELEASE.txt
