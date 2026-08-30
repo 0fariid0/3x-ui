@@ -1,8 +1,0 @@
-v3.6.28 validation notes
-
-- gofmt applied to internal/sub/service.go
-- bash/plain source packaging completed
-- JSON OpenAPI files parsed successfully
-- git diff --check passed
-- Targeted TypeScript helper syntax checked by inspection; full frontend build was not run in this environment.
-- Full Go test/build was not run because this environment cannot download the Go 1.26.5 toolchain required by the project.
