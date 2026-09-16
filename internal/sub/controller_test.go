@@ -119,6 +119,18 @@ func TestApplyCommonHeadersDisablesCachingAndExposesMetadata(t *testing.T) {
 	}
 }
 
+func TestApplyCommonHeadersOmitsEmptyProfileURL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	(&SUBController{}).ApplyCommonHeaders(c,
+		"upload=1; download=2; total=3; expire=4", "1", "Profile", "", "", "", false, "", false)
+
+	if got := w.Header().Get("Profile-Web-Page-Url"); got != "" {
+		t.Fatalf("Profile-Web-Page-Url leaked default subscription URL: %q", got)
+	}
+}
+
 func TestShouldAutoServeClash(t *testing.T) {
 	tests := []struct {
 		name         string

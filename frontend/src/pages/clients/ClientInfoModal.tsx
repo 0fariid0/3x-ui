@@ -701,6 +701,7 @@ export default function ClientInfoModal({
         open={hwidsModalOpen}
         email={client?.email}
         hwids={clientHwids}
+        limitHwid={client?.limitHwid}
         loading={hwidsLoading}
         clearing={hwidsClearing}
         deletingId={deletingHwidId}

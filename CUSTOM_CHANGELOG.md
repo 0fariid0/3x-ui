@@ -1,3 +1,20 @@
+## v3.8.1
+
+- Added port-conflict validation when enabling an inbound and rejected generated
+  Xray configurations with socket bind conflicts before disrupting the running core.
+- Restarted Xray only when a hot diff would leave a removed client's live session behind.
+- Fixed logger and Telegram bot concurrent-access races.
+- Added standard adjacent-window tolerance to both login and settings 2FA checks.
+- Stopped empty profile metadata from exposing the subscription URL; explicitly
+  configured custom profile URLs continue to work.
+- Preserved per-client traffic-reset schedules when toggling clients and processed
+  due inbound/client resets concurrently.
+- Published and verified SHA-256 sidecars for panel release archives.
+- Preserved single-device HWID deletion, added remaining-capacity details to the
+  admin device dialog, and added a read-only subscriber HWID status endpoint.
+- Corrected the unlimited display-host JSON regression check so the legitimate
+  default DNS address is not mistaken for the synthetic informational config.
+
 ## v3.8.0
 
 - Hid the always-first subscription display entry when both the client's

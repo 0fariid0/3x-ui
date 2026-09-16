@@ -705,7 +705,9 @@ func TestSub_PermanentDisplayHost_OmittedForFullyUnlimitedClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetJson: %v", err)
 	}
-	if strings.Contains(jsonOut, `"address": "1.1.1.1"`) {
+	// 1.1.1.1 may legitimately be present as the default DNS server; the
+	// synthetic display entry is uniquely identified by its fixed UUID.
+	if strings.Contains(jsonOut, subscriptionDisplayHostUUID) {
 		t.Fatalf("JSON subscription must omit display config for unlimited client:\n%s", jsonOut)
 	}
 }

@@ -1,10 +1,12 @@
 package sub
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -67,6 +69,69 @@ func initHwidSubRouter(t *testing.T, limit int) (*gin.Engine, string) {
 		WithSUBClashEnabled(true),
 	)
 	return router, subID
+}
+
+func assertHwidStatus(t *testing.T, rec *httptest.ResponseRecorder, active bool, limit, registered, remaining int, full bool) {
+	t.Helper()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("hwid-status status = %d, body=%q", rec.Code, rec.Body.String())
+	}
+	var got map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode hwid-status body %q: %v", rec.Body.String(), err)
+	}
+	want := map[string]any{
+		"active": active, "limit": float64(limit), "registered": float64(registered),
+		"remaining": float64(remaining), "full": full,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("hwid-status = %#v, want exactly %#v", got, want)
+	}
+}
+
+func TestSubscriptionHwidStatusCountsRegisteredDevices(t *testing.T) {
+	router, subID := initHwidSubRouter(t, 2)
+	statusPath := "/sub/" + subID + "/hwid-status"
+	assertHwidStatus(t, requestSub(t, router, http.MethodGet, statusPath, "", ""), true, 2, 0, 2, false)
+
+	for i, hwid := range []string{"device-one", "device-two"} {
+		if rec := requestSub(t, router, http.MethodGet, "/sub/"+subID, hwid, ""); rec.Code != http.StatusOK {
+			t.Fatalf("register %s = %d, want 200", hwid, rec.Code)
+		}
+		registered := i + 1
+		assertHwidStatus(t, requestSub(t, router, http.MethodGet, statusPath, "", ""),
+			true, 2, registered, 2-registered, registered == 2)
+	}
+}
+
+func TestSubscriptionHwidStatusIsReadOnly(t *testing.T) {
+	router, subID := initHwidSubRouter(t, 1)
+	rec := requestSub(t, router, http.MethodGet, "/sub/"+subID+"/hwid-status", "device-probe", "")
+	assertHwidStatus(t, rec, true, 1, 0, 1, false)
+
+	var count int64
+	if err := database.GetDB().Model(&model.ClientHwid{}).Where("sub_id = ?", subID).Count(&count).Error; err != nil {
+		t.Fatalf("count hwids: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("client_hwids rows after status probe = %d, want 0", count)
+	}
+}
+
+func TestSubscriptionHwidStatusHidesUnknownAndDisabled(t *testing.T) {
+	router, subID := initHwidSubRouter(t, 1)
+	unknown := requestSub(t, router, http.MethodGet, "/sub/does-not-exist/hwid-status", "", "")
+	if unknown.Code != http.StatusNotFound || unknown.Body.Len() != 0 {
+		t.Fatalf("unknown response = %d %q, want bare 404", unknown.Code, unknown.Body.String())
+	}
+	if err := database.GetDB().Model(&model.ClientRecord{}).Where("sub_id = ?", subID).UpdateColumn("enable", false).Error; err != nil {
+		t.Fatalf("disable client: %v", err)
+	}
+	disabled := requestSub(t, router, http.MethodGet, "/sub/"+subID+"/hwid-status", "", "")
+	if disabled.Code != unknown.Code || disabled.Body.String() != unknown.Body.String() ||
+		!reflect.DeepEqual(disabled.Header(), unknown.Header()) {
+		t.Fatalf("disabled and unknown subscriptions must be indistinguishable")
+	}
 }
 
 func requestSub(t *testing.T, router *gin.Engine, method string, path string, hwid string, accept string) *httptest.ResponseRecorder {

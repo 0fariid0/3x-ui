@@ -1273,6 +1273,7 @@ reset: Number(values.reset) || 0,
         email={client?.email}
         zIndex={CLIENT_IP_LOG_MODAL_Z_INDEX}
         hwids={clientHwids}
+        limitHwid={limitHwid}
         loading={hwidsLoading}
         clearing={hwidsClearing}
         deletingId={deletingHwidId}

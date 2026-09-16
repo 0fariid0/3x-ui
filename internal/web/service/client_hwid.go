@@ -31,6 +31,16 @@ type HwidGateResult struct {
 	Registered        int
 }
 
+// HwidSlotStatus exposes only aggregate device-slot counters to subscribers.
+// It never includes an HWID, email, device metadata, IP, or User-Agent.
+type HwidSlotStatus struct {
+	Active     bool `json:"active" example:"true"`
+	Limit      int  `json:"limit" example:"2"`
+	Registered int  `json:"registered" example:"1"`
+	Remaining  int  `json:"remaining" example:"1"`
+	Full       bool `json:"full" example:"false"`
+}
+
 const minHwidLength = 6
 
 type ClientHwidInfo struct {
@@ -154,6 +164,45 @@ func (s *ClientService) EnforceHwidForSubID(subID string, req HwidRequest) (Hwid
 		return nil
 	})
 	return res, err
+}
+
+// HwidSlotStatusForSubID is read-only. It mirrors the enabled-client scope of
+// the HWID gate but never registers a device or updates last_seen.
+func (s *ClientService) HwidSlotStatusForSubID(subID string) (status HwidSlotStatus, found bool, err error) {
+	subID = strings.TrimSpace(subID)
+	if subID == "" {
+		return status, false, nil
+	}
+
+	db := database.GetDB()
+	var enabled int64
+	if err := db.Model(&model.ClientRecord{}).
+		Where("sub_id = ? AND enable = ?", subID, true).
+		Count(&enabled).Error; err != nil {
+		return status, false, err
+	}
+	if enabled == 0 {
+		return status, false, nil
+	}
+
+	limit, err := effectiveHwidLimitForSubID(db, subID)
+	if err != nil {
+		return status, false, err
+	}
+	if limit <= 0 {
+		return status, true, nil
+	}
+
+	var registered int64
+	if err := db.Model(&model.ClientHwid{}).Where("sub_id = ?", subID).Count(&registered).Error; err != nil {
+		return status, false, err
+	}
+	status.Active = true
+	status.Limit = limit
+	status.Registered = int(registered)
+	status.Remaining = max(limit-status.Registered, 0)
+	status.Full = status.Registered >= limit
+	return status, true, nil
 }
 
 func (s *ClientService) ListClientHwids(email string) ([]ClientHwidInfo, error) {

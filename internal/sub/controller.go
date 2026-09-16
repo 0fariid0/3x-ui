@@ -301,6 +301,8 @@ func (a *SUBController) initRouter(g *gin.RouterGroup) {
 	gLink := g.Group(a.subPath)
 	gLink.GET(":subid", a.subs)
 	gLink.HEAD(":subid", a.subs)
+	gLink.GET(":subid/hwid-status", a.hwidStatus)
+	gLink.HEAD(":subid/hwid-status", a.hwidStatus)
 	gLink.GET(":subid/usage", a.usageHistory)
 	if a.jsonEnabled {
 		gJson := g.Group(a.subJsonPath)
@@ -425,7 +427,7 @@ func (a *SUBController) subs(c *gin.Context) {
 	}
 	logSubscriptionRoute(userAgent, "raw")
 	subId := c.Param("subid")
-	scheme, host, hostWithPort, _ := a.subService.ResolveRequest(c)
+	_, host, _, _ := a.subService.ResolveRequest(c)
 	subReq := a.subService.ForRequest(host)
 	subReq.SetNameMode(c.Query("name"))
 	subReq.subscriptionBody = true
@@ -442,11 +444,9 @@ func (a *SUBController) subs(c *gin.Context) {
 
 		// Add headers
 		header := fmt.Sprintf("upload=%d; download=%d; total=%d; expire=%d", traffic.Up, traffic.Down, traffic.Total, traffic.ExpiryTime/1000)
-		profileUrl := a.subProfileUrl
-		if profileUrl == "" {
-			profileUrl = fmt.Sprintf("%s://%s%s", scheme, hostWithPort, c.Request.RequestURI)
-		}
-		a.ApplyCommonHeaders(c, header, a.updateInterval, a.subTitle, a.subSupportUrl, profileUrl, a.subAnnounce, a.subEnableRouting, a.subRoutingRules, a.subHideSettings)
+		// Never expose the subscription request URL as profile metadata. Only an
+		// explicitly configured profile URL is safe to send to clients.
+		a.ApplyCommonHeaders(c, header, a.updateInterval, a.subTitle, a.subSupportUrl, a.subProfileUrl, a.subAnnounce, a.subEnableRouting, a.subRoutingRules, a.subHideSettings)
 
 		if a.subIncyEnableRouting && a.subIncyRoutingRules != "" {
 			incyRules, _, err := resolveIncyRoutingSource(a.subIncyRoutingRules)
@@ -680,6 +680,18 @@ func applyHwidHeaders(c *gin.Context, result service.HwidGateResult) {
 	}
 }
 
+// hwidStatus returns read-only device-slot counters. It deliberately skips
+// enforceHwid so checking capacity cannot consume a device slot.
+func (a *SUBController) hwidStatus(c *gin.Context) {
+	status, found, err := a.clientService.HwidSlotStatusForSubID(c.Param("subid"))
+	if err != nil || !found {
+		writeSubError(c, err)
+		return
+	}
+	setNoCacheHeaders(c)
+	c.JSON(http.StatusOK, status)
+}
+
 // setNoCacheHeaders marks a subscription page response as non-cacheable so VPN
 // clients and browsers always fetch fresh traffic/expiry data.
 func setNoCacheHeaders(c *gin.Context) {
@@ -758,7 +770,7 @@ func (a *SUBController) serveJson(c *gin.Context, alwaysReturnArray bool, conten
 
 func (a *SUBController) serveJsonBody(c *gin.Context, alwaysReturnArray bool, contentType string, rawDownload bool) bool {
 	subId := c.Param("subid")
-	scheme, host, hostWithPort, _ := a.subService.ResolveRequest(c)
+	_, host, _, _ := a.subService.ResolveRequest(c)
 	jsonSub, header, err := a.subJsonService.GetJsonNamed(subId, host, alwaysReturnArray, c.Query("name"))
 	if err != nil {
 		writeSubError(c, err)
@@ -768,11 +780,7 @@ func (a *SUBController) serveJsonBody(c *gin.Context, alwaysReturnArray bool, co
 		return false
 	}
 	a.recordSubscriptionAccess(c, subId, "json")
-	profileUrl := a.subProfileUrl
-	if profileUrl == "" {
-		profileUrl = fmt.Sprintf("%s://%s%s", scheme, hostWithPort, c.Request.RequestURI)
-	}
-	a.ApplyCommonHeaders(c, header, a.updateInterval, a.subTitle, a.subSupportUrl, profileUrl, a.subAnnounce, a.subEnableRouting, a.subRoutingRules, a.subHideSettings)
+	a.ApplyCommonHeaders(c, header, a.updateInterval, a.subTitle, a.subSupportUrl, a.subProfileUrl, a.subAnnounce, a.subEnableRouting, a.subRoutingRules, a.subHideSettings)
 	if rawDownload {
 		c.Writer.Header().Set("Content-Disposition", `attachment; filename="subscription.json"`)
 	}
@@ -803,7 +811,7 @@ func (a *SUBController) subClashs(c *gin.Context) {
 
 func (a *SUBController) serveClashBody(c *gin.Context, rawDownload bool) bool {
 	subId := c.Param("subid")
-	scheme, host, hostWithPort, _ := a.subService.ResolveRequest(c)
+	_, host, _, _ := a.subService.ResolveRequest(c)
 	clashSub, header, err := a.subClashService.GetClashNamed(subId, host, c.Query("name"))
 	if err != nil {
 		writeSubError(c, err)
@@ -813,11 +821,7 @@ func (a *SUBController) serveClashBody(c *gin.Context, rawDownload bool) bool {
 		return false
 	}
 	a.recordSubscriptionAccess(c, subId, "clash")
-	profileUrl := a.subProfileUrl
-	if profileUrl == "" {
-		profileUrl = fmt.Sprintf("%s://%s%s", scheme, hostWithPort, c.Request.RequestURI)
-	}
-	a.ApplyCommonHeaders(c, header, a.updateInterval, a.subTitle, a.subSupportUrl, profileUrl, a.subAnnounce, a.subEnableRouting, a.subRoutingRules, a.subHideSettings)
+	a.ApplyCommonHeaders(c, header, a.updateInterval, a.subTitle, a.subSupportUrl, a.subProfileUrl, a.subAnnounce, a.subEnableRouting, a.subRoutingRules, a.subHideSettings)
 	if rawDownload {
 		c.Writer.Header().Set("Content-Disposition", `attachment; filename="subscription.yaml"`)
 	} else if a.subTitle != "" {

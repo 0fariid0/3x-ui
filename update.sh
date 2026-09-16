@@ -1036,6 +1036,28 @@ update_x-ui() {
     if ! download_xui_release_archive "${tag_version}" "${archive_path}"; then
         _fail "ERROR: Failed to download or validate x-ui release archive from GitHub (normal and IPv4 attempts failed)"
     fi
+    # Releases publish <asset>.sha256 next to each archive. A mismatch or a
+    # failed sidecar download aborts the update; only a 404 (releases
+    # predating the sidecar) is tolerated with a warning.
+    archive="${xui_folder}-linux-$(arch).tar.gz"
+    rm -f "${archive}.sha256"
+    sidecar_code=$(${curl_bin} -sL --retry 3 --retry-delay 3 --connect-timeout 15 --max-time 60 -o "${archive}.sha256" -w '%{http_code}' "https://github.com/0fariid0/3x-ui/releases/download/${tag_version}/x-ui-linux-$(arch).tar.gz.sha256" 2> /dev/null)
+    if [[ "${sidecar_code}" == "200" ]]; then
+        expected_sha256=$(awk 'NR == 1 {print $1}' "${archive}.sha256")
+        actual_sha256=$(sha256sum "${archive}" | awk '{print $1}')
+        rm -f "${archive}.sha256"
+        if [[ ! "${expected_sha256}" =~ ^[0-9a-f]{64}$ || "${expected_sha256}" != "${actual_sha256}" ]]; then
+            rm -f "${archive}"
+            _fail "ERROR: Checksum mismatch for $(basename "${archive}"): expected ${expected_sha256:-<none>}, got ${actual_sha256}"
+        fi
+        echo -e "${green}Checksum verified: ${actual_sha256}${plain}"
+    elif [[ "${sidecar_code}" == "404" ]]; then
+        rm -f "${archive}.sha256"
+        echo -e "${yellow}No checksum published for this release, skipping verification${plain}"
+    else
+        rm -f "${archive}.sha256" "${archive}"
+        _fail "ERROR: Failed to download the checksum for x-ui-linux-$(arch).tar.gz (HTTP ${sidecar_code})"
+    fi
 
     if [[ -e ${xui_folder}/ ]]; then
         echo -e "${green}Stopping x-ui...${plain}"

@@ -8,6 +8,7 @@ interface ClientHwidListModalProps {
   email?: string;
   zIndex?: number;
   hwids: ClientHwidInfo[];
+  limitHwid?: number;
   loading: boolean;
   clearing: boolean;
   deletingId: number | null;
@@ -25,6 +26,7 @@ export default function ClientHwidListModal({
   email,
   zIndex,
   hwids,
+  limitHwid = 0,
   loading,
   clearing,
   deletingId,
@@ -35,6 +37,7 @@ export default function ClientHwidListModal({
   onClose,
 }: ClientHwidListModalProps) {
   const { t } = useTranslation();
+  const remaining = limitHwid > 0 ? Math.max(limitHwid - hwids.length, 0) : null;
 
   return (
     <Modal
@@ -64,6 +67,13 @@ export default function ClientHwidListModal({
         </Button>,
       ]}
     >
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+        <Tag>{t('pages.clients.limitHwid')}: {limitHwid > 0 ? limitHwid : '∞'}</Tag>
+        <Tag>{t('pages.clients.hwidLog')}: {hwids.length}</Tag>
+        <Tag color={remaining === 0 ? 'red' : 'green'}>
+          {t('pages.clients.remaining')}: {remaining ?? '∞'}
+        </Tag>
+      </div>
       {hwids.length > 0 ? (
         <div style={{ maxHeight: 360, overflowY: 'auto' }}>
           {hwids.map((entry) => (
