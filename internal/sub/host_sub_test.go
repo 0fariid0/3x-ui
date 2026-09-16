@@ -579,6 +579,13 @@ func TestSub_PermanentDisplayHost_FirstAndOnceAcrossInbounds(t *testing.T) {
 	if err := db.Where("sub_id = ?", "display-sub").First(&rec).Error; err != nil {
 		t.Fatalf("load client: %v", err)
 	}
+	// Keep this client limited so the informational entry has something useful
+	// to show. Unlimited clients are covered by the omission test below.
+	rec.TotalGB = 10 * 1024 * 1024 * 1024
+	rec.ExpiryTime = 4102444800000 // 2100-01-01 UTC
+	if err := db.Save(&rec).Error; err != nil {
+		t.Fatalf("make display client limited: %v", err)
+	}
 	second := &model.Inbound{
 		UserId: 1, Tag: "second-display", Enable: true, Listen: "203.0.113.6", Port: 4602,
 		Protocol: model.VLESS, Remark: "second-display",
@@ -660,5 +667,45 @@ func TestSub_PermanentDisplayHost_FirstAndOnceAcrossInbounds(t *testing.T) {
 	}
 	if displayAt, realAt := strings.Index(jsonOut, `"remarks": "NOTICE-`), strings.Index(jsonOut, `"address": "203.0.113.5"`); displayAt < 0 || realAt < 0 || displayAt > realAt {
 		t.Fatalf("json display config must be first:\n%s", jsonOut)
+	}
+}
+
+func TestSub_PermanentDisplayHost_OmittedForFullyUnlimitedClient(t *testing.T) {
+	seedSubDB(t)
+	seedSubInbound(t, "unlimited-display-sub", "unlimited-real", 4611, 1, `{"network":"tcp","security":"none"}`)
+
+	settingService := service.SettingService{}
+	if err := settingService.UpdateSubscriptionDisplayHost(&entity.SubscriptionDisplayHost{
+		Enable: true,
+		Remark: "📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D",
+	}); err != nil {
+		t.Fatalf("enable display host: %v", err)
+	}
+
+	links, _, _, _, err := NewSubService("").GetSubs("unlimited-display-sub", "req.example.com")
+	if err != nil {
+		t.Fatalf("GetSubs: %v", err)
+	}
+	flat := splitLinkLines(strings.Join(links, "\n"))
+	if len(flat) != 1 || strings.Contains(flat[0], "1.1.1.1:1") {
+		t.Fatalf("RAW subscription must omit display host for unlimited client: %v", flat)
+	}
+
+	clash := NewSubClashService(false, "", NewSubService(""))
+	yaml, _, err := clash.GetClash("unlimited-display-sub", "req.example.com")
+	if err != nil {
+		t.Fatalf("GetClash: %v", err)
+	}
+	if strings.Contains(yaml, "server: 1.1.1.1") {
+		t.Fatalf("Clash subscription must omit display proxy for unlimited client:\n%s", yaml)
+	}
+
+	jsonSvc := NewSubJsonService("", "", "", NewSubService(""))
+	jsonOut, _, err := jsonSvc.GetJson("unlimited-display-sub", "req.example.com", true)
+	if err != nil {
+		t.Fatalf("GetJson: %v", err)
+	}
+	if strings.Contains(jsonOut, `"address": "1.1.1.1"`) {
+		t.Fatalf("JSON subscription must omit display config for unlimited client:\n%s", jsonOut)
 	}
 }

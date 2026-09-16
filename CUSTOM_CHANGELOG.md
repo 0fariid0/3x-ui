@@ -1,3 +1,10 @@
+## v3.8.0
+
+- Hid the always-first subscription display entry when both the client's
+  traffic quota and expiry date are unlimited.
+- Kept the display entry for clients that have either a traffic limit or an
+  expiry date, across RAW, JSON, and Clash subscription outputs.
+
 ## v3.7.5
 
 - Fixed per-client destination tracking turning itself back off after it was enabled.

@@ -69,9 +69,16 @@ func (s *SubService) subscriptionDisplayRemark(inbound *model.Inbound, client mo
 	if inbound == nil {
 		inbound = subscriptionDisplayInbound()
 	}
+	stats := s.statsForClient(inbound, client)
+	// The synthetic entry exists only to present quota/expiry information. When
+	// both are unlimited it has nothing useful to show, so omit the whole entry
+	// from RAW, JSON and Clash subscriptions instead of rendering infinities.
+	if stats.Total <= 0 && stats.ExpiryTime == 0 {
+		return ""
+	}
 	ctx := remarkContext{
 		client:     client,
-		stats:      s.statsForClient(inbound, client),
+		stats:      stats,
 		inbound:    inbound,
 		hostRemark: "Subscription Info",
 		transport:  "tcp",
