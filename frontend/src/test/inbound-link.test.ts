@@ -11,6 +11,7 @@ import {
   genVmessLink,
   genWireguardConfig,
   genWireguardLink,
+  isPostQuantumLink,
   preferPublicHost,
   resolveAddr,
 } from '@/lib/xray/inbound-link';
@@ -813,5 +814,26 @@ describe('genVlessLink XHTTP extra compatibility', () => {
     expect(extra.sessionIDKey).toBe('X-Session');
     expect(extra.sessionPlacement).toBe('header');
     expect(extra.sessionKey).toBe('X-Session');
+  });
+});
+
+describe('isPostQuantumLink', () => {
+  const x25519Key = 'kO9pIKKPtoUCzo3ZWfWfp0lQoWCyJC1TqL8oz1hpsFM';
+  const mlkem768Key = 'A'.repeat(1590);
+
+  it('allows QR rendering for X25519-only vless encryption', () => {
+    const encryption = `mlkem768x25519plus.native.0rtt.${x25519Key}`;
+    const link = `vless://id@example.test:443?encryption=${encodeURIComponent(encryption)}&type=ws`;
+    expect(isPostQuantumLink(link)).toBe(false);
+  });
+
+  it('still suppresses oversized ML-KEM-768 QR payloads', () => {
+    const encryption = `mlkem768x25519plus.native.0rtt.${mlkem768Key}`;
+    const link = `vless://id@example.test:443?encryption=${encodeURIComponent(encryption)}&type=xhttp`;
+    expect(isPostQuantumLink(link)).toBe(true);
+  });
+
+  it('still detects post-quantum verification keys', () => {
+    expect(isPostQuantumLink('vless://id@example.test:443?type=xhttp&pqv=encoded')).toBe(true);
   });
 });

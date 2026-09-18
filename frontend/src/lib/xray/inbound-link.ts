@@ -14,6 +14,7 @@ import type { XHttpStreamSettings } from '@/schemas/protocols/stream/xhttp';
 import { getHeaderValue } from './headers';
 import { canEnableTlsFlow } from './protocol-capabilities';
 import { deriveSpiderX } from './spider-x';
+import { vlessEncryptionAuthKind } from './vless-encryption';
 
 // Share-link generators. Each per-protocol fn takes a typed inbound plus
 // client overrides and returns a URL (or '' when the protocol doesn't
@@ -1307,7 +1308,25 @@ function wgPeerCommentSuffix(peer: unknown): string {
 
 export function isPostQuantumLink(link: string): boolean {
   if (/[?&]pqv=/.test(link)) return true;
-  if (link.includes('mlkem768') || link.includes('mldsa65')) return true;
+  if (link.includes('mldsa65')) return true;
+
+  // Every vlessenc value starts with `mlkem768x25519plus`, including the
+  // short X25519-only authentication selected by "X25519 (native)". Looking
+  // at that prefix alone therefore hides perfectly valid X25519 QR codes.
+  // Classify the actual key payload instead: X25519 keys are short, whereas
+  // ML-KEM-768 keys are large enough to exceed a practical QR payload.
+  const encryptionMatch = link.match(/[?&]encryption=([^&#]*)/i);
+  if (encryptionMatch) {
+    let encryption = encryptionMatch[1];
+    try {
+      encryption = decodeURIComponent(encryption);
+    } catch {
+      // Keep the original value for malformed/legacy links.
+    }
+    const authKind = vlessEncryptionAuthKind(encryption);
+    if (authKind?.startsWith('mlkem768')) return true;
+  }
+
   if (link.includes('ML-KEM-768')) return true;
   return false;
 }
