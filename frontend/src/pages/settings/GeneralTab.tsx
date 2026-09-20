@@ -21,8 +21,6 @@ import { HttpUtil, LanguageManager } from '@/utils';
 import { onNumber } from '@/utils/onNumber';
 import { DefaultSettingTag, SettingListItem } from '@/components/ui';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useTheme } from '@/hooks/useTheme';
-import type { AppearanceMode } from '@/hooks/useTheme';
 import { catTabLabel } from './catTabLabel';
 import { sanitizePath } from './uriPath';
 import SecretInput from './SecretInput';
@@ -45,7 +43,6 @@ const DATEPICKER_LIST: { name: string; value: 'gregorian' | 'jalalian' }[] = [
 export default function GeneralTab({ allSetting, updateSetting }: GeneralTabProps) {
   const { t } = useTranslation();
   const { isMobile } = useMediaQuery();
-  const { appearance, setAppearance } = useTheme();
 
   const [lang, setLang] = useState<string>(() => LanguageManager.getLanguage());
   const [inboundOptions, setInboundOptions] = useState<{ label: string; value: string }[]>([]);
@@ -227,22 +224,6 @@ export default function GeneralTab({ allSetting, updateSetting }: GeneralTabProp
                 onChange={onLangChange}
                 style={{ width: '100%' }}
                 options={langOptions}
-              />
-            </SettingListItem>
-
-            <SettingListItem
-              paddings="small"
-              title={t('pages.settings.appearance')}
-              description={t('pages.settings.appearanceDesc')}
-            >
-              <Select
-                value={appearance}
-                onChange={(value) => setAppearance(value as AppearanceMode)}
-                style={{ width: '100%' }}
-                options={[
-                  { value: 'classic', label: t('pages.settings.appearanceClassic') },
-                  { value: 'goguard', label: t('pages.settings.appearanceGoGuard') },
-                ]}
               />
             </SettingListItem>
           </>

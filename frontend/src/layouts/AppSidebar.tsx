@@ -25,7 +25,6 @@ import {
   MoonOutlined,
   SafetyOutlined,
   SettingOutlined,
-  SkinOutlined,
   SunOutlined,
   SwapOutlined,
   TagsOutlined,
@@ -104,34 +103,9 @@ function ThemeCycleButton({ id, isDark, isUltra, onCycle, ariaLabel }: {
   );
 }
 
-function AppearanceButton({ active, onToggle, ariaLabel }: {
-  active: boolean;
-  onToggle: () => void;
-  ariaLabel: string;
-}) {
-  return (
-    <button
-      type="button"
-      className={`sidebar-theme-cycle sidebar-appearance-toggle${active ? ' is-active' : ''}`}
-      aria-label={ariaLabel}
-      title={ariaLabel}
-      onClick={onToggle}
-    >
-      <SkinOutlined />
-    </button>
-  );
-}
-
 export default function AppSidebar() {
   const { t } = useTranslation();
-  const {
-    isDark,
-    isUltra,
-    appearance,
-    toggleTheme,
-    toggleUltra,
-    toggleAppearance,
-  } = useTheme();
+  const { isDark, isUltra, toggleTheme, toggleUltra } = useTheme();
   const navigate = useNavigate();
   const { pathname, hash } = useLocation();
   const { allSetting } = useAllSettings();
@@ -287,13 +261,6 @@ export default function AppSidebar() {
                 onCycle={() => cycleTheme('theme-cycle')}
                 ariaLabel={t('menu.theme')}
               />
-              <AppearanceButton
-                active={appearance === 'goguard'}
-                onToggle={toggleAppearance}
-                ariaLabel={appearance === 'goguard'
-                  ? t('menu.classicAppearance')
-                  : t('menu.goguardAppearance')}
-              />
             </div>
           )}
         </div>
@@ -351,13 +318,6 @@ export default function AppSidebar() {
               isUltra={isUltra}
               onCycle={() => cycleTheme('theme-cycle-drawer')}
               ariaLabel={t('menu.theme')}
-            />
-            <AppearanceButton
-              active={appearance === 'goguard'}
-              onToggle={toggleAppearance}
-              ariaLabel={appearance === 'goguard'
-                ? t('menu.classicAppearance')
-                : t('menu.goguardAppearance')}
             />
             <button
               className="drawer-close"

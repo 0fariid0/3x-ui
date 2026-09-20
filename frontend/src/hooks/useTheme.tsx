@@ -5,9 +5,6 @@ import type { ThemeConfig } from 'antd';
 
 const STORAGE_DARK = 'dark-mode';
 const STORAGE_ULTRA = 'isUltraDarkThemeEnabled';
-const STORAGE_APPEARANCE = 'panel-appearance';
-
-export type AppearanceMode = 'classic' | 'goguard';
 
 function readBool(key: string, fallback: boolean): boolean {
   const raw = localStorage.getItem(key);
@@ -15,22 +12,13 @@ function readBool(key: string, fallback: boolean): boolean {
   return raw === 'true';
 }
 
-function readAppearance(): AppearanceMode {
-  return localStorage.getItem(STORAGE_APPEARANCE) === 'goguard' ? 'goguard' : 'classic';
-}
-
-function applyDom(isDark: boolean, isUltra: boolean, appearance: AppearanceMode) {
+function applyDom(isDark: boolean, isUltra: boolean) {
   document.body.classList.remove('dark', 'light');
   document.body.classList.add(isDark ? 'dark' : 'light');
   if (isUltra) {
     document.documentElement.setAttribute('data-theme', 'ultra-dark');
   } else {
     document.documentElement.removeAttribute('data-theme');
-  }
-  if (appearance === 'goguard') {
-    document.documentElement.setAttribute('data-appearance', 'goguard');
-  } else {
-    document.documentElement.removeAttribute('data-appearance');
   }
   const msg = document.getElementById('message');
   if (msg) {
@@ -42,8 +30,7 @@ function applyDom(isDark: boolean, isUltra: boolean, appearance: AppearanceMode)
 // module load so the document is in the right theme before React mounts.
 const initialDark = readBool(STORAGE_DARK, true);
 const initialUltra = readBool(STORAGE_ULTRA, false);
-const initialAppearance = readAppearance();
-applyDom(initialDark, initialUltra, initialAppearance);
+applyDom(initialDark, initialUltra);
 
 const DARK_TOKENS = {
   colorBgBase: '#1a1b1f',
@@ -108,32 +95,6 @@ const LIGHT_BUTTON_TOKENS = {
   colorPrimaryHover: '#2468e5',
   colorPrimaryActive: '#073ea8',
 };
-const GOGUARD_LIGHT_TOKENS = {
-  colorPrimary: '#2563eb',
-  colorInfo: '#2563eb',
-  colorBgBase: '#f8fafc',
-  colorBgLayout: '#f8fafc',
-  colorBgContainer: '#ffffff',
-  colorBgElevated: '#ffffff',
-  colorBorder: '#e2e8f0',
-  colorBorderSecondary: '#e8edf3',
-  borderRadius: 10,
-  borderRadiusLG: 12,
-  controlHeight: 36,
-};
-const GOGUARD_DARK_TOKENS = {
-  colorPrimary: '#4f7cff',
-  colorInfo: '#4f7cff',
-  colorBgBase: '#27282b',
-  colorBgLayout: '#27282b',
-  colorBgContainer: '#27282b',
-  colorBgElevated: '#303136',
-  colorBorder: '#3d3f45',
-  colorBorderSecondary: '#383a40',
-  borderRadius: 10,
-  borderRadiusLG: 12,
-  controlHeight: 36,
-};
 
 // hashed:false drops the `:where(.css-<hash>)` wrapper antd puts around every
 // rule. It costs nothing in specificity — `:where()` contributes zero, so the
@@ -149,35 +110,7 @@ const SHARED_STYLE_CONFIG = {
   cssVar: { key: 'xui' },
 } as const;
 
-export function buildAntdThemeConfig(
-  isDark: boolean,
-  isUltra: boolean,
-  appearance: AppearanceMode = 'classic',
-): ThemeConfig {
-  if (appearance === 'goguard') {
-    return {
-      ...SHARED_STYLE_CONFIG,
-      algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
-      token: isDark ? GOGUARD_DARK_TOKENS : GOGUARD_LIGHT_TOKENS,
-      components: {
-        Layout: {
-          bodyBg: isDark ? '#27282b' : '#f8fafc',
-          headerBg: isDark ? '#27282b' : '#ffffff',
-          siderBg: isDark ? '#27282b' : '#ffffff',
-          triggerBg: isDark ? '#303136' : '#f1f5f9',
-        },
-        Menu: {
-          darkItemBg: '#27282b',
-          darkSubMenuItemBg: '#242528',
-          darkPopupBg: '#303136',
-          itemBorderRadius: 8,
-        },
-        Card: { colorBorderSecondary: isDark ? '#383a40' : '#e8edf3' },
-        Statistic: STATISTIC_TOKENS,
-        Button: isDark ? { borderRadius: 8 } : { ...LIGHT_BUTTON_TOKENS, borderRadius: 8 },
-      },
-    };
-  }
+export function buildAntdThemeConfig(isDark: boolean, isUltra: boolean): ThemeConfig {
   if (!isDark) {
     return {
       ...SHARED_STYLE_CONFIG,
@@ -218,11 +151,8 @@ export function pauseAnimationsUntilLeave(elementId: string): void {
 interface ThemeContextValue {
   isDark: boolean;
   isUltra: boolean;
-  appearance: AppearanceMode;
   toggleTheme: () => void;
   toggleUltra: () => void;
-  setAppearance: (appearance: AppearanceMode) => void;
-  toggleAppearance: () => void;
   antdThemeConfig: ThemeConfig;
 }
 
@@ -231,39 +161,21 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [isDark, setIsDark] = useState<boolean>(initialDark);
   const [isUltra, setIsUltra] = useState<boolean>(initialUltra);
-  const [appearance, setAppearance] = useState<AppearanceMode>(initialAppearance);
 
   useLayoutEffect(() => {
-    applyDom(isDark, isUltra, appearance);
+    applyDom(isDark, isUltra);
     localStorage.setItem(STORAGE_DARK, String(isDark));
     localStorage.setItem(STORAGE_ULTRA, String(isUltra));
-    localStorage.setItem(STORAGE_APPEARANCE, appearance);
-  }, [isDark, isUltra, appearance]);
+  }, [isDark, isUltra]);
 
   const toggleTheme = useCallback(() => setIsDark((v) => !v), []);
   const toggleUltra = useCallback(() => setIsUltra((v) => !v), []);
-  const toggleAppearance = useCallback(
-    () => setAppearance((value) => (value === 'classic' ? 'goguard' : 'classic')),
-    [],
-  );
 
-  const antdThemeConfig = useMemo(
-    () => buildAntdThemeConfig(isDark, isUltra, appearance),
-    [isDark, isUltra, appearance],
-  );
+  const antdThemeConfig = useMemo(() => buildAntdThemeConfig(isDark, isUltra), [isDark, isUltra]);
 
   const value = useMemo<ThemeContextValue>(
-    () => ({
-      isDark,
-      isUltra,
-      appearance,
-      toggleTheme,
-      toggleUltra,
-      setAppearance,
-      toggleAppearance,
-      antdThemeConfig,
-    }),
-    [isDark, isUltra, appearance, toggleTheme, toggleUltra, toggleAppearance, antdThemeConfig],
+    () => ({ isDark, isUltra, toggleTheme, toggleUltra, antdThemeConfig }),
+    [isDark, isUltra, toggleTheme, toggleUltra, antdThemeConfig],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
