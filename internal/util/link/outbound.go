@@ -176,10 +176,16 @@ func parseVmess(link string) (*ParseResult, error) {
 		if m := getString(j, "mode", ""); m != "" {
 			xh["mode"] = m
 		}
-		// xhttp advanced keys are passed through if present in the json
-		for _, k := range []string{"xPaddingBytes", "scMaxEachPostBytes", "scMinPostsIntervalMs"} {
+		for _, k := range vmessXhttpKeys {
 			if v, ok := j[k]; ok {
 				xh[k] = v
+			}
+		}
+		for legacy, renamed := range xhttpLegacyAliases {
+			if _, ok := xh[renamed]; !ok {
+				if v, ok := j[legacy].(string); ok && v != "" {
+					xh[renamed] = v
+				}
 			}
 		}
 	case "tcp":
@@ -232,6 +238,19 @@ func parseVmess(link string) (*ParseResult, error) {
 		"streamSettings": stream,
 	}
 	return &ParseResult{Outbound: ob, Identity: identity}, nil
+}
+
+var vmessXhttpKeys = []string{
+	"xPaddingBytes", "xPaddingObfsMode", "xPaddingKey", "xPaddingHeader", "xPaddingPlacement", "xPaddingMethod",
+	"sessionIDPlacement", "sessionIDKey", "sessionIDTable", "sessionIDLength",
+	"seqPlacement", "seqKey", "uplinkDataPlacement", "uplinkDataKey", "uplinkHTTPMethod", "uplinkChunkSize",
+	"scMaxEachPostBytes", "scMinPostsIntervalMs", "scMaxBufferedPosts", "scStreamUpServerSecs",
+	"serverMaxHeaderBytes", "noSSEHeader", "noGRPCHeader", "xmux", "downloadSettings", "headers",
+}
+
+var xhttpLegacyAliases = map[string]string{
+	"sessionPlacement": "sessionIDPlacement",
+	"sessionKey":       "sessionIDKey",
 }
 
 func vmessIdentity(j map[string]any) string {

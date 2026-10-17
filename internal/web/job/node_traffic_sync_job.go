@@ -385,6 +385,12 @@ func (j *NodeTrafficSyncJob) syncOne(mgr *runtime.Manager, n *model.Node, doIpSy
 		}
 	}
 
+	resetCtx, resetCancel := context.WithTimeout(context.Background(), nodeTrafficSyncRequestTimeout)
+	if resetErr := j.inboundService.DeliverNodeResets(resetCtx, n.Id, rt); resetErr != nil {
+		logger.Warningf("node traffic sync: reset delivery to %s failed, retrying next tick: %v", n.Name, resetErr)
+	}
+	resetCancel()
+
 	ctx, cancel := context.WithTimeout(context.Background(), nodeTrafficSyncRequestTimeout)
 	defer cancel()
 

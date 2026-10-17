@@ -27,9 +27,10 @@ type trafficLocalApplyPlan struct {
 }
 
 type trafficMutationBatch struct {
-	localPlans  []trafficLocalApplyPlan
-	remotePlans []trafficInboundUpdatePlan
-	nodeIDs     map[int]struct{}
+	localPlans    []trafficLocalApplyPlan
+	remotePlans   []trafficInboundUpdatePlan
+	nodeIDs       map[int]struct{}
+	renewedEmails []string
 }
 
 type trafficInboundUpdatePlan struct{ oldInbound, newInbound model.Inbound }
@@ -61,6 +62,7 @@ func (s *InboundService) applyTrafficMutationBatch(b *trafficMutationBatch) bool
 	if b == nil {
 		return false
 	}
+	s.resetMtprotoClientQuotas(b.renewedEmails)
 	needRestart := false
 	for i := range b.remotePlans {
 		plan := &b.remotePlans[i]

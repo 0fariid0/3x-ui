@@ -652,6 +652,7 @@ func (s *ClientService) bulkAdjustInboundClients(
 		}
 		return res
 	}
+	prevSettings := oldInbound.Settings
 	oldInbound.Settings = string(newSettings)
 
 	// A flow change rewrites the user's xray config, which the lightweight
@@ -664,7 +665,7 @@ func (s *ClientService) bulkAdjustInboundClients(
 	// Serialize against the traffic poll to avoid the cross-transaction
 	// lock-order deadlock on inbounds/client_records (runSerializedTx).
 	txErr := runSerializedTx(func(tx *gorm.DB) error {
-		if err := tx.Save(oldInbound).Error; err != nil {
+		if err := commitInboundClientSettings(tx, oldInbound, prevSettings); err != nil {
 			return err
 		}
 		finalClients, gcErr := inboundSvc.GetClients(oldInbound)
@@ -974,6 +975,7 @@ func (s *ClientService) bulkDelInboundClients(
 		}
 		return res
 	}
+	prevSettings := oldInbound.Settings
 	oldInbound.Settings = string(newSettings)
 
 	foundList := make([]string, 0, len(foundEmails))
@@ -1044,7 +1046,7 @@ func (s *ClientService) bulkDelInboundClients(
 	// Serialize against the traffic poll to avoid the cross-transaction
 	// lock-order deadlock on inbounds/client_records (runSerializedTx).
 	txErr := runSerializedTx(func(tx *gorm.DB) error {
-		if err := tx.Save(oldInbound).Error; err != nil {
+		if err := commitInboundClientSettings(tx, oldInbound, prevSettings); err != nil {
 			return err
 		}
 		finalClients, err := inboundSvc.GetClients(oldInbound)
@@ -1609,7 +1611,7 @@ func (s *ClientService) bulkSetEnableInboundClients(inboundSvc *InboundService, 
 	}
 
 	txErr := runSerializedTx(func(tx *gorm.DB) error {
-		if e := tx.Save(oldInbound).Error; e != nil {
+		if e := commitInboundClientSettings(tx, oldInbound, prevSettings); e != nil {
 			return e
 		}
 		finalClients, gcErr := inboundSvc.GetClients(oldInbound)
@@ -1673,7 +1675,7 @@ func (s *ClientService) bulkSetEnableInboundClients(inboundSvc *InboundService, 
 			}
 		}
 		if !pushFailed {
-			advancePushedInbound(rt, prevSettings, oldInbound)
+			advancePushedInbound(rt, prevSettings, string(newSettings), oldInbound)
 		}
 	}
 

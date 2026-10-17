@@ -9,7 +9,24 @@ on:
       - "v*.*.*"
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      GOMAXPROCS: 2
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Prepare embed directory
+        run: make dist-stub
+      - name: Verify custom lifecycle and subscription behavior
+        run: go test -p 1 ./internal/database ./internal/web/service ./internal/web/job ./internal/web/runtime ./internal/sub ./internal/util/link
   build:
+    needs: validate
     permissions:
       contents: write
     strategy:
@@ -189,6 +206,7 @@ jobs:
   #  Windows Build
   # =================================
   build-windows:
+    needs: validate
     name: Build for Windows
     permissions:
       contents: write

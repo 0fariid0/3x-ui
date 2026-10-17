@@ -1,3 +1,21 @@
+## v3.9.0
+
+- Backported client-operation three-way settings writes so concurrent renewals,
+  traffic updates, and edits to neighbouring clients survive.
+- Zeroed traffic before re-enabling quota-disabled users.
+- Added durable delivery/replay of client resets to every hosting node and
+  scoped MTProto sidecar quota resets to the clients actually reset.
+- Resolved inbound resets using the node-side inbound ID.
+- Applied depletion checks by client email across attached local inbounds.
+- Skipped unchanged node traffic and baseline writes.
+- Fixed REALITY host SNI in JSON output, retained external VLESS encryption in
+  Clash, defaulted missing VLESS encryption to none, and preserved VMess XHTTP
+  parameters on import.
+- Preserved the fork's legacy inbound-update API, frontend, subscription display
+  policy, HWID, analytics, Pin, routing and QR customizations. This is a custom
+  release, not a wholesale upgrade to upstream 3.9.0.
+- Grouped scheduled dependency updates and limited their open pull requests.
+
 ## v3.8.1
 
 - Added port-conflict validation when enabling an inbound and rejected generated

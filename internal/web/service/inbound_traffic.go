@@ -507,6 +507,7 @@ func (s *InboundService) autoRenewClients(tx *gorm.DB, mutationBatch *trafficMut
 	if err = clearGlobalTraffic(tx, renewEmails...); err != nil {
 		return false, 0, err
 	}
+	mutationBatch.renewedEmails = append(mutationBatch.renewedEmails, renewEmails...)
 	for _, clientToAdd := range clientsToAdd {
 		if clientToAdd.inbound.NodeID != nil {
 			mutationBatch.addNode(*clientToAdd.inbound.NodeID)
@@ -632,28 +633,22 @@ func (s *InboundService) ResetClientTrafficByEmail(clientEmail string) error {
 }
 
 func (s *InboundService) ResetClientTraffic(id int, clientEmail string) (needRestart bool, err error) {
-	var resetInbound *model.Inbound
+	var ownNode *int
 	err = submitTrafficWrite(func() error {
 		var inner error
-		needRestart, resetInbound, inner = s.resetClientTrafficLocked(id, clientEmail)
+		needRestart, ownNode, inner = s.resetClientTrafficLocked(id, clientEmail)
 		return inner
 	})
 	if err == nil {
 		s.resetMtprotoClientQuota(clientEmail)
-		if resetInbound != nil && resetInbound.NodeID != nil {
-			if rt, rterr := s.runtimeFor(resetInbound); rterr == nil {
-				if e := rt.ResetClientTraffic(context.Background(), resetInbound, clientEmail); e != nil {
-					logger.Warning("ResetClientTraffic: remote propagation to", rt.Name(), "failed:", e)
-				}
-			} else {
-				logger.Warning("ResetClientTraffic: runtime lookup failed:", rterr)
-			}
+		if ownNode != nil {
+			s.deliverNodeResetsNow([]int{*ownNode})
 		}
 	}
 	return
 }
 
-func (s *InboundService) resetClientTrafficLocked(id int, clientEmail string) (bool, *model.Inbound, error) {
+func (s *InboundService) resetClientTrafficLocked(id int, clientEmail string) (bool, *int, error) {
 	needRestart := false
 	var reenablePlan *trafficLocalApplyPlan
 	var reenableNodeID *int
@@ -725,6 +720,9 @@ func (s *InboundService) resetClientTrafficLocked(id int, clientEmail string) (b
 		if err := tx.Where("email = ?", clientEmail).Delete(&model.NodeClientTraffic{}).Error; err != nil {
 			return err
 		}
+		if _, err := queueNodeResets(tx, []string{clientEmail}); err != nil {
+			return err
+		}
 		if err := tx.Model(model.Inbound{}).
 			Where("id = ?", id).
 			Update("last_traffic_reset_time", now).Error; err != nil {
@@ -753,7 +751,10 @@ func (s *InboundService) resetClientTrafficLocked(id int, clientEmail string) (b
 		}
 	}
 
-	return needRestart, inbound, nil
+	if inbound != nil {
+		return needRestart, inbound.NodeID, nil
+	}
+	return needRestart, nil, nil
 }
 
 func (s *InboundService) ResetAllTraffics() error {
@@ -762,7 +763,6 @@ func (s *InboundService) ResetAllTraffics() error {
 	})
 	if err == nil {
 		s.propagateResetAllTrafficsToNodes()
-		s.resetAllMtprotoQuotas()
 	}
 	return err
 }

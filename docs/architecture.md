@@ -354,6 +354,8 @@ merged with GUID-based baselines to avoid double counting after resets.
 `job/xray_traffic_job.go`, `job/node_traffic_sync_job.go`, `service/inbound_node.go`
 (`SetRemoteTraffic` / `upsertNodeBaseline`), models `xray.ClientTraffic`,
 `model.NodeClientTraffic`, `model.ClientGlobalTraffic` (cross-master totals).
+A client reset is queued per hosting node in `model.NodePendingReset` (`service/node_reset_queue.go`)
+and replayed by the node sync until the node accepts it.
 Periodic resets: `job/periodic_traffic_reset_job.go` (keyed off `Inbound.TrafficReset`).
 
 ### 5.4 Background jobs (cron)
@@ -459,6 +461,7 @@ for AutoMigrate in `internal/database/db.go`.
 | `ApiToken` | REST API tokens | SHA-256 hash (plaintext shown once) |
 | `InboundFallback` | Fallback routing on a shared port | SNI/ALPN/path → dest |
 | `HistoryOfSeeders` | Seeder bookkeeping | prevents re-running one-off migrations |
+| `NodePendingReset` | Pending client resets per node | Retried until acknowledged |
 
 ---
 
