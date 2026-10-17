@@ -9,6 +9,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/util/json_util"
 
 	"github.com/op/go-logging"
+	"github.com/xtls/xray-core/proxy/shadowsocks"
 )
 
 func TestMain(m *testing.M) {
@@ -219,7 +220,7 @@ func TestComputeHotDiff_ClientChangeFallsBackToReplace(t *testing.T) {
 		{
 			name: "unsupported protocol",
 			mutate: func(cfg *Config) {
-				cfg.InboundConfigs[1].Protocol = "shadowsocks"
+				cfg.InboundConfigs[1].Protocol = "http"
 			},
 		},
 		{
@@ -383,5 +384,42 @@ func TestComputeHotDiff_RealityClientOnlyChangeStaysHot(t *testing.T) {
 	}
 	if len(diff.AddedUsers) != 1 || diff.AddedUsers[0].Email != "b" {
 		t.Fatalf("expected user b added via AlterInbound, got %+v", diff.AddedUsers)
+	}
+}
+func TestInboundUserOps_ShadowsocksAddedUserBuildsTheInboundAccount(t *testing.T) {
+	cases := []struct {
+		name, settingsHead, clientMethod string
+		wantLegacy                       bool
+	}{
+		{"legacy aead", `"method":"aes-256-gcm"`, `"method":"aes-256-gcm",`, true},
+		{"2022", `"method":"2022-blake3-aes-128-gcm","password":"AAECAwQFBgcICQoLDA0ODw=="`, "", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			inbound := func(clients ...string) *InboundConfig {
+				return &InboundConfig{
+					Port: 8388, Protocol: "shadowsocks", Tag: "inbound-8388",
+					Listen:   json_util.RawMessage(`"0.0.0.0"`),
+					Settings: json_util.RawMessage(`{` + tc.settingsHead + `,"network":"tcp,udp","clients":[` + strings.Join(clients, ",") + `]}`),
+				}
+			}
+			clientA := `{` + tc.clientMethod + `"email":"a","password":"EBESExQVFhcYGRobHB0eHw=="}`
+			clientB := `{` + tc.clientMethod + `"email":"b","password":"ICEiIyQlJicoKSorLC0uLw=="}`
+
+			diff, ok := InboundUserOps(inbound(clientA), inbound(clientA, clientB))
+			if !ok {
+				t.Fatal("a client-only shadowsocks change must apply through per-user ops")
+			}
+			if len(diff.RemovedUsers) != 0 || len(diff.AddedUsers) != 1 || diff.AddedUsers[0].Email != "b" {
+				t.Fatalf("expected only user b added, got added %+v removed %+v", diff.AddedUsers, diff.RemovedUsers)
+			}
+			_, legacy, modern := decodeSSAccount(t, diff.AddedUsers[0].User)
+			if tc.wantLegacy && (legacy == nil || legacy.CipherType != shadowsocks.CipherType_AES_256_GCM) {
+				t.Fatalf("want a legacy aes-256-gcm account, got legacy %v modern %v", legacy, modern)
+			}
+			if !tc.wantLegacy && (modern == nil || modern.Key != "ICEiIyQlJicoKSorLC0uLw==") {
+				t.Fatalf("want a 2022 account keyed by b's password, got legacy %v modern %v", legacy, modern)
+			}
+		})
 	}
 }

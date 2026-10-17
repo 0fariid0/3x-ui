@@ -897,3 +897,11 @@ func mapToSlice[T any](m map[string]*T) []*T {
 	}
 	return result
 }
+
+func IsMissingUserErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "not found") && !strings.Contains(msg, "failed to get handler")
+}

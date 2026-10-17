@@ -1,3 +1,10 @@
+## v3.9.1
+
+- Show the first 12 hash characters as a device fingerprint in the admin HWID list; raw HWIDs and full hashes remain private.
+- Apply Shadowsocks multi-user changes through per-user operations, including the correct cipher for 2022 accounts.
+- Preserve the Shadowsocks listener during client-only inbound edits and node pushes; retain rebuild fallback for structural changes or failed user operations.
+- Keep the existing restart-on-client-disable policy and all custom v3.9.0 behavior.
+
 ## v3.9.0
 
 - Backported client-operation three-way settings writes so concurrent renewals,

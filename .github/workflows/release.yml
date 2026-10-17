@@ -24,7 +24,7 @@ jobs:
       - name: Prepare embed directory
         run: make dist-stub
       - name: Verify custom lifecycle and subscription behavior
-        run: go test -p 1 ./internal/database ./internal/web/service ./internal/web/job ./internal/web/runtime ./internal/sub ./internal/util/link
+        run: go test -p 1 ./internal/xray ./internal/database ./internal/web/service ./internal/web/job ./internal/web/runtime ./internal/sub ./internal/util/link
   build:
     needs: validate
     permissions:

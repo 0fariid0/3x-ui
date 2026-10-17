@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/runtime"
+	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
@@ -1381,6 +1383,7 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	// Capture the pre-edit protocol and routing state before oldInbound is
 	// overwritten with the new values further down, then ensure a routed
 	// inbound keeps a stable egress port (reusing the one already stored).
+	running := *oldInbound
 	oldProtocol := oldInbound.Protocol
 	oldRoutedMtproto := mtprotoRoutesThroughXray(oldInbound)
 	if err := s.normalizeMtprotoXrayPort(inbound, oldInbound.Settings); err != nil {
@@ -1545,7 +1548,7 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 			} else {
 				oldSnapshot := *oldInbound
 				oldSnapshot.Tag = tag
-				var runtimeInbound *model.Inbound
+				var runtimeInbound, runningInbound *model.Inbound
 				if inbound.Enable {
 					var err2 error
 					runtimeInbound, err2 = s.buildInboundForLocalRuntime(tx, oldInbound)
@@ -1554,7 +1557,13 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 						needRestart = true
 					}
 				}
+				if runtimeInbound != nil && running.Enable && running.Protocol == model.Shadowsocks && runtimeInbound.Protocol == model.Shadowsocks {
+					runningInbound, _ = s.buildInboundForLocalRuntime(tx, &running)
+				}
 				postCommitApply = func() {
+					if runningInbound != nil && applyInboundUserOps(rt, runningInbound, runtimeInbound) {
+						return
+					}
 					if err2 := rt.DelInbound(context.Background(), &oldSnapshot); err2 == nil {
 						logger.Debug("Old inbound deleted on", rt.Name(), ":", tag)
 					}
@@ -1852,4 +1861,31 @@ func (s *InboundService) SearchInbounds(query string) ([]*model.Inbound, error) 
 		return nil, err
 	}
 	return inbounds, nil
+}
+
+func applyInboundUserOps(rt runtime.Runtime, running, next *model.Inbound) bool {
+	diff, ok := xray.InboundUserOps(running.GenXrayInboundConfig(), next.GenXrayInboundConfig())
+	if !ok {
+		return false
+	}
+	ctx := context.Background()
+	for _, u := range diff.RemovedUsers {
+		if err := rt.RemoveUser(ctx, next, u.Email); err != nil && !xray.IsMissingUserErr(err) {
+			logger.Debug("Unable to remove client", u.Email, "in place on", rt.Name(), ":", err)
+			return false
+		}
+	}
+	for _, u := range diff.AddedUsers {
+		err := rt.AddUser(ctx, next, u.User)
+		if xray.IsUserExistsErr(err) {
+			if err = rt.RemoveUser(ctx, next, u.Email); err == nil {
+				err = rt.AddUser(ctx, next, u.User)
+			}
+		}
+		if err != nil {
+			logger.Debug("Unable to add client", u.Email, "in place on", rt.Name(), ":", err)
+			return false
+		}
+	}
+	return true
 }

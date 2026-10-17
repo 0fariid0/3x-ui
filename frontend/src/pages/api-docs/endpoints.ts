@@ -927,7 +927,7 @@ export const sections: readonly Section[] = [
         params: [
           { name: 'email', in: 'path', type: 'string', desc: 'Client email.' },
         ],
-        response: '{\n  "success": true,\n  "obj": [\n    {\n      "id": 1,\n      "firstSeen": 1735000000000,\n      "lastSeen": 1735100000000,\n      "userAgent": "Happ/1.0",\n      "deviceOs": "android",\n      "osVersion": "15",\n      "deviceModel": "Pixel 9"\n    }\n  ]\n}',
+        response: '{\n  "success": true,\n  "obj": [\n    {\n      "id": 1,\n      "firstSeen": 1735000000000,\n      "lastSeen": 1735100000000,\n      "userAgent": "Happ/1.0",\n      "deviceOs": "android",\n      "osVersion": "15",\n      "deviceModel": "Pixel 9", "fingerprint": "a1b2c3d4e5f6"\n    }\n  ]\n}',
       },
       {
         method: 'DELETE',
