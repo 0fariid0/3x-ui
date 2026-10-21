@@ -1,7 +1,9 @@
 package sub
 
 import (
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/goccy/go-json"
 
@@ -9,6 +11,13 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/json_util"
 )
+
+type subscriptionDisplayCandidate struct {
+	client    model.Client
+	inbound   *model.Inbound
+	endpoint  map[string]any
+	synthetic bool
+}
 
 const (
 	subscriptionDisplayHostAddress = "1.1.1.1"
@@ -91,10 +100,87 @@ func (s *SubService) subscriptionDisplayRemark(inbound *model.Inbound, client mo
 	return remark
 }
 
-func (s *SubService) subscriptionDisplayRawLink(inbound *model.Inbound, client model.Client) string {
-	remark := s.subscriptionDisplayRemark(inbound, client)
+func (s *SubService) subscriptionDisplayCandidateFor(subID string, inbounds []*model.Inbound, format string) (subscriptionDisplayCandidate, bool) {
+	if !s.displayHostEnabled {
+		return subscriptionDisplayCandidate{}, false
+	}
+	byID := make(map[int]*model.Inbound, len(inbounds))
+	for _, inbound := range inbounds {
+		byID[inbound.Id] = inbound
+	}
+	for _, priority := range s.displayHostPriorities {
+		inbound := byID[priority.InboundId]
+		if inbound == nil || !inbound.Enable {
+			continue
+		}
+		for _, client := range s.matchingClients(inbound, subID) {
+			if !s.subscriptionDisplayClientActive(inbound, client) {
+				continue
+			}
+			clone := *inbound
+			s.projectThroughFallbackMaster(&clone)
+			if priority.HostGroupId == "" {
+				selection := s.hostEndpointsForClient(&clone, format, client.RecordID)
+				if selection.managed || s.subscriptionLinkDisabled(client.RecordID, model.InboundSubscriptionLinkKey(inbound.Id)) {
+					continue
+				}
+				return subscriptionDisplayCandidate{client: client, inbound: &clone}, true
+			}
+			var host model.Host
+			err := database.GetDB().Where(
+				"inbound_id = ? AND group_id = ? AND address = ?",
+				inbound.Id, priority.HostGroupId, priority.Address,
+			).Order("id ASC").First(&host).Error
+			if err != nil || slices.Contains(host.ExcludeFromSubTypes, format) {
+				continue
+			}
+			if !s.subscriptionLinkEnabled(client.RecordID, host.SubscriptionLinkKey(), !host.IsDisabled) {
+				continue
+			}
+			endpoint := hostToExternalProxyMap(&host, s.resolveInboundAddress(&clone), clone.Port)
+			return subscriptionDisplayCandidate{client: client, inbound: &clone, endpoint: endpoint}, true
+		}
+	}
+	client, inbound, ok := s.subscriptionDisplayContext(subID, inbounds)
+	if !ok {
+		return subscriptionDisplayCandidate{}, false
+	}
+	return subscriptionDisplayCandidate{client: client, inbound: inbound, synthetic: true}, true
+}
+
+func (s *SubService) subscriptionDisplayClientActive(inbound *model.Inbound, client model.Client) bool {
+	if !client.Enable {
+		return false
+	}
+	stats := s.statsForClient(inbound, client)
+	if !stats.Enable {
+		return false
+	}
+	if stats.ExpiryTime > 0 && stats.ExpiryTime <= time.Now().UnixMilli() {
+		return false
+	}
+	return stats.Total <= 0 || stats.Up+stats.Down < stats.Total
+}
+
+func (s *SubService) subscriptionDisplayRawLink(subID string, inbounds []*model.Inbound) string {
+	candidate, ok := s.subscriptionDisplayCandidateFor(subID, inbounds, "raw")
+	if !ok {
+		return ""
+	}
+	remark := s.subscriptionDisplayRemark(candidate.inbound, candidate.client)
 	if remark == "" {
 		return ""
+	}
+	if !candidate.synthetic {
+		var link string
+		if candidate.endpoint != nil {
+			link = s.linkFromHosts(candidate.inbound, candidate.client, []map[string]any{candidate.endpoint})
+		} else {
+			link = s.GetLink(candidate.inbound, candidate.client.Email)
+		}
+		if lines := splitLinkLines(link); len(lines) > 0 {
+			return applyRemarkToLink(lines[0], remark)
+		}
 	}
 	params := map[string]string{
 		"encryption": "none",
@@ -105,13 +191,34 @@ func (s *SubService) subscriptionDisplayRawLink(inbound *model.Inbound, client m
 	return buildLinkWithParams(base, params, remark)
 }
 
-func (s *SubJsonService) subscriptionDisplayConfig(subReq *SubService, inbound *model.Inbound, client model.Client) json_util.RawMessage {
-	remark := subReq.subscriptionDisplayRemark(inbound, client)
+func (s *SubJsonService) subscriptionDisplayConfig(subReq *SubService, subID string, inbounds []*model.Inbound) json_util.RawMessage {
+	candidate, ok := subReq.subscriptionDisplayCandidateFor(subID, inbounds, "json")
+	if !ok {
+		return nil
+	}
+	remark := subReq.subscriptionDisplayRemark(candidate.inbound, candidate.client)
 	if remark == "" {
 		return nil
 	}
+	if !candidate.synthetic {
+		selectedInbound := candidate.inbound
+		if candidate.endpoint != nil {
+			clone := *candidate.inbound
+			injectExternalProxy(&clone, []map[string]any{candidate.endpoint})
+			selectedInbound = &clone
+		}
+		configs := s.getConfig(subReq, selectedInbound, candidate.client, subReq.address)
+		if len(configs) > 0 {
+			var config map[string]any
+			if json.Unmarshal(configs[0], &config) == nil {
+				config["remarks"] = remark
+				result, _ := json.MarshalIndent(config, "", "  ")
+				return result
+			}
+		}
+	}
 	displayInbound := subscriptionDisplayInbound()
-	displayClient := client
+	displayClient := candidate.client
 	displayClient.ID = subscriptionDisplayHostUUID
 	displayClient.Flow = ""
 
@@ -128,10 +235,27 @@ func (s *SubJsonService) subscriptionDisplayConfig(subReq *SubService, inbound *
 	return result
 }
 
-func (s *SubClashService) subscriptionDisplayProxy(subReq *SubService, inbound *model.Inbound, client model.Client) map[string]any {
-	remark := subReq.subscriptionDisplayRemark(inbound, client)
+func (s *SubClashService) subscriptionDisplayProxy(subReq *SubService, subID string, inbounds []*model.Inbound) map[string]any {
+	candidate, ok := subReq.subscriptionDisplayCandidateFor(subID, inbounds, "clash")
+	if !ok {
+		return nil
+	}
+	remark := subReq.subscriptionDisplayRemark(candidate.inbound, candidate.client)
 	if remark == "" {
 		return nil
+	}
+	if !candidate.synthetic {
+		selectedInbound := candidate.inbound
+		if candidate.endpoint != nil {
+			clone := *candidate.inbound
+			injectExternalProxy(&clone, []map[string]any{candidate.endpoint})
+			selectedInbound = &clone
+		}
+		proxies := s.getProxies(subReq, selectedInbound, candidate.client, subReq.address)
+		if len(proxies) > 0 {
+			proxies[0]["name"] = remark
+			return proxies[0]
+		}
 	}
 	return map[string]any{
 		"name":    remark,

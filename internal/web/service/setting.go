@@ -40,6 +40,7 @@ const (
 	DefaultTrustedProxyCIDRs      = "127.0.0.1/32,::1/128"
 	DefaultSubJsonDNS             = "1.1.1.1"
 	maxRegexLength                = 2048
+	displayPriorityKey            = "subscriptionDisplayHostPriorities"
 )
 
 var defaultValueMap = map[string]string{
@@ -71,6 +72,7 @@ var defaultValueMap = map[string]string{
 	"remarkTemplate":                DefaultRemarkTemplate,
 	"subscriptionDisplayHostEnable": "false",
 	"subscriptionDisplayHostRemark": "📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D",
+	displayPriorityKey:              "[]",
 	"subShowIdentityOnAllLinks":     "false",
 	"timeLocation":                  "Local",
 	"tgBotEnable":                   "false",
@@ -734,6 +736,18 @@ func (s *SettingService) GetSubscriptionDisplayHostRemark() (string, error) {
 	return s.getString("subscriptionDisplayHostRemark")
 }
 
+func (s *SettingService) GetSubscriptionDisplayHostPriorities() ([]entity.DisplayHostPriority, error) {
+	value, err := s.getString(displayPriorityKey)
+	if err != nil {
+		return nil, err
+	}
+	var priorities []entity.DisplayHostPriority
+	if err := json.Unmarshal([]byte(value), &priorities); err != nil {
+		return nil, err
+	}
+	return priorities, nil
+}
+
 func (s *SettingService) UpdateSubscriptionDisplayHost(config *entity.SubscriptionDisplayHost) error {
 	if config == nil {
 		return errors.New("display host config is required")
@@ -750,6 +764,21 @@ func (s *SettingService) UpdateSubscriptionDisplayHost(config *entity.Subscripti
 		values := map[string]string{
 			"subscriptionDisplayHostEnable": strconv.FormatBool(config.Enable),
 			"subscriptionDisplayHostRemark": remark,
+		}
+		if config.Priorities != nil {
+			for _, priority := range *config.Priorities {
+				if priority.InboundId <= 0 {
+					return errors.New("display host priority inbound is required")
+				}
+				if len(priority.HostGroupId) > 128 || len(priority.Address) > 512 {
+					return errors.New("display host priority is too long")
+				}
+			}
+			encoded, err := json.Marshal(*config.Priorities)
+			if err != nil {
+				return err
+			}
+			values[displayPriorityKey] = string(encoded)
 		}
 		for key, value := range values {
 			var setting model.Setting

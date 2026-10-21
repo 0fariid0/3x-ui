@@ -14,6 +14,7 @@ import type { BulkAddHostValues } from '@/schemas/api/host';
 import RemarkTemplateField from '@/components/form/RemarkTemplateField';
 import HostList, { sortHosts } from './HostList';
 import HostFormModal from './HostFormModal';
+import DisplayPriorityModal from './DisplayPriorityModal';
 
 export default function HostsPage() {
   const { t } = useTranslation();
@@ -35,6 +36,7 @@ export default function HostsPage() {
   const [displayHostEnable, setDisplayHostEnable] = useState(false);
   const [displayHostRemark, setDisplayHostRemark] = useState('📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D');
   const [displayHostSaving, setDisplayHostSaving] = useState(false);
+  const [displayPriorityOpen, setDisplayPriorityOpen] = useState(false);
 
   useEffect(() => {
     if (!displayHost) return;
@@ -45,12 +47,16 @@ export default function HostsPage() {
   const saveDisplayHost = useCallback(async () => {
     setDisplayHostSaving(true);
     try {
-      const msg = await updateDisplayHost({ enable: displayHostEnable, remark: displayHostRemark });
+      const msg = await updateDisplayHost({
+        enable: displayHostEnable,
+        remark: displayHostRemark,
+        priorities: displayHost?.priorities ?? [],
+      });
       if (msg?.success) messageApi.success(t('pages.hosts.displayHost.saved'));
     } finally {
       setDisplayHostSaving(false);
     }
-  }, [displayHostEnable, displayHostRemark, updateDisplayHost, messageApi, t]);
+  }, [displayHostEnable, displayHostRemark, displayHost?.priorities, updateDisplayHost, messageApi, t]);
 
   const onAdd = useCallback(() => {
     setFormMode('add');
@@ -209,9 +215,14 @@ export default function HostsPage() {
                           <Typography.Text code>1.1.1.1:1</Typography.Text>
                           <Typography.Text type="secondary">{t('pages.hosts.displayHost.fixedEndpoint')}</Typography.Text>
                         </Space>
-                        <Button type="primary" loading={displayHostSaving} onClick={saveDisplayHost}>
-                          {t('save')}
-                        </Button>
+                        <Space wrap>
+                          <Button disabled={!displayHost} onClick={() => setDisplayPriorityOpen(true)}>
+                            {t('pages.hosts.displayHost.priorityButton')}
+                          </Button>
+                          <Button type="primary" loading={displayHostSaving} onClick={saveDisplayHost}>
+                            {t('save')}
+                          </Button>
+                        </Space>
                       </Space>
                     </Card>
                   </Col>
@@ -247,6 +258,14 @@ export default function HostsPage() {
           existingHosts={hosts}
           save={onSave}
           onOpenChange={setFormOpen}
+        />
+        <DisplayPriorityModal
+          open={displayPriorityOpen}
+          displayHost={displayHost}
+          hosts={hosts}
+          inboundOptions={inboundOptions}
+          save={updateDisplayHost}
+          onOpenChange={setDisplayPriorityOpen}
         />
       </Layout>
     </ConfigProvider>

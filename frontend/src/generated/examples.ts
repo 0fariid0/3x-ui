@@ -706,6 +706,11 @@ export const EXAMPLES: Record<string, unknown> = {
       }
     ]
   },
+  "DisplayHostPriority": {
+    "address": "",
+    "hostGroupId": "",
+    "inboundId": 0
+  },
   "FallbackParentInfo": {
     "masterId": 0,
     "path": ""
@@ -1107,6 +1112,7 @@ export const EXAMPLES: Record<string, unknown> = {
   },
   "SubscriptionDisplayHost": {
     "enable": false,
+    "priorities": null,
     "remark": ""
   },
   "User": {

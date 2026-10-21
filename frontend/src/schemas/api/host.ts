@@ -115,8 +115,16 @@ export const BulkAddHostSchema = HostFormSchema.omit({ inboundId: true, address:
 });
 export type BulkAddHostValues = z.infer<typeof BulkAddHostSchema>;
 
+export const DisplayHostPrioritySchema = z.object({
+  inboundId: z.number().int().positive(),
+  hostGroupId: z.string().default(''),
+  address: z.string().default(''),
+});
+export type DisplayHostPriority = z.infer<typeof DisplayHostPrioritySchema>;
+
 export const SubscriptionDisplayHostSchema = z.object({
   enable: z.boolean().default(false),
   remark: z.string().max(256).default(''),
+  priorities: z.array(DisplayHostPrioritySchema).default([]),
 });
 export type SubscriptionDisplayHost = z.infer<typeof SubscriptionDisplayHostSchema>;

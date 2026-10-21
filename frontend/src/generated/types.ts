@@ -4,6 +4,7 @@ export type OnlineAPISupport = number;
 export type ProcessState = string;
 export type Protocol = string;
 export type SubLinkProvider = unknown;
+export type nodeBulkResetter = unknown;
 export type staticEgressResolver = string;
 export type trafficLocalApplyAction = number;
 export type transportBits = number;
@@ -604,6 +605,12 @@ export interface ClientUsageAlerts {
   items: ClientUsageAlert[];
 }
 
+export interface DisplayHostPriority {
+  address: string;
+  hostGroupId: string;
+  inboundId: number;
+}
+
 export interface FallbackParentInfo {
   masterId: number;
   path?: string;
@@ -958,6 +965,7 @@ export interface Setting {
 
 export interface SubscriptionDisplayHost {
   enable: boolean;
+  priorities?: DisplayHostPriority[] | null;
   remark: string;
 }
 

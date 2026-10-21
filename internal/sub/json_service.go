@@ -139,8 +139,8 @@ func (s *SubJsonService) GetJsonNamed(subId string, host string, alwaysReturnArr
 			return string(finalJson), header, nil
 		}
 	}
-	if displayClient, displayInbound, ok := subReq.subscriptionDisplayContext(subId, inbounds); ok {
-		if displayConfig := s.subscriptionDisplayConfig(subReq, displayInbound, displayClient); len(displayConfig) > 0 {
+	if displayClient, _, ok := subReq.subscriptionDisplayContext(subId, inbounds); ok {
+		if displayConfig := s.subscriptionDisplayConfig(subReq, subId, inbounds); len(displayConfig) > 0 {
 			configArray = append(configArray, displayConfig)
 			seenEmails[displayClient.Email] = struct{}{}
 		}

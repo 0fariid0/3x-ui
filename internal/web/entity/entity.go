@@ -383,8 +383,15 @@ func isWildcardListen(listen string) bool {
 }
 
 type SubscriptionDisplayHost struct {
-	Enable bool   `json:"enable" form:"enable"`
-	Remark string `json:"remark" form:"remark" validate:"omitempty,max=256"`
+	Enable     bool                   `json:"enable" form:"enable"`
+	Remark     string                 `json:"remark" form:"remark" validate:"omitempty,max=256"`
+	Priorities *[]DisplayHostPriority `json:"priorities,omitempty" form:"priorities" validate:"omitempty,dive"`
+}
+
+type DisplayHostPriority struct {
+	InboundId   int    `json:"inboundId" validate:"required,gt=0"`
+	HostGroupId string `json:"hostGroupId" validate:"omitempty,max=128"`
+	Address     string `json:"address" validate:"omitempty,max=512"`
 }
 
 type HostGroup struct {

@@ -501,7 +501,11 @@ func (s *HostService) GetSubscriptionDisplayHost() (*entity.SubscriptionDisplayH
 	if err != nil {
 		return nil, err
 	}
-	return &entity.SubscriptionDisplayHost{Enable: enabled, Remark: remark}, nil
+	priorities, err := settingService.GetSubscriptionDisplayHostPriorities()
+	if err != nil {
+		return nil, err
+	}
+	return &entity.SubscriptionDisplayHost{Enable: enabled, Remark: remark, Priorities: &priorities}, nil
 }
 
 func (s *HostService) UpdateSubscriptionDisplayHost(config *entity.SubscriptionDisplayHost) error {

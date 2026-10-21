@@ -24,6 +24,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/util/common"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/random"
 	wgutil "github.com/mhsanaei/3x-ui/v3/internal/util/wireguard"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/entity"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
@@ -79,6 +80,7 @@ type SubService struct {
 	// inbounds the client is attached to.
 	displayHostEnabled       bool
 	displayHostRemark        string
+	displayHostPriorities    []entity.DisplayHostPriority
 	maintenanceEnabled       bool
 	maintenanceMode          string
 	maintenanceMessage       string
@@ -317,6 +319,10 @@ func (s *SubService) loadRemarkSettings() {
 	if err != nil {
 		s.displayHostRemark = ""
 	}
+	s.displayHostPriorities, err = s.settingService.GetSubscriptionDisplayHostPriorities()
+	if err != nil {
+		s.displayHostPriorities = nil
+	}
 	s.maintenanceEnabled, err = s.settingService.GetSubMaintenanceEnable()
 	if err != nil {
 		s.maintenanceEnabled = false
@@ -457,8 +463,8 @@ func (s *SubService) getSubs(subId string) ([]string, []string, int64, xray.Clie
 			return result, emails, lastOnline, traffic, nil
 		}
 	}
-	if displayClient, displayInbound, ok := s.subscriptionDisplayContext(subId, inbounds); ok {
-		if displayLink := s.subscriptionDisplayRawLink(displayInbound, displayClient); displayLink != "" {
+	if displayClient, _, ok := s.subscriptionDisplayContext(subId, inbounds); ok {
+		if displayLink := s.subscriptionDisplayRawLink(subId, inbounds); displayLink != "" {
 			result = append(result, displayLink)
 			emails = append(emails, displayClient.Email)
 			seenEmails[displayClient.Email] = struct{}{}

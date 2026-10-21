@@ -15,6 +15,9 @@ export type Protocol = z.infer<typeof ProtocolSchema>;
 export const SubLinkProviderSchema = z.unknown();
 export type SubLinkProvider = z.infer<typeof SubLinkProviderSchema>;
 
+export const nodeBulkResetterSchema = z.unknown();
+export type nodeBulkResetter = z.infer<typeof nodeBulkResetterSchema>;
+
 export const staticEgressResolverSchema = z.string();
 export type staticEgressResolver = z.infer<typeof staticEgressResolverSchema>;
 
@@ -646,6 +649,13 @@ export const ClientUsageAlertsSchema = z.object({
 });
 export type ClientUsageAlerts = z.infer<typeof ClientUsageAlertsSchema>;
 
+export const DisplayHostPrioritySchema = z.object({
+  address: z.string().max(512),
+  hostGroupId: z.string().max(128),
+  inboundId: z.number().int().gt(0),
+});
+export type DisplayHostPriority = z.infer<typeof DisplayHostPrioritySchema>;
+
 export const FallbackParentInfoSchema = z.object({
   masterId: z.number().int(),
   path: z.string().optional(),
@@ -1023,6 +1033,7 @@ export type Setting = z.infer<typeof SettingSchema>;
 
 export const SubscriptionDisplayHostSchema = z.object({
   enable: z.boolean(),
+  priorities: z.array(z.lazy(() => DisplayHostPrioritySchema)).nullable().optional(),
   remark: z.string().max(256),
 });
 export type SubscriptionDisplayHost = z.infer<typeof SubscriptionDisplayHostSchema>;

@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.9.1",
+    "version": "3.9.2",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -2562,6 +2562,29 @@
         ],
         "type": "object"
       },
+      "DisplayHostPriority": {
+        "properties": {
+          "address": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "hostGroupId": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "inboundId": {
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "address",
+          "hostGroupId",
+          "inboundId"
+        ],
+        "type": "object"
+      },
       "FallbackParentInfo": {
         "description": "FallbackParentInfo carries everything the frontend needs to rewrite a\nchild inbound's client link: where to connect (the master's address\nand port) and which path matched on the master's fallbacks array.\nThe frontend already has the master inbound in its dbInbounds list,\nso we only ship identifiers + the match path here.",
         "properties": {
@@ -4192,6 +4215,13 @@
         "properties": {
           "enable": {
             "type": "boolean"
+          },
+          "priorities": {
+            "items": {
+              "$ref": "#/components/schemas/DisplayHostPriority"
+            },
+            "nullable": true,
+            "type": "array"
           },
           "remark": {
             "maxLength": 256,

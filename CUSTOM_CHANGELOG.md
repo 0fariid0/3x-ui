@@ -1,3 +1,9 @@
+## v3.9.2
+
+- Added ordered real-config priorities for the permanent subscription display entry.
+- Preserved the existing display name and all original subscription configurations.
+- Added automatic fallback to the previous informational config when no priority is available.
+
 ## v3.9.1
 
 - Show the first 12 hash characters as a device fingerprint in the admin HWID list; raw HWIDs and full hashes remain private.

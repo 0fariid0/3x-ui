@@ -2536,6 +2536,29 @@ export const SCHEMAS: Record<string, unknown> = {
     ],
     "type": "object"
   },
+  "DisplayHostPriority": {
+    "properties": {
+      "address": {
+        "maxLength": 512,
+        "type": "string"
+      },
+      "hostGroupId": {
+        "maxLength": 128,
+        "type": "string"
+      },
+      "inboundId": {
+        "exclusiveMinimum": true,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "address",
+      "hostGroupId",
+      "inboundId"
+    ],
+    "type": "object"
+  },
   "FallbackParentInfo": {
     "description": "FallbackParentInfo carries everything the frontend needs to rewrite a\nchild inbound's client link: where to connect (the master's address\nand port) and which path matched on the master's fallbacks array.\nThe frontend already has the master inbound in its dbInbounds list,\nso we only ship identifiers + the match path here.",
     "properties": {
@@ -4166,6 +4189,13 @@ export const SCHEMAS: Record<string, unknown> = {
     "properties": {
       "enable": {
         "type": "boolean"
+      },
+      "priorities": {
+        "items": {
+          "$ref": "#/components/schemas/DisplayHostPriority"
+        },
+        "nullable": true,
+        "type": "array"
       },
       "remark": {
         "maxLength": 256,
