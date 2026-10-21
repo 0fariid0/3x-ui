@@ -2065,6 +2065,13 @@
       "activeForAllClients": "This Host is enabled globally and is active for all attached clients.",
       "noClientOverrides": "Not enabled for any client.",
       "displayHost": {
+        "priorityButton": "Connection priority",
+        "priorityTitle": "Display-config connection priority",
+        "priorityHint": "The first available inbound/Host is copied with your existing display name. Original configs are preserved. If none match, the informational config is used.",
+        "defaultAddress": "Inbound default address",
+        "addPriority": "Add priority",
+        "priorityCount": "Priority count: {count}",
+        "prioritySaved": "Display-config priorities saved.",
         "title": "Permanent subscription display entry",
         "hint": "Adds one synthetic informational config at the very top of every subscription. It is emitted only once even when the client belongs to multiple inbounds. Use static text and the same variables as normal Hosts; this entry is not intended to connect.",
         "placeholder": "e.g. 📊{{TRAFFIC_LEFT}}|⏳{{DAYS_LEFT}}D",

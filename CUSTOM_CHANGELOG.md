@@ -1,3 +1,12 @@
+## v3.9.3
+
+- Fix recent subscription app ordering for requests arriving within the same millisecond or after clock changes.
+- Publish stable releases only after all seven Linux targets and Windows amd64 packages and checksums have passed verification.
+- Preserve original RAW, JSON and Clash names while rendering the prioritized display config independently.
+- Skip priorities that cannot generate a config in the requested format; retain the existing final fallback.
+- Fix priority count interpolation, mobile layout, empty Host addresses and null API priorities.
+- Preserve all tracked source files, Windows OpenSSL installer and VS Code files.
+
 ## v3.9.2
 
 - Added ordered real-config priorities for the permanent subscription display entry.

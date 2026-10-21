@@ -2547,6 +2547,7 @@ export const SCHEMAS: Record<string, unknown> = {
         "type": "string"
       },
       "inboundId": {
+        "example": 1,
         "exclusiveMinimum": true,
         "minimum": 0,
         "type": "integer"

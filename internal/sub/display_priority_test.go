@@ -2,8 +2,11 @@ package sub
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/goccy/go-yaml"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
@@ -23,7 +26,7 @@ func TestSubscriptionDisplayPriorityUsesRealConfigAndPreservesOriginals(t *testi
 	}
 	host := seedHost(t, &model.Host{
 		GroupId: "preferred", InboundId: second.Id, Address: "preferred.example.com", Port: 8443,
-		Remark: "original-host-name", Security: "same",
+		Remark: "original-host-{{EMAIL}}|{{TRAFFIC_LEFT}}", Security: "same",
 	})
 	priorities := []entity.DisplayHostPriority{
 		{InboundId: first.Id, HostGroupId: "missing", Address: "missing.example.com"},
@@ -44,6 +47,14 @@ func TestSubscriptionDisplayPriorityUsesRealConfigAndPreservesOriginals(t *testi
 	baseLinks, _, _, _, err := NewSubService("").GetSubs("priority-sub", "request.example.com")
 	if err != nil {
 		t.Fatalf("baseline raw: %v", err)
+	}
+	baseJSON, _, err := NewSubJsonService("", "", "", NewSubService("")).GetJson("priority-sub", "request.example.com", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseClash, _, err := NewSubClashService(false, "", NewSubService("")).GetClash("priority-sub", "request.example.com")
+	if err != nil {
+		t.Fatal(err)
 	}
 	if err := (&service.SettingService{}).UpdateSubscriptionDisplayHost(&entity.SubscriptionDisplayHost{
 		Enable: true, Remark: "DISPLAY-{{EMAIL}}", Priorities: &priorities,
@@ -81,6 +92,13 @@ func TestSubscriptionDisplayPriorityUsesRealConfigAndPreservesOriginals(t *testi
 	if !strings.Contains(string(mustJSON(t, configs[0])), "preferred.example.com") {
 		t.Fatalf("json display config does not use selected address: %s", jsonOut)
 	}
+	var originalConfigs []map[string]any
+	if err := json.Unmarshal([]byte(baseJSON), &originalConfigs); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(configs[1:], originalConfigs) {
+		t.Fatal("display priority changed original JSON configs or names")
+	}
 
 	clashOut, _, err := NewSubClashService(false, "", NewSubService("")).GetClash("priority-sub", "request.example.com")
 	if err != nil {
@@ -88,6 +106,18 @@ func TestSubscriptionDisplayPriorityUsesRealConfigAndPreservesOriginals(t *testi
 	}
 	if nameAt, serverAt := strings.Index(clashOut, "name: DISPLAY-second@e"), strings.Index(clashOut, "server: preferred.example.com"); nameAt < 0 || serverAt < 0 || nameAt > serverAt {
 		t.Fatalf("clash display proxy does not use selected config and name:\n%s", clashOut)
+	}
+	var originalClash, selectedClash struct {
+		Proxies []map[string]any `yaml:"proxies"`
+	}
+	if err := yaml.Unmarshal([]byte(baseClash), &originalClash); err != nil {
+		t.Fatal(err)
+	}
+	if err := yaml.Unmarshal([]byte(clashOut), &selectedClash); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(selectedClash.Proxies[1:], originalClash.Proxies) {
+		t.Fatal("display priority changed original Clash proxies or names")
 	}
 
 	stored, err := (&service.SettingService{}).GetSubscriptionDisplayHostPriorities()

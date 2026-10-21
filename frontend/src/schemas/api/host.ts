@@ -125,6 +125,6 @@ export type DisplayHostPriority = z.infer<typeof DisplayHostPrioritySchema>;
 export const SubscriptionDisplayHostSchema = z.object({
   enable: z.boolean().default(false),
   remark: z.string().max(256).default(''),
-  priorities: z.array(DisplayHostPrioritySchema).default([]),
+  priorities: z.array(DisplayHostPrioritySchema).nullish().transform((value) => value ?? []),
 });
 export type SubscriptionDisplayHost = z.infer<typeof SubscriptionDisplayHostSchema>;

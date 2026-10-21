@@ -93,7 +93,10 @@ func TestRecordSubscriptionAccessKeepsThreeRecentDistinctApps(t *testing.T) {
 		}
 	}
 
-	// Refreshing an existing app moves it to the front and increments its count.
+	if err := database.GetDB().Model(&model.ClientSubscriptionAgent{}).Where("client_id = ?", rec.Id).
+		Update("last_seen", int64(4102444800000)).Error; err != nil {
+		t.Fatal(err)
+	}
 	if err := svc.RecordSubscriptionAccess(rec.SubID, "HiddifyNext/2.6.0", "raw"); err != nil {
 		t.Fatal(err)
 	}

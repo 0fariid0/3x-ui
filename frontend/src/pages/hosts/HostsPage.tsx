@@ -261,7 +261,7 @@ export default function HostsPage() {
         />
         <DisplayPriorityModal
           open={displayPriorityOpen}
-          displayHost={displayHost}
+          displayHost={displayHost ? { ...displayHost, enable: displayHostEnable, remark: displayHostRemark } : undefined}
           hosts={hosts}
           inboundOptions={inboundOptions}
           save={updateDisplayHost}

@@ -389,7 +389,7 @@ type SubscriptionDisplayHost struct {
 }
 
 type DisplayHostPriority struct {
-	InboundId   int    `json:"inboundId" validate:"required,gt=0"`
+	InboundId   int    `json:"inboundId" validate:"required,gt=0" example:"1"`
 	HostGroupId string `json:"hostGroupId" validate:"omitempty,max=128"`
 	Address     string `json:"address" validate:"omitempty,max=512"`
 }

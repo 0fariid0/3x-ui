@@ -154,7 +154,7 @@ func (s *ClientService) RecordSubscriptionAccess(subID, userAgent, format string
 	}
 
 	var clients []model.ClientRecord
-	if err := database.GetDB().Select("id").Where("sub_id = ?", subID).Find(&clients).Error; err != nil {
+	if err := database.GetDB().Select("id").Where("sub_id = ?", subID).Order("id ASC").Find(&clients).Error; err != nil {
 		return err
 	}
 	if len(clients) == 0 {
@@ -163,6 +163,19 @@ func (s *ClientService) RecordSubscriptionAccess(subID, userAgent, format string
 	now := time.Now().UnixMilli()
 	return database.GetDB().Transaction(func(tx *gorm.DB) error {
 		for _, client := range clients {
+			var lockedClient model.ClientRecord
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Select("id").First(&lockedClient, client.Id).Error; err != nil {
+				return err
+			}
+			var latest int64
+			if err := tx.Model(&model.ClientSubscriptionAgent{}).Where("client_id = ?", client.Id).
+				Select("COALESCE(MAX(last_seen), 0)").Scan(&latest).Error; err != nil {
+				return err
+			}
+			seenAt := now
+			if latest >= seenAt {
+				seenAt = latest + 1
+			}
 			row := model.ClientSubscriptionAgent{
 				ClientId:     client.Id,
 				AppKey:       identity.Key,
@@ -172,20 +185,18 @@ func (s *ClientService) RecordSubscriptionAccess(subID, userAgent, format string
 				Format:       format,
 				RequestCount: 1,
 				FirstSeen:    now,
-				LastSeen:     now,
+				LastSeen:     seenAt,
 			}
 			// One atomic upsert works on both SQLite and PostgreSQL and avoids a
 			// unique-key race when an app refreshes the same URL concurrently.
 			if err := tx.Clauses(clause.OnConflict{
 				Columns: []clause.Column{{Name: "client_id"}, {Name: "app_key"}},
 				DoUpdates: clause.Assignments(map[string]any{
-					"app_name":   identity.Name,
-					"version":    identity.Version,
-					"user_agent": ua,
-					"format":     format,
-					// Keep the recent-app order deterministic even when two refreshes
-					// land inside the same millisecond.
-					"last_seen":     gorm.Expr("CASE WHEN last_seen >= ? THEN last_seen + 1 ELSE ? END", now, now),
+					"app_name":      identity.Name,
+					"version":       identity.Version,
+					"user_agent":    ua,
+					"format":        format,
+					"last_seen":     seenAt,
 					"request_count": gorm.Expr("request_count + 1"),
 				}),
 			}).Create(&row).Error; err != nil {

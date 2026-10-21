@@ -43,7 +43,7 @@ export default function DisplayPriorityModal({
     }];
     for (const host of hosts) {
       if (!host.inboundIds.includes(inbound.id)) continue;
-      for (const address of host.hosts) {
+      for (const address of host.hosts.length > 0 ? host.hosts : ['']) {
         result.push({
           value: encodePriority({ inboundId: inbound.id, hostGroupId: host.groupId, address }),
           label: `${inboundLabel} — ${host.remark || address} (${address})`,
@@ -98,11 +98,11 @@ export default function DisplayPriorityModal({
       </Typography.Paragraph>
       <Space orientation="vertical" style={{ width: '100%' }} size="middle">
         {rows.map((row, index) => (
-          <Space key={`${index}-${encodePriority(row)}`} style={{ width: '100%' }} align="center">
+          <div key={`${index}-${encodePriority(row)}`} style={{ display: 'flex', width: '100%', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <Typography.Text style={{ minWidth: 28 }}>{index + 1}</Typography.Text>
             <Select
               showSearch
-              style={{ minWidth: 470, flex: 1 }}
+              style={{ minWidth: 180, flex: '1 1 280px', maxWidth: '100%' }}
               value={encodePriority(row)}
               options={options}
               optionFilterProp="label"
@@ -111,7 +111,7 @@ export default function DisplayPriorityModal({
             <Button icon={<ArrowUpOutlined />} disabled={index === 0} onClick={() => moveRow(index, -1)} />
             <Button icon={<ArrowDownOutlined />} disabled={index === rows.length - 1} onClick={() => moveRow(index, 1)} />
             <Button danger icon={<DeleteOutlined />} onClick={() => setRows((current) => current.filter((_, rowIndex) => rowIndex !== index))} />
-          </Space>
+          </div>
         ))}
         <Button
           block

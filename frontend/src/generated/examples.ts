@@ -709,7 +709,7 @@ export const EXAMPLES: Record<string, unknown> = {
   "DisplayHostPriority": {
     "address": "",
     "hostGroupId": "",
-    "inboundId": 0
+    "inboundId": 1
   },
   "FallbackParentInfo": {
     "masterId": 0,

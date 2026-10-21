@@ -1137,7 +1137,7 @@
         "priorityHint": "Arrange the real inbound/Host addresses in order. The first available entry for each user becomes the display config, with the existing display name. If none match, the current informational config is used.",
         "defaultAddress": "Inbound default address",
         "addPriority": "Add priority",
-        "priorityCount": "Priority count: {{count}}",
+        "priorityCount": "Priority count: {count}",
         "prioritySaved": "Display-config priorities saved."
       },
       "enabledClientsWhenDisabled": "This Host is disabled globally. It is currently enabled only for these clients:"

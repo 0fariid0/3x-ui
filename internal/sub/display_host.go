@@ -1,6 +1,7 @@
 package sub
 
 import (
+	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -100,7 +101,7 @@ func (s *SubService) subscriptionDisplayRemark(inbound *model.Inbound, client mo
 	return remark
 }
 
-func (s *SubService) subscriptionDisplayCandidateFor(subID string, inbounds []*model.Inbound, format string) (subscriptionDisplayCandidate, bool) {
+func (s *SubService) subscriptionDisplayCandidateFor(subID string, inbounds []*model.Inbound, format string, usable func(subscriptionDisplayCandidate) bool) (subscriptionDisplayCandidate, bool) {
 	if !s.displayHostEnabled {
 		return subscriptionDisplayCandidate{}, false
 	}
@@ -124,7 +125,11 @@ func (s *SubService) subscriptionDisplayCandidateFor(subID string, inbounds []*m
 				if selection.managed || s.subscriptionLinkDisabled(client.RecordID, model.InboundSubscriptionLinkKey(inbound.Id)) {
 					continue
 				}
-				return subscriptionDisplayCandidate{client: client, inbound: &clone}, true
+				candidate := subscriptionDisplayCandidate{client: client, inbound: &clone}
+				if usable(candidate) {
+					return candidate, true
+				}
+				continue
 			}
 			var host model.Host
 			err := database.GetDB().Where(
@@ -138,7 +143,10 @@ func (s *SubService) subscriptionDisplayCandidateFor(subID string, inbounds []*m
 				continue
 			}
 			endpoint := hostToExternalProxyMap(&host, s.resolveInboundAddress(&clone), clone.Port)
-			return subscriptionDisplayCandidate{client: client, inbound: &clone, endpoint: endpoint}, true
+			candidate := subscriptionDisplayCandidate{client: client, inbound: &clone, endpoint: endpoint}
+			if usable(candidate) {
+				return candidate, true
+			}
 		}
 	}
 	client, inbound, ok := s.subscriptionDisplayContext(subID, inbounds)
@@ -163,7 +171,23 @@ func (s *SubService) subscriptionDisplayClientActive(inbound *model.Inbound, cli
 }
 
 func (s *SubService) subscriptionDisplayRawLink(subID string, inbounds []*model.Inbound) string {
-	candidate, ok := s.subscriptionDisplayCandidateFor(subID, inbounds, "raw")
+	render := *s
+	render.usageShown = maps.Clone(s.usageShown)
+	s = &render
+	var realLink string
+	candidate, ok := s.subscriptionDisplayCandidateFor(subID, inbounds, "raw", func(candidate subscriptionDisplayCandidate) bool {
+		var link string
+		if candidate.endpoint != nil {
+			link = s.linkFromHosts(candidate.inbound, candidate.client, []map[string]any{candidate.endpoint})
+		} else {
+			link = s.GetLink(candidate.inbound, candidate.client.Email)
+		}
+		if lines := splitLinkLines(link); len(lines) > 0 {
+			realLink = lines[0]
+			return true
+		}
+		return false
+	})
 	if !ok {
 		return ""
 	}
@@ -172,15 +196,7 @@ func (s *SubService) subscriptionDisplayRawLink(subID string, inbounds []*model.
 		return ""
 	}
 	if !candidate.synthetic {
-		var link string
-		if candidate.endpoint != nil {
-			link = s.linkFromHosts(candidate.inbound, candidate.client, []map[string]any{candidate.endpoint})
-		} else {
-			link = s.GetLink(candidate.inbound, candidate.client.Email)
-		}
-		if lines := splitLinkLines(link); len(lines) > 0 {
-			return applyRemarkToLink(lines[0], remark)
-		}
+		return applyRemarkToLink(realLink, remark)
 	}
 	params := map[string]string{
 		"encryption": "none",
@@ -192,7 +208,18 @@ func (s *SubService) subscriptionDisplayRawLink(subID string, inbounds []*model.
 }
 
 func (s *SubJsonService) subscriptionDisplayConfig(subReq *SubService, subID string, inbounds []*model.Inbound) json_util.RawMessage {
-	candidate, ok := subReq.subscriptionDisplayCandidateFor(subID, inbounds, "json")
+	render := *subReq
+	render.usageShown = maps.Clone(subReq.usageShown)
+	subReq = &render
+	var realConfig map[string]any
+	candidate, ok := subReq.subscriptionDisplayCandidateFor(subID, inbounds, "json", func(candidate subscriptionDisplayCandidate) bool {
+		selectedInbound := *candidate.inbound
+		if candidate.endpoint != nil {
+			injectExternalProxy(&selectedInbound, []map[string]any{candidate.endpoint})
+		}
+		configs := s.getConfig(subReq, &selectedInbound, candidate.client, subReq.address)
+		return len(configs) > 0 && json.Unmarshal(configs[0], &realConfig) == nil && realConfig != nil
+	})
 	if !ok {
 		return nil
 	}
@@ -201,21 +228,9 @@ func (s *SubJsonService) subscriptionDisplayConfig(subReq *SubService, subID str
 		return nil
 	}
 	if !candidate.synthetic {
-		selectedInbound := candidate.inbound
-		if candidate.endpoint != nil {
-			clone := *candidate.inbound
-			injectExternalProxy(&clone, []map[string]any{candidate.endpoint})
-			selectedInbound = &clone
-		}
-		configs := s.getConfig(subReq, selectedInbound, candidate.client, subReq.address)
-		if len(configs) > 0 {
-			var config map[string]any
-			if json.Unmarshal(configs[0], &config) == nil {
-				config["remarks"] = remark
-				result, _ := json.MarshalIndent(config, "", "  ")
-				return result
-			}
-		}
+		realConfig["remarks"] = remark
+		result, _ := json.MarshalIndent(realConfig, "", "  ")
+		return result
 	}
 	displayInbound := subscriptionDisplayInbound()
 	displayClient := candidate.client
@@ -236,7 +251,22 @@ func (s *SubJsonService) subscriptionDisplayConfig(subReq *SubService, subID str
 }
 
 func (s *SubClashService) subscriptionDisplayProxy(subReq *SubService, subID string, inbounds []*model.Inbound) map[string]any {
-	candidate, ok := subReq.subscriptionDisplayCandidateFor(subID, inbounds, "clash")
+	render := *subReq
+	render.usageShown = maps.Clone(subReq.usageShown)
+	subReq = &render
+	var realProxy map[string]any
+	candidate, ok := subReq.subscriptionDisplayCandidateFor(subID, inbounds, "clash", func(candidate subscriptionDisplayCandidate) bool {
+		selectedInbound := *candidate.inbound
+		if candidate.endpoint != nil {
+			injectExternalProxy(&selectedInbound, []map[string]any{candidate.endpoint})
+		}
+		proxies := s.getProxies(subReq, &selectedInbound, candidate.client, subReq.address)
+		if len(proxies) == 0 || proxies[0] == nil {
+			return false
+		}
+		realProxy = proxies[0]
+		return true
+	})
 	if !ok {
 		return nil
 	}
@@ -245,17 +275,8 @@ func (s *SubClashService) subscriptionDisplayProxy(subReq *SubService, subID str
 		return nil
 	}
 	if !candidate.synthetic {
-		selectedInbound := candidate.inbound
-		if candidate.endpoint != nil {
-			clone := *candidate.inbound
-			injectExternalProxy(&clone, []map[string]any{candidate.endpoint})
-			selectedInbound = &clone
-		}
-		proxies := s.getProxies(subReq, selectedInbound, candidate.client, subReq.address)
-		if len(proxies) > 0 {
-			proxies[0]["name"] = remark
-			return proxies[0]
-		}
+		realProxy["name"] = remark
+		return realProxy
 	}
 	return map[string]any{
 		"name":    remark,

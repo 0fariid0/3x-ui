@@ -24,7 +24,15 @@ jobs:
       - name: Prepare embed directory
         run: make dist-stub
       - name: Verify custom lifecycle and subscription behavior
-        run: go test -p 1 ./internal/xray ./internal/database ./internal/web/service ./internal/web/job ./internal/web/runtime ./internal/sub ./internal/util/link
+        run: |
+          set -o pipefail
+          go test -count=1 -p 1 ./internal/xray ./internal/database ./internal/web/service ./internal/web/job ./internal/web/runtime ./internal/sub ./internal/util/link 2>&1 | tee validation.log
+      - name: Preserve validation report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: validation-report
+          path: validation.log
   build:
     needs: validate
     permissions:
@@ -191,17 +199,6 @@ jobs:
             ./x-ui-linux-${{ matrix.platform }}.tar.gz
             ./x-ui-linux-${{ matrix.platform }}.tar.gz.sha256
 
-      - name: Upload files to GH release
-        uses: svenstaro/upload-release-action@v2
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
-          file: x-ui-linux-${{ matrix.platform }}.tar.gz*
-          file_glob: true
-          overwrite: true
-          prerelease: false
-
   # =================================
   #  Windows Build
   # =================================
@@ -327,16 +324,45 @@ jobs:
             ./x-ui-windows-amd64.zip
             ./x-ui-windows-amd64.zip.sha256
 
-      - name: Upload files to GH release
-        uses: svenstaro/upload-release-action@v2
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+  publish-stable:
+    name: Publish complete stable release
+    needs: [build, build-windows]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: stable-release-${{ github.ref_name }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
-          file: x-ui-windows-amd64.zip*
-          file_glob: true
-          overwrite: true
-          prerelease: false
+          pattern: x-ui-*
+          path: release-artifacts
+          merge-multiple: true
+      - name: Verify all eight platform packages
+        run: bash tools/verify-release-assets.sh release-artifacts
+      - name: Upload and publish complete release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true ] || {
+              echo "Release is already published; refusing to overwrite it."
+              exit 1
+            }
+          else
+            gh release create "$TAG" --verify-tag --draft --title "Fara Xray $TAG" \
+              --notes "Custom release: all seven Linux targets and Windows amd64, with SHA-256 checksums."
+          fi
+          gh release upload "$TAG" release-artifacts/* --clobber
+          gh release view "$TAG" --json assets --jq '.assets[].name' | sort > uploaded-assets.txt
+          find release-artifacts -maxdepth 1 -type f -printf '%f\n' | sort > expected-assets.txt
+          diff -u expected-assets.txt uploaded-assets.txt
+          gh release edit "$TAG" --draft=false --latest
 
   # =================================
   #  Rolling dev channel (per-commit)
@@ -365,8 +391,12 @@ jobs:
       - name: Download all build artifacts
         uses: actions/download-artifact@v8
         with:
+          pattern: x-ui-*
           path: dev-artifacts
           merge-multiple: true
+
+      - name: Verify all eight platform packages
+        run: bash tools/verify-release-assets.sh dev-artifacts
 
       - name: Publish dev-latest pre-release
         env:
