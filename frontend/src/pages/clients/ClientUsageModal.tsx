@@ -18,6 +18,7 @@ import { usePanelDateTime } from '@/hooks/usePanelDateTime';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { TRAFFIC_POLL_INTERVAL_S } from '@/lib/traffic/poll-interval';
 import './ClientUsageModal.css';
+import ClientHistoryDetails from './ClientHistoryDetails';
 
 interface ApiMsg<T> { success?: boolean; msg?: string; obj?: T; }
 interface DailyUsage { day: string; up: number; down: number; total: number; }
@@ -301,7 +302,10 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
           <div>
             <div className="client-usage-chart-title">{t('pages.clients.usageChart')}</div>
             <div className="client-usage-chart-sub">
-              {chartRangeText} · {dateLabel(report.rangeStart || report.firstDataAt)} — {dateLabel(report.rangeEnd || report.lastDataAt)}
+              <span>{chartRangeText}</span>
+              <bdi dir="ltr">{dateLabel(report.rangeStart || report.firstDataAt)}</bdi>
+              <span>—</span>
+              <bdi dir="ltr">{dateLabel(report.rangeEnd || report.lastDataAt)}</bdi>
             </div>
           </div>
           <div className="client-usage-legend">
@@ -502,10 +506,11 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
     {
       key: 'history', label: <span><HistoryOutlined /> {t('pages.clients.changeHistory')}</span>, children: (
         <div className="client-usage-list">
+          <small dir="auto">{t('pages.clients.historyDetails.hint')}</small>
           {report.events.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} /> : report.events.map((event) => (
             <div className="client-usage-list-row" key={event.id}>
-              <div><strong>{eventName(event)}</strong><small>{event.details || event.summary}</small></div>
-              <div><Tag>{event.kind}</Tag><small>{dateLabel(event.createdAt)}</small></div>
+              <div><strong dir="auto">{eventName(event)}</strong><ClientHistoryDetails details={event.details} summary={event.summary} formatDateTime={panelDateTime.formatDateTime} /></div>
+              <div><Tag>{eventName(event)}</Tag><small><bdi dir="ltr">{dateLabel(event.createdAt)}</bdi></small></div>
             </div>
           ))}
         </div>

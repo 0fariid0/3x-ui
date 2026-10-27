@@ -111,3 +111,4 @@
   gap: 4px;
   white-space: nowrap;
 }
+.spk-tt-label, .spk-tt-val { direction: ltr; unicode-bidi: isolate; }

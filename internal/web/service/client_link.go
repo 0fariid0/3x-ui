@@ -88,7 +88,9 @@ func applyClientRecordMerge(row *model.ClientRecord, incoming *model.ClientRecor
 
 func (s *ClientService) SyncInbound(tx *gorm.DB, inboundId int, clients []model.Client) error {
 	if tx == nil {
-		tx = database.GetDB()
+		return database.GetDB().Transaction(func(tx *gorm.DB) error {
+			return s.SyncInbound(tx, inboundId, clients)
+		})
 	}
 
 	if err := tx.Where("inbound_id = ?", inboundId).Delete(&model.ClientInbound{}).Error; err != nil {
@@ -156,6 +158,9 @@ func (s *ClientService) SyncInbound(tx *gorm.DB, inboundId int, clients []model.
 			continue
 		}
 		if err := tx.Save(row).Error; err != nil {
+			return err
+		}
+		if err := recordClientLimitChange(tx, before, *row); err != nil {
 			return err
 		}
 		if err := tx.Model(&model.ClientRecord{}).

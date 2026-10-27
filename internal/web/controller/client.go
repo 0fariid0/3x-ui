@@ -295,11 +295,9 @@ func (a *ClientController) update(c *gin.Context) {
 	if updated.Email != email {
 		_ = a.insightService.RenameClientHistory(email, updated.Email)
 	}
-	kind, summary := "updated", "Client settings updated"
-	if previous != nil && (updated.ExpiryTime > previous.ExpiryTime || updated.TotalGB > previous.TotalGB) {
-		kind, summary = "renewed", "Client renewed or quota increased"
+	if previous == nil || (updated.ExpiryTime == previous.ExpiryTime && updated.TotalGB == previous.TotalGB) {
+		_ = a.insightService.RecordEvent(updated.Email, "updated", "Client settings updated", map[string]any{"previousEmail": email, "enable": updated.Enable})
 	}
-	_ = a.insightService.RecordEvent(updated.Email, kind, summary, map[string]any{"previousEmail": email, "expiryTime": updated.ExpiryTime, "totalGB": updated.TotalGB, "enable": updated.Enable})
 	notifyClientsChanged()
 }
 
@@ -438,7 +436,9 @@ func (a *ClientController) bulkAdjust(c *gin.Context) {
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
-	recordClientEvents(&a.insightService, req.Emails, "bulk_adjusted", "Client expiry, quota, or flow adjusted", req)
+	if req.AddDays == 0 && req.AddBytes == 0 {
+		recordClientEvents(&a.insightService, req.Emails, "bulk_adjusted", "Client flow adjusted", req)
+	}
 	notifyClientsChanged()
 }
 
@@ -646,7 +646,6 @@ func (a *ClientController) resetTrafficByEmail(c *gin.Context) {
 	if needRestart {
 		a.xrayService.SetToNeedRestart()
 	}
-	_ = a.insightService.RecordEvent(email, "traffic_reset", "Client traffic reset", nil)
 	notifyClientsChanged()
 }
 
@@ -667,7 +666,6 @@ func (a *ClientController) updateTrafficByEmail(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.inbounds.toasts.inboundClientUpdateSuccess"), nil)
-	_ = a.insightService.RecordEvent(email, "traffic_adjusted", "Client traffic manually adjusted", req)
 	notifyClientsChanged()
 }
 
@@ -804,6 +802,5 @@ func (a *ClientController) bulkResetTraffic(c *gin.Context) {
 	}
 	jsonObj(c, gin.H{"affected": affected}, nil)
 	a.xrayService.SetToNeedRestart()
-	recordClientEvents(&a.insightService, req.Emails, "traffic_reset", "Client traffic reset in bulk", nil)
 	notifyClientsChanged()
 }

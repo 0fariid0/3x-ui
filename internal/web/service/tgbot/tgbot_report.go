@@ -27,7 +27,7 @@ func (t *Tgbot) SendReport() {
 	if err == nil && len(runTime) > 0 {
 		msg := ""
 		msg += t.I18nBot("tgbot.messages.report", "RunTime=="+runTime)
-		msg += t.I18nBot("tgbot.messages.datetime", "DateTime=="+time.Now().Format("2006-01-02 15:04:05"))
+		msg += t.I18nBot("tgbot.messages.datetime", "DateTime=="+t.settingService.FormatReportTime(time.Now()))
 		t.SendMsgToTgbotAdmins(msg)
 	}
 
@@ -258,7 +258,7 @@ func (t *Tgbot) getExhausted(chatId int64) {
 			if inbound.ExpiryTime == 0 {
 				output += t.I18nBot("tgbot.messages.expire", "Time=="+t.I18nBot("tgbot.unlimited"))
 			} else {
-				output += t.I18nBot("tgbot.messages.expire", "Time=="+time.Unix((inbound.ExpiryTime/1000), 0).Format("2006-01-02 15:04:05"))
+				output += t.I18nBot("tgbot.messages.expire", "Time=="+t.settingService.FormatReportTime(time.Unix((inbound.ExpiryTime/1000), 0)))
 			}
 			output += "\r\n"
 		}
@@ -284,11 +284,11 @@ func (t *Tgbot) getExhausted(chatId int64) {
 		} else {
 			cols = 2
 		}
-		output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+time.Now().Format("2006-01-02 15:04:05"))
+		output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+t.settingService.FormatReportTime(time.Now()))
 		keyboard := tu.InlineKeyboardGrid(tu.InlineKeyboardCols(cols, buttons...))
 		t.SendMsgToTgbot(chatId, output, keyboard)
 	} else {
-		output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+time.Now().Format("2006-01-02 15:04:05"))
+		output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+t.settingService.FormatReportTime(time.Now()))
 		t.SendMsgToTgbot(chatId, output)
 	}
 }
@@ -419,7 +419,7 @@ func (t *Tgbot) sendBackup(chatId int64) {
 
 func (t *Tgbot) sendBackupData(chatId int64, dbData []byte, dbFilename string) {
 	output := t.I18nBot("tgbot.messages.hostname", "Hostname=="+hostname)
-	output += t.I18nBot("tgbot.messages.backupTime", "Time=="+time.Now().Format("2006-01-02 15:04:05"))
+	output += t.I18nBot("tgbot.messages.backupTime", "Time=="+t.settingService.FormatReportTime(time.Now()))
 	t.SendMsgToTgbot(chatId, output)
 
 	// Send database backup (SQLite file, or a pg_dump archive on PostgreSQL)
@@ -462,7 +462,7 @@ func (t *Tgbot) sendBackupData(chatId int64, dbData []byte, dbFilename string) {
 func (t *Tgbot) sendBanLogs(chatId int64, dt bool) {
 	if dt {
 		output := t.I18nBot("tgbot.messages.hostname", "Hostname=="+hostname)
-		output += t.I18nBot("tgbot.messages.datetime", "DateTime=="+time.Now().Format("2006-01-02 15:04:05"))
+		output += t.I18nBot("tgbot.messages.datetime", "DateTime=="+t.settingService.FormatReportTime(time.Now()))
 		t.SendMsgToTgbot(chatId, output)
 	}
 

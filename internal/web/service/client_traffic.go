@@ -81,6 +81,9 @@ func (s *ClientService) BulkResetTraffic(inboundSvc *InboundService, emails []st
 	err := submitTrafficWrite(func() error {
 		db := database.GetDB()
 		return db.Transaction(func(tx *gorm.DB) error {
+			if err := recordClientTrafficResets(tx, cleanEmails); err != nil {
+				return err
+			}
 			if err := adjustGroupBaselinesForRemovedTraffic(tx, cleanEmails); err != nil {
 				return err
 			}
@@ -168,6 +171,9 @@ func (s *ClientService) resetAllClientTrafficsLocked(id int) ([]string, []int, e
 			return nil
 		}
 		reset = resetEmails
+		if err := recordClientTrafficResets(tx, resetEmails); err != nil {
+			return err
+		}
 
 		if err := adjustGroupBaselinesForRemovedTraffic(tx, resetEmails); err != nil {
 			return err

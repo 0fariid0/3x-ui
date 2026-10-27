@@ -106,7 +106,9 @@ export default function ThroughputCard({ status, up, down, labels, isMobile }: T
         <div>
           <div className="ov-kicker">{t('pages.index.overallSpeed')}</div>
           <div className="ov-sub">
-            {`${t('pages.index.throughputSub')} · ${t('pages.index.peak')} ${SizeFormatter.speedFormat(peak(chartDown))}`}
+            <span>{t('pages.index.throughputSub')}</span>
+            <span> · {t('pages.index.peak')} </span>
+            <bdi dir="ltr">{SizeFormatter.speedFormat(peak(chartDown))}</bdi>
           </div>
         </div>
         <div className="ov-traffic-range">

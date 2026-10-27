@@ -612,6 +612,9 @@ func (s *InboundService) delClientStatsByEmails(tx *gorm.DB, emails []string) er
 func (s *InboundService) ResetClientTrafficByEmail(clientEmail string) error {
 	err := submitTrafficWrite(func() error {
 		return database.GetDB().Transaction(func(tx *gorm.DB) error {
+			if err := recordClientTrafficResets(tx, []string{clientEmail}); err != nil {
+				return err
+			}
 			if err := adjustGroupBaselinesForRemovedTraffic(tx, []string{clientEmail}); err != nil {
 				return err
 			}
@@ -697,6 +700,7 @@ func (s *InboundService) resetClientTrafficLocked(id int, clientEmail string) (b
 		}
 	}
 
+	previousTraffic := *traffic
 	traffic.Up = 0
 	traffic.Down = 0
 	traffic.Enable = true
@@ -708,6 +712,9 @@ func (s *InboundService) resetClientTrafficLocked(id int, clientEmail string) (b
 		return false, nil, err
 	}
 	if err := db.Transaction(func(tx *gorm.DB) error {
+		if err := recordClientTrafficChange(tx, previousTraffic, 0, 0, "traffic_reset"); err != nil {
+			return err
+		}
 		if err := adjustGroupBaselinesForRemovedTraffic(tx, []string{clientEmail}); err != nil {
 			return err
 		}
@@ -1179,12 +1186,21 @@ func (s *InboundService) GetClientTrafficByEmail(email string) (traffic *xray.Cl
 func (s *InboundService) UpdateClientTrafficByEmail(email string, upload int64, download int64) error {
 	return submitTrafficWrite(func() error {
 		db := database.GetDB()
-		err := db.Model(xray.ClientTraffic{}).
-			Where("email = ?", email).
-			Updates(map[string]any{
-				"up":   upload,
-				"down": download,
-			}).Error
+		err := db.Transaction(func(tx *gorm.DB) error {
+			var previous xray.ClientTraffic
+			if err := tx.Where("email = ?", email).First(&previous).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(xray.ClientTraffic{}).
+				Where("email = ?", email).
+				Updates(map[string]any{
+					"up":   upload,
+					"down": download,
+				}).Error; err != nil {
+				return err
+			}
+			return recordClientTrafficChange(tx, previous, upload, download, "traffic_adjusted")
+		})
 		if err != nil {
 			logger.Warningf("Error updating ClientTraffic with email %s: %v", email, err)
 		}

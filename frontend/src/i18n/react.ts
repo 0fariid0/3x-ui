@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 
 import { LanguageManager } from '@/utils';
 import enUS from '../../../internal/web/translation/en-US.json';
+import { normalizeTranslationPlaceholders } from './placeholders';
 
 const FALLBACK = 'en-US';
 
@@ -24,7 +25,7 @@ export async function readyI18n() {
   await i18next.use(initReactI18next).init({
     lng: active,
     fallbackLng: FALLBACK,
-    resources: { [FALLBACK]: { translation: enUS } },
+    resources: { [FALLBACK]: { translation: normalizeTranslationPlaceholders(enUS) as typeof enUS } },
     interpolation: { escapeValue: false, prefix: '{', suffix: '}' },
     returnNull: false,
   });
@@ -32,7 +33,7 @@ export async function readyI18n() {
     const loader = lazyModules[moduleKeyFor(active)] as (() => Promise<{ default: Record<string, unknown> }>) | undefined;
     if (loader) {
       const mod = await loader();
-      const messages = (mod.default ?? mod) as Record<string, unknown>;
+      const messages = normalizeTranslationPlaceholders(mod.default ?? mod) as Record<string, unknown>;
       i18next.addResourceBundle(active, 'translation', messages, true, true);
       await i18next.changeLanguage(active);
     }

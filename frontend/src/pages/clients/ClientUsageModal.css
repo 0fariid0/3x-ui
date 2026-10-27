@@ -61,6 +61,8 @@
 }
 
 .client-usage-summary strong {
+  direction: ltr;
+  unicode-bidi: isolate;
   margin-top: 7px;
   font-size: 18px;
   font-variant-numeric: tabular-nums;
@@ -82,11 +84,11 @@
 
 .client-usage-chart-title,
 .client-usage-section-title { font-size: 14px; font-weight: 600; }
-.client-usage-chart-sub { margin-top: 4px; font-size: 12px; color: var(--ant-color-text-tertiary); }
+.client-usage-chart-sub { margin-top: 4px; font-size: 12px; color: var(--ant-color-text-tertiary); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .client-usage-legend { display: flex; gap: 18px; flex-wrap: wrap; }
 .client-usage-legend span { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ant-color-text-secondary); }
 .client-usage-legend i { width: 14px; height: 2px; border-radius: 2px; }
-.client-usage-legend b { color: var(--ant-color-text); font-variant-numeric: tabular-nums; }
+.client-usage-legend b { color: var(--ant-color-text); font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
 
 .client-usage-chart-foot {
   display: grid;
@@ -138,6 +140,11 @@
 .client-usage-list-row code { overflow-wrap: anywhere; }
 .client-usage-list-row small { color: var(--ant-color-text-tertiary); }
 .client-usage-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+
+.client-history-details { display: grid; gap: 5px; font-size: 12px; }
+.client-history-details > div { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+.client-history-details span { color: var(--ant-color-text-secondary); }
+.client-history-details bdi { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 
 @media (max-width: 1100px) {
   .client-usage-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }

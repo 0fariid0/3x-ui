@@ -957,6 +957,21 @@ export type CalendarKind = 'gregorian' | 'jalalian';
 
 export class IntlUtil {
   private static readonly panelOffsetStorageKey = 'xui-panel-offset-seconds';
+  private static readonly panelCalendarStorageKey = 'xui-panel-calendar';
+
+  static setPanelCalendar(calendar: CalendarKind): void {
+    try {
+      globalThis.localStorage?.setItem(IntlUtil.panelCalendarStorageKey, calendar);
+    } catch (_) { /* Storage may be unavailable. */ }
+  }
+
+  static savedPanelCalendar(): CalendarKind {
+    try {
+      return globalThis.localStorage?.getItem(IntlUtil.panelCalendarStorageKey) === 'jalalian' ? 'jalalian' : 'gregorian';
+    } catch (_) {
+      return 'gregorian';
+    }
+  }
 
   static setPanelOffsetSeconds(offsetSeconds: number): void {
     try {
@@ -999,7 +1014,7 @@ export class IntlUtil {
     return new Date(parsed.getTime() + (Number(offsetSeconds) || 0) * 1000);
   }
 
-  static formatDate(date: string | number | Date | null | undefined, calendar: CalendarKind = 'gregorian'): string {
+  static formatDate(date: string | number | Date | null | undefined, calendar: CalendarKind = IntlUtil.savedPanelCalendar()): string {
     return IntlUtil.formatPanelDateTime(date, calendar, IntlUtil.savedPanelOffsetSeconds());
   }
 
@@ -1008,7 +1023,7 @@ export class IntlUtil {
   // administrator browser timezone can never alter the displayed value.
   static formatPanelDateTime(
     date: string | number | Date | null | undefined,
-    calendar: CalendarKind = 'gregorian',
+    calendar: CalendarKind = IntlUtil.savedPanelCalendar(),
     offsetSeconds = 0,
   ): string {
     const shifted = IntlUtil.shiftedPanelDate(date, offsetSeconds);
@@ -1027,7 +1042,7 @@ export class IntlUtil {
 
   static formatPanelDate(
     date: string | number | Date | null | undefined,
-    calendar: CalendarKind = 'gregorian',
+    calendar: CalendarKind = IntlUtil.savedPanelCalendar(),
     offsetSeconds = 0,
   ): string {
     const shifted = IntlUtil.shiftedPanelDate(date, offsetSeconds);
@@ -1056,7 +1071,7 @@ export class IntlUtil {
     }).format(shifted);
   }
 
-  static formatPanelDayKey(day: string, calendar: CalendarKind = 'gregorian'): string {
+  static formatPanelDayKey(day: string, calendar: CalendarKind = IntlUtil.savedPanelCalendar()): string {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return day;
     // Noon UTC is intentionally used so a calendar conversion cannot cross a
     // date boundary when the browser has an unusual local timezone.

@@ -1,5 +1,5 @@
 import { getMessage } from '@/utils/messageBus';
-import { ColorUtils, ClipboardManager, FileManager } from '@/utils';
+import { ColorUtils, ClipboardManager, FileManager, IntlUtil } from '@/utils';
 import { Protocols } from '@/schemas/primitives';
 import { coerceInboundJsonField } from '@/models/dbinbound';
 import {
@@ -163,13 +163,6 @@ export function formatIpInfo(record: unknown) {
   const ts = r.timestamp || r.Timestamp || 0;
   if (!ip) return String(record);
   if (!ts) return String(ip);
-  const date = new Date(Number(ts) * 1000);
-  const timeStr = date
-    .toLocaleString('en-GB', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hour12: false,
-    })
-    .replace(',', '');
+  const timeStr = IntlUtil.formatDate(Number(ts));
   return `${ip} (${timeStr})`;
 }

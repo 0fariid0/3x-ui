@@ -41,7 +41,7 @@ func (t *Tgbot) BuildClientDraftMessage() string {
 	default:
 		diff := client_ExpiryTime - now
 		if diff > 172800000 {
-			expiry = time.UnixMilli(client_ExpiryTime).Format("2006-01-02 15:04:05")
+			expiry = t.settingService.FormatReportTime(time.UnixMilli(client_ExpiryTime))
 		} else {
 			expiry = fmt.Sprintf("%d %s", diff/3600000, t.I18nBot("tgbot.hours"))
 		}
@@ -442,7 +442,7 @@ func (t *Tgbot) clientInfoMsg(
 	if traffic.ExpiryTime == 0 {
 		expiryTime = t.I18nBot("tgbot.unlimited")
 	} else if diff > 172800 || !traffic.Enable {
-		expiryTime = time.Unix((traffic.ExpiryTime / 1000), 0).Format("2006-01-02 15:04:05")
+		expiryTime = t.settingService.FormatReportTime(time.Unix((traffic.ExpiryTime / 1000), 0))
 		if diff > 0 {
 			days := diff / 86400
 			hours := (diff % 86400) / 3600
@@ -512,7 +512,7 @@ func (t *Tgbot) clientInfoMsg(
 	if printOnline {
 		output += t.I18nBot("tgbot.messages.online", "Status=="+status)
 		if !isOnline && traffic.LastOnline > 0 {
-			output += t.I18nBot("tgbot.messages.lastOnline", "Time=="+time.UnixMilli(traffic.LastOnline).Format("2006-01-02 15:04:05"))
+			output += t.I18nBot("tgbot.messages.lastOnline", "Time=="+t.settingService.FormatReportTime(time.UnixMilli(traffic.LastOnline)))
 		}
 	}
 	if printActive {
@@ -531,7 +531,7 @@ func (t *Tgbot) clientInfoMsg(
 		output += t.I18nBot("tgbot.messages.total", "UpDown=="+common.FormatTraffic((traffic.Up+traffic.Down)), "Total=="+total)
 	}
 	if printRefreshed {
-		output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+time.Now().Format("2006-01-02 15:04:05"))
+		output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+t.settingService.FormatReportTime(time.Now()))
 	}
 
 	return output
@@ -574,7 +574,7 @@ func (t *Tgbot) getClientUsage(chatId int64, tgUserID int64, email ...string) {
 		}
 	}
 
-	output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+time.Now().Format("2006-01-02 15:04:05"))
+	output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+t.settingService.FormatReportTime(time.Now()))
 	t.SendMsgToTgbot(chatId, output)
 	output = t.I18nBot("tgbot.commands.pleaseChoose")
 	t.SendAnswer(chatId, output, false)
@@ -602,7 +602,7 @@ func (t *Tgbot) searchClientIps(chatId int64, email string, messageID ...int) {
 					continue
 				}
 				if item.Timestamp > 0 {
-					ts := time.Unix(item.Timestamp, 0).Format("2006-01-02 15:04:05")
+					ts := t.settingService.FormatReportTime(time.Unix(item.Timestamp, 0))
 					lines = append(lines, fmt.Sprintf("%s (%s)", item.IP, ts))
 					continue
 				}
@@ -622,7 +622,7 @@ func (t *Tgbot) searchClientIps(chatId int64, email string, messageID ...int) {
 	output := ""
 	output += t.I18nBot("tgbot.messages.email", "Email=="+email)
 	output += t.I18nBot("tgbot.messages.ips", "IPs=="+formattedIps)
-	output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+time.Now().Format("2006-01-02 15:04:05"))
+	output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+t.settingService.FormatReportTime(time.Now()))
 
 	inlineKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
@@ -662,7 +662,7 @@ func (t *Tgbot) clientTelegramUserInfo(chatId int64, email string, messageID ...
 	output := ""
 	output += t.I18nBot("tgbot.messages.email", "Email=="+email)
 	output += t.I18nBot("tgbot.messages.TGUser", "TelegramID=="+tgId)
-	output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+time.Now().Format("2006-01-02 15:04:05"))
+	output += t.I18nBot("tgbot.messages.refreshedOn", "Time=="+t.settingService.FormatReportTime(time.Now()))
 
 	inlineKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(

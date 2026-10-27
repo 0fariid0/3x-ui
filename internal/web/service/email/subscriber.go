@@ -71,7 +71,7 @@ func i18n(key string, params ...string) string {
 func (s *Subscriber) formatMessage(e eventbus.Event) (subject, body string) {
 	h, _ := hostname()
 	host := h
-	ts := e.Timestamp.Format("2006-01-02 15:04:05")
+	ts := s.settingService.FormatReportTime(e.Timestamp)
 
 	wrap := func(title, content string) string {
 		// Strip newlines from title to prevent broken HTML

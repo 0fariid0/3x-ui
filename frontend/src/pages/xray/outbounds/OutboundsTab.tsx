@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { usePanelDateTime } from '@/hooks/usePanelDateTime';
 import {
   Button,
   Col,
@@ -112,6 +113,7 @@ export default function OutboundsTab({
   onRefreshXrayData,
 }: OutboundsTabProps) {
   const { t } = useTranslation();
+  const panelDateTime = usePanelDateTime();
   const [modal, modalContextHolder] = Modal.useModal();
   const [messageApi, messageContextHolder] = message.useMessage();
   const [testMode, setTestMode] = useState<OutboundTestMode>('tcp');
@@ -735,7 +737,7 @@ export default function OutboundsTab({
                       ? <Tooltip title={r.lastError}><WarningOutlined style={{ color: '#e04141' }} /></Tooltip>
                       : <Tooltip title={t('pages.xray.outboundSub.statusOk')}><CheckCircleOutlined style={{ color: '#008771' }} /></Tooltip>),
                   },
-                  { title: t('pages.xray.outboundSub.colLastFetch'), dataIndex: 'lastUpdated', key: 'lastUpdated', render: (v: number) => v ? new Date(v * 1000).toLocaleString() : t('pages.xray.outboundSub.never') },
+                  { title: t('pages.xray.outboundSub.colLastFetch'), dataIndex: 'lastUpdated', key: 'lastUpdated', render: (v: number) => v ? panelDateTime.formatDateTime(v * 1000) : t('pages.xray.outboundSub.never') },
                   {
                     title: t('pages.xray.outboundSub.colEnabled'),
                     key: 'enabled',

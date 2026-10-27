@@ -1,3 +1,11 @@
+## v3.9.4 — Report calendar and persistent client change history
+
+- Apply the selected Jalali/Gregorian calendar to report dates, outbound subscription refresh dates, geodata timestamps, IP timestamps, API token dates and built-in Telegram/email reports. Refresh the calendar preference after settings saves and window focus. Preserve legacy IP time strings in the API and add a numeric timestamp for panel rendering.
+- Record successful quota and expiry changes at the shared client persistence layer, including manual edits, current client APIs, legacy inbound client APIs and bulk adjustments. Store exact before/after byte limits and expiry timestamps, signed changes and event time. Repeated identical writes across inbounds produce no extra event.
+- Record before/after usage counters for client resets and manual adjustments. Preserve renewal, quota/expiry and reset history independently of usage retention and show the latest 200 events independently of the chart range.
+- Render structured history in the selected calendar; normalize legacy translation placeholders without altering uppercase subscription remark variables; isolate mixed Persian/numeric report values.
+- No database schema change. Existing custom subscription naming, display priorities, HWID and configuration generation remain in the source. Detailed changes cannot be reconstructed for edits made before this update.
+
 ## v3.9.3
 
 - Fix recent subscription app ordering for requests arriving within the same millisecond or after clock changes.

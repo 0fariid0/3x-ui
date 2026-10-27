@@ -656,3 +656,5 @@
   .ov-usage-alert-row { grid-template-columns: 22px minmax(0, 1fr); }
   .ov-usage-values { grid-column: 2; flex-direction: row; align-items: center; gap: 7px; }
 }
+.ov-wide-head .ov-sub { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; }
+.ov-legend-num, .ov-foot-value, .ov-foot-part { direction: ltr; unicode-bidi: isolate; }

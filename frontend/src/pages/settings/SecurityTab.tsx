@@ -203,7 +203,7 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
 
   function formatTokenDate(ts: number): string {
     if (!ts) return '';
-    return IntlUtil.formatDate(apiTokenCreatedAtMilliseconds(ts));
+    return IntlUtil.formatDate(apiTokenCreatedAtMilliseconds(ts), allSetting.datepicker);
   }
 
   function toggleTwoFactor() {

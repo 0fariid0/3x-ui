@@ -158,6 +158,9 @@ func TestGetClientIpsWithNodes_LabelsNodes(t *testing.T) {
 	byIP := map[string]string{}
 	for _, in := range infos {
 		byIP[in.IP] = in.Node
+		if in.Timestamp != now*1000 || in.Time == "" {
+			t.Fatalf("IP timestamp must preserve the legacy time and expose milliseconds: %+v", in)
+		}
 	}
 	if byIP["1.1.1.1"] != "" {
 		t.Fatalf("local IP should have empty node, got %q", byIP["1.1.1.1"])

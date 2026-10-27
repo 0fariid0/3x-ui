@@ -6,6 +6,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useGeodataCategories, useGeodataEntries, useGeodataFiles } from '@/api/queries/useGeodata';
 import { canonicalToken, mergeSelection, selectionFromValue, tokenFor } from '@/lib/xray/geoTokens';
 import { SizeFormatter } from '@/utils';
+import { usePanelDateTime } from '@/hooks/usePanelDateTime';
 import type { GeoCategory, GeoEntry, GeoFile, GeoKind } from '@/generated/types';
 
 import './GeoBrowserModal.css';
@@ -40,6 +41,7 @@ function preferredFile(files: GeoFile[], kind: GeoKind): string | undefined {
 
 export default function GeoBrowserModal({ open, kind, value, onApply, onClose }: GeoBrowserModalProps) {
   const { t } = useTranslation();
+  const panelDateTime = usePanelDateTime();
   const [file, setFile] = useState<string | undefined>(undefined);
   const [categoryQuery, setCategoryQuery] = useState('');
   const [activeCode, setActiveCode] = useState<string | undefined>(undefined);
@@ -222,7 +224,7 @@ export default function GeoBrowserModal({ open, kind, value, onApply, onClose }:
     ? t('pages.xray.geoBrowser.fileMeta', {
         count: activeFile.categories.toLocaleString(),
         size: SizeFormatter.sizeFormat(activeFile.size),
-        date: new Date(activeFile.modifiedAt).toLocaleString(),
+        date: panelDateTime.formatDateTime(new Date(activeFile.modifiedAt).getTime()),
       })
     : '';
 

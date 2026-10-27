@@ -26,7 +26,7 @@ jobs:
       - name: Verify custom lifecycle and subscription behavior
         run: |
           set -o pipefail
-          go test -count=1 -p 1 ./internal/xray ./internal/database ./internal/web/service ./internal/web/job ./internal/web/runtime ./internal/sub ./internal/util/link 2>&1 | tee validation.log
+          go test -count=1 -p 1 ./internal/xray ./internal/database ./internal/web/service ./internal/web/service/tgbot ./internal/web/service/email ./internal/web/controller ./internal/web/job ./internal/web/runtime ./internal/sub ./internal/util/link 2>&1 | tee validation.log
       - name: Preserve validation report
         if: always()
         uses: actions/upload-artifact@v7

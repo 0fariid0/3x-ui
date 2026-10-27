@@ -216,9 +216,10 @@ func (s *InboundService) GetClientIpNodeAttribution(email string) (map[string]st
 // ClientIpInfo is one IP shown in the panel's per-client IP log, labelled with
 // the node it is connecting through ("" = this local panel).
 type ClientIpInfo struct {
-	IP   string `json:"ip"`
-	Time string `json:"time"`
-	Node string `json:"node"`
+	IP        string `json:"ip"`
+	Time      string `json:"time"`
+	Node      string `json:"node"`
+	Timestamp int64  `json:"timestamp,omitempty"`
 }
 
 // GetClientIpsWithNodes returns a client's recorded IPs (from the flat
@@ -259,6 +260,7 @@ func (s *InboundService) GetClientIpsWithNodes(email string) ([]ClientIpInfo, er
 		info := ClientIpInfo{IP: e.IP}
 		if e.Timestamp > 0 {
 			info.Time = time.Unix(e.Timestamp, 0).Local().Format("2006-01-02 15:04:05")
+			info.Timestamp = e.Timestamp * 1000
 		}
 		if guid, ok := attr[e.IP]; ok && guid != "" && guid != localGuid {
 			info.Node = guidName[guid]

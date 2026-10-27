@@ -5,6 +5,7 @@ export type ClientIpInfo = {
   ip: string;
   time: string;
   node: string;
+  timestamp?: number;
 };
 
 // normalizeClientIps accepts the API payload and returns typed entries. It also
@@ -26,6 +27,7 @@ export function normalizeClientIps(obj: unknown): ClientIpInfo[] {
         ip,
         time: typeof o.time === 'string' ? o.time : '',
         node: typeof o.node === 'string' ? o.node : '',
+        ...(typeof o.timestamp === 'number' && o.timestamp > 0 ? { timestamp: o.timestamp } : {}),
       });
     }
   }

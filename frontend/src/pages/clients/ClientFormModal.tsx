@@ -1256,7 +1256,7 @@ reset: Number(values.reset) || 0,
                   fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
                 }}
               >
-                {entry.ip}{entry.time ? ` (${entry.time})` : ''}
+                <bdi dir="ltr">{entry.ip}{entry.timestamp ? ` (${hwidDateLabel(entry.timestamp)})` : entry.time ? ` (${entry.time})` : ''}</bdi>
                 {entry.node ? (
                   <span style={{ marginInlineStart: 6, opacity: 0.85, fontWeight: 600 }}>@ {entry.node}</span>
                 ) : null}

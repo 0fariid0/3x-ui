@@ -7,6 +7,7 @@ import { AllSetting } from '@/models/setting';
 import { AllSettingSchema, type AllSettingInput } from '@/schemas/setting';
 import { keys } from '@/api/queryKeys';
 import { useServerDraft } from '@/hooks/useServerDraft';
+import { setDatepicker } from '@/hooks/useDatepicker';
 
 type SettingSavePayload = Partial<AllSetting> & Record<string, unknown>;
 type SettingSaveResult = {
@@ -18,6 +19,7 @@ async function fetchAllSetting(): Promise<AllSettingInput | null> {
   const msg = await HttpUtil.post('/panel/api/setting/all', undefined, { silent: true });
   if (!msg?.success) throw new Error(msg?.msg || 'Failed to fetch settings');
   const validated = parseMsg(msg, AllSettingSchema, 'setting/all');
+  if (validated.obj?.datepicker) setDatepicker(validated.obj.datepicker);
   return validated.obj;
 }
 
@@ -60,6 +62,7 @@ export function useAllSettings() {
     onSuccess: ({ msg, saved }) => {
       if (!msg?.success) return;
       if (saved) markSaved(saved);
+      if (saved?.datepicker) setDatepicker(saved.datepicker);
       queryClient.invalidateQueries({ queryKey: keys.settings.all() });
     },
   });

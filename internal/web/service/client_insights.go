@@ -910,7 +910,9 @@ func (s *ClientInsightService) GetReportForRange(email string, days, hours int) 
 		return connectedInbounds[i].ID < connectedInbounds[j].ID
 	})
 	var events []model.ClientEvent
-	_ = db.Where("email = ? AND created_at >= ?", email, rangeStart).Order("created_at DESC, id DESC").Limit(100).Find(&events).Error
+	if err := db.Where("email = ?", email).Order("created_at DESC, id DESC").Limit(200).Find(&events).Error; err != nil {
+		return nil, err
+	}
 	var anomalies []model.ClientAnomaly
 	_ = db.Where("email = ? AND created_at >= ?", email, rangeStart).Order("created_at DESC, id DESC").Limit(50).Find(&anomalies).Error
 	destinations, destinationSummaries, destinationErr := s.destinationReport(email, rangeStart, rangeEnd)
@@ -1160,7 +1162,7 @@ func (s *ClientInsightService) RestoreExpiredActions(inboundSvc *InboundService,
 			continue
 		}
 		var manualChanges int64
-		_ = db.Model(&model.ClientEvent{}).Where("email = ? AND created_at > ? AND kind NOT IN ?", row.Email, row.CreatedAt, []string{"anomaly", "anomaly_restored"}).Count(&manualChanges).Error
+		_ = db.Model(&model.ClientEvent{}).Where("email = ? AND created_at > ? AND kind NOT IN ?", row.Email, row.CreatedAt, []string{"anomaly", "anomaly_restored", "activated"}).Count(&manualChanges).Error
 		if manualChanges > 0 {
 			now := time.Now().UnixMilli()
 			db.Model(row).Updates(map[string]any{"status": "resolved_manual_change", "resolved_at": now, "details": row.Details + ": automatic restore skipped after a later client change"})
@@ -1426,7 +1428,8 @@ func (s *ClientInsightService) Cleanup(historyDays int) error {
 		if oldestActive.CreatedAt > 0 && oldestActive.CreatedAt < eventCutoff {
 			eventCutoff = oldestActive.CreatedAt
 		}
-		if err := tx.Where("created_at < ?", eventCutoff).Delete(&model.ClientEvent{}).Error; err != nil {
+		if err := tx.Where("created_at < ? AND kind NOT IN ?", eventCutoff,
+			[]string{"renewed", "limits_changed", "activated", "traffic_reset", "traffic_adjusted"}).Delete(&model.ClientEvent{}).Error; err != nil {
 			return err
 		}
 		if err := tx.Where("created_at < ? AND status <> ?", dayCutoff, "acted").Delete(&model.ClientAnomaly{}).Error; err != nil {

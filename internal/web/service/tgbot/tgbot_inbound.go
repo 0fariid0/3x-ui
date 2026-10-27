@@ -37,7 +37,7 @@ func (t *Tgbot) getInboundUsages() string {
 		if inbound.ExpiryTime == 0 {
 			info.WriteString(t.I18nBot("tgbot.messages.expire", "Time=="+t.I18nBot("tgbot.unlimited")))
 		} else {
-			info.WriteString(t.I18nBot("tgbot.messages.expire", "Time=="+time.Unix((inbound.ExpiryTime/1000), 0).Format("2006-01-02 15:04:05")))
+			info.WriteString(t.I18nBot("tgbot.messages.expire", "Time=="+t.settingService.FormatReportTime(time.Unix((inbound.ExpiryTime/1000), 0))))
 		}
 		info.WriteString("\r\n")
 	}
@@ -289,7 +289,7 @@ func (t *Tgbot) searchInbound(chatId int64, remark string) {
 		if inbound.ExpiryTime == 0 {
 			info += t.I18nBot("tgbot.messages.expire", "Time=="+t.I18nBot("tgbot.unlimited"))
 		} else {
-			info += t.I18nBot("tgbot.messages.expire", "Time=="+time.Unix((inbound.ExpiryTime/1000), 0).Format("2006-01-02 15:04:05"))
+			info += t.I18nBot("tgbot.messages.expire", "Time=="+t.settingService.FormatReportTime(time.Unix((inbound.ExpiryTime/1000), 0)))
 		}
 		t.SendMsgToTgbot(chatId, info)
 
