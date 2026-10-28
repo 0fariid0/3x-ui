@@ -2,14 +2,16 @@ import { useTranslation } from 'react-i18next';
 
 import { SizeFormatter } from '@/utils';
 import { parseClientEventDetails } from '@/schemas/api/client-event';
+import { remainingDaysAtChange } from '@/lib/clients/history';
 
 interface ClientHistoryDetailsProps {
   details?: string;
   summary: string;
   formatDateTime: (value: number) => string;
+  recordedAt: number;
 }
 
-export default function ClientHistoryDetails({ details, summary, formatDateTime }: ClientHistoryDetailsProps) {
+export default function ClientHistoryDetails({ details, summary, formatDateTime, recordedAt }: ClientHistoryDetailsProps) {
   const { t, i18n } = useTranslation();
   const data = parseClientEventDetails(details);
   const number = (value: number) => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 2 }).format(value);
@@ -19,6 +21,12 @@ export default function ClientHistoryDetails({ details, summary, formatDateTime 
     : formatDateTime(value);
   const lines: { label: string; value: string }[] = [];
   const add = (key: string, value: string) => lines.push({ label: t(`pages.clients.historyDetails.${key}`), value });
+  const addRemainingDays = (key: string, value: number | undefined) => {
+    if (value === undefined) return;
+    const remaining = remainingDaysAtChange(value, recordedAt);
+    if (remaining !== null) add(key, `${number(remaining)} ${t('days')}`);
+    else if (value === 0) add(key, t('unlimited'));
+  };
 
   if (data) {
     if (data.previousTotalBytes !== undefined) add('previousQuota', size(data.previousTotalBytes));
@@ -29,8 +37,10 @@ export default function ClientHistoryDetails({ details, summary, formatDateTime 
     }
     if (data.previousExpiryTime !== undefined) add('previousExpiry', expiry(data.previousExpiryTime));
     if (data.expiryTime !== undefined) add('expiry', expiry(data.expiryTime));
-    if (data.addedMilliseconds != null && data.addedMilliseconds !== 0) {
-      add('daysChange', `${data.addedMilliseconds > 0 ? '+' : '−'}${number(Math.abs(data.addedMilliseconds) / 86400000)} ${t('days')}`);
+    addRemainingDays('previousRemainingDays', data.previousExpiryTime);
+    addRemainingDays('remainingDays', data.expiryTime);
+    if (data.addedMilliseconds != null) {
+      add('daysChange', `${data.addedMilliseconds > 0 ? '+' : data.addedMilliseconds < 0 ? '−' : ''}${number(Math.abs(data.addedMilliseconds) / 86400000)} ${t('days')}`);
     }
     if (data.previousUsedBytes !== undefined) add('previousUsage', SizeFormatter.sizeFormat(data.previousUsedBytes));
     if (data.usedBytes !== undefined) add('usage', SizeFormatter.sizeFormat(data.usedBytes));

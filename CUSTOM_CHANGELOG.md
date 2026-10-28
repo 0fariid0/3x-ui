@@ -1,3 +1,9 @@
+## v3.9.5 — Focused renewal history
+
+- Hide subscription-link visibility and external-link change events in the panel history, including existing entries. Keep their stored records and the actual link settings unchanged.
+- Show remaining days before and after each expiry change, measured at the recorded event time. Show zero-day changes explicitly and retain expiry dates, unlimited status and delayed first-use validity.
+- Disable the Git pager in the release publishing script so publication continues without waiting for q.
+
 ## v3.9.4 — Report calendar and persistent client change history
 
 - Apply the selected Jalali/Gregorian calendar to report dates, outbound subscription refresh dates, geodata timestamps, IP timestamps, API token dates and built-in Telegram/email reports. Refresh the calendar preference after settings saves and window focus. Preserve legacy IP time strings in the API and add a numeric timestamp for panel rendering.

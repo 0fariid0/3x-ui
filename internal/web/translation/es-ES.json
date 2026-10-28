@@ -897,6 +897,8 @@
         "previousQuota": "Previous quota",
         "quota": "New quota",
         "quotaChange": "Quota change",
+        "previousRemainingDays": "Previous days remaining",
+        "remainingDays": "New days remaining",
         "previousExpiry": "Previous expiry",
         "expiry": "New expiry",
         "daysChange": "Duration change",
@@ -905,7 +907,7 @@
         "requestedBytes": "Requested quota addition",
         "requestedDays": "Requested days addition",
         "firstUseDays": "days after first connection",
-        "hint": "Latest 200 recorded events, independent of the usage chart period. Detailed changes are recorded from this update onward."
+        "hint": "Latest 200 recorded events, independent of the usage chart period. Detailed changes are recorded from this update onward. Remaining days are measured at the time of each recorded event."
       },
       "eventKinds": {
         "limits_changed": "Quota or expiry changed",

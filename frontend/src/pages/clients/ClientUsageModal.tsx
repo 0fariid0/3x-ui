@@ -19,6 +19,7 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { TRAFFIC_POLL_INTERVAL_S } from '@/lib/traffic/poll-interval';
 import './ClientUsageModal.css';
 import ClientHistoryDetails from './ClientHistoryDetails';
+import { visibleClientEvents } from '@/lib/clients/history';
 
 interface ApiMsg<T> { success?: boolean; msg?: string; obj?: T; }
 interface DailyUsage { day: string; up: number; down: number; total: number; }
@@ -246,6 +247,7 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
 
   const dateLabel = (ts?: number) => (!ts || ts <= 0 ? '—' : panelDateTime.formatDateTime(ts));
   const daily = useMemo(() => report?.dailyUsage ?? [], [report?.dailyUsage]);
+  const historyEvents = useMemo(() => visibleClientEvents(report?.events ?? []), [report?.events]);
   const hourly = useMemo(() => report?.hourlyUsage ?? [], [report?.hourlyUsage]);
   const timeline = useMemo(() => report?.timelineUsage ?? [], [report?.timelineUsage]);
   const useRollingHours = (report?.hours ?? 0) > 0;
@@ -507,9 +509,9 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
       key: 'history', label: <span><HistoryOutlined /> {t('pages.clients.changeHistory')}</span>, children: (
         <div className="client-usage-list">
           <small dir="auto">{t('pages.clients.historyDetails.hint')}</small>
-          {report.events.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} /> : report.events.map((event) => (
+          {historyEvents.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} /> : historyEvents.map((event) => (
             <div className="client-usage-list-row" key={event.id}>
-              <div><strong dir="auto">{eventName(event)}</strong><ClientHistoryDetails details={event.details} summary={event.summary} formatDateTime={panelDateTime.formatDateTime} /></div>
+              <div><strong dir="auto">{eventName(event)}</strong><ClientHistoryDetails details={event.details} summary={event.summary} formatDateTime={panelDateTime.formatDateTime} recordedAt={event.createdAt} /></div>
               <div><Tag>{eventName(event)}</Tag><small><bdi dir="ltr">{dateLabel(event.createdAt)}</bdi></small></div>
             </div>
           ))}
