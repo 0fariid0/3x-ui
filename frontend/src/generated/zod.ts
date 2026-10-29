@@ -786,6 +786,34 @@ export const HostGroupSchema = z.object({
 });
 export type HostGroup = z.infer<typeof HostGroupSchema>;
 
+export const IPBlockChangeSchema = z.object({
+  action: z.string(),
+  email: z.string(),
+  ip: z.string(),
+  nodeId: z.number().int(),
+});
+export type IPBlockChange = z.infer<typeof IPBlockChangeSchema>;
+
+export const IPBlockEntrySchema = z.object({
+  bannedAt: z.number().int(),
+  email: z.string(),
+  expiresAt: z.number().int(),
+  ip: z.string(),
+  permanent: z.boolean(),
+  source: z.string(),
+});
+export type IPBlockEntry = z.infer<typeof IPBlockEntrySchema>;
+
+export const IPBlockStatusSchema = z.object({
+  auditWarning: z.boolean(),
+  available: z.boolean(),
+  banSeconds: z.number().int(),
+  blocks: z.array(z.lazy(() => IPBlockEntrySchema)),
+  jail: z.string(),
+  reason: z.string(),
+});
+export type IPBlockStatus = z.infer<typeof IPBlockStatusSchema>;
+
 export const InboundSchema = z.object({
   clientStats: z.array(z.lazy(() => ClientTrafficSchema)),
   down: z.number().int(),

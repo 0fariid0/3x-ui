@@ -220,6 +220,7 @@ type ClientIpInfo struct {
 	Time      string `json:"time"`
 	Node      string `json:"node"`
 	Timestamp int64  `json:"timestamp,omitempty"`
+	NodeID    *int   `json:"nodeId,omitempty"`
 }
 
 // GetClientIpsWithNodes returns a client's recorded IPs (from the flat
@@ -249,7 +250,7 @@ func (s *InboundService) GetClientIpsWithNodes(email string) ([]ClientIpInfo, er
 	}
 
 	attr, _ := s.GetClientIpNodeAttribution(email)
-	guidName := s.nodeGuidNameMap()
+	guidInfo := s.nodeGuidInfoMap()
 	localGuid, _ := (&SettingService{}).GetPanelGuid()
 
 	out := make([]ClientIpInfo, 0, len(entries))
@@ -262,8 +263,15 @@ func (s *InboundService) GetClientIpsWithNodes(email string) ([]ClientIpInfo, er
 			info.Time = time.Unix(e.Timestamp, 0).Local().Format("2006-01-02 15:04:05")
 			info.Timestamp = e.Timestamp * 1000
 		}
-		if guid, ok := attr[e.IP]; ok && guid != "" && guid != localGuid {
-			info.Node = guidName[guid]
+		if guid, ok := attr[e.IP]; ok && guid != "" {
+			if guid == localGuid {
+				zero := 0
+				info.NodeID = &zero
+			} else if node, exists := guidInfo[guid]; exists {
+				info.Node, info.NodeID = node.name, &node.id
+			} else {
+				info.Node = guid
+			}
 		}
 		out = append(out, info)
 	}
@@ -273,11 +281,16 @@ func (s *InboundService) GetClientIpsWithNodes(email string) ([]ClientIpInfo, er
 // nodeGuidNameMap maps each known node's attribution key to its display name,
 // keyed by effectiveNodeGuid so a cloned node's IPs (stored under its node-unique
 // key) still resolve to the right name instead of colliding under a shared GUID.
-func (s *InboundService) nodeGuidNameMap() map[string]string {
+type clientIPNodeRef struct {
+	id   int
+	name string
+}
+
+func (s *InboundService) nodeGuidInfoMap() map[string]clientIPNodeRef {
 	db := database.GetDB()
 	var nodes []model.Node
 	if err := db.Model(&model.Node{}).Find(&nodes).Error; err != nil {
-		return map[string]string{}
+		return map[string]clientIPNodeRef{}
 	}
 	ptrs := make([]*model.Node, len(nodes))
 	for i := range nodes {
@@ -285,9 +298,9 @@ func (s *InboundService) nodeGuidNameMap() map[string]string {
 	}
 	selfGuid, _ := (&SettingService{}).GetPanelGuid()
 	ambiguous := ambiguousNodeGuids(ptrs, selfGuid)
-	m := make(map[string]string, len(nodes))
+	m := make(map[string]clientIPNodeRef, len(nodes))
 	for i := range nodes {
-		m[effectiveNodeGuid(&nodes[i], ambiguous)] = nodes[i].Name
+		m[effectiveNodeGuid(&nodes[i], ambiguous)] = clientIPNodeRef{id: nodes[i].Id, name: nodes[i].Name}
 	}
 	return m
 }

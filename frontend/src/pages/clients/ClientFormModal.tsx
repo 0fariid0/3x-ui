@@ -34,6 +34,7 @@ import { useClientHwids } from '@/hooks/useClientHwids';
 import { DateTimePicker, SelectAllClearButtons } from '@/components/form';
 import { FormField } from '@/components/form/rhf';
 import ClientHwidListModal from '@/components/clients/ClientHwidList';
+import ClientIpManagerModal from './ClientIpManagerModal';
 import { TLS_FLOW_CONTROL, TRAFFIC_RESETS } from '@/schemas/primitives';
 import type { ClientRecord, InboundOption, ExternalLink, ExternalLinkInput } from '@/hooks/useClients';
 import { useFail2banStatusQuery, getLimitIpNotice } from '@/api/queries/useFail2banStatusQuery';
@@ -1223,50 +1224,18 @@ reset: Number(values.reset) || 0,
         </FormProvider>
       </Modal>
 
-      <Modal
+      <ClientIpManagerModal
+        key={client?.email}
         open={ipsModalOpen}
-        title={`${t('pages.clients.ipLog')}${client?.email ? ` — ${client.email}` : ''}`}
-        width={440}
+        email={client?.email}
+        ips={clientIps}
+        loading={ipsLoading}
+        clearing={ipsClearing}
         zIndex={CLIENT_IP_LOG_MODAL_Z_INDEX}
-        onCancel={() => setIpsModalOpen(false)}
-        footer={[
-          <Button key="refresh" icon={<ReloadOutlined />} loading={ipsLoading} onClick={loadIps}>
-            {t('refresh')}
-          </Button>,
-          <Button key="clear" danger loading={ipsClearing} disabled={clientIps.length === 0} onClick={clearIps}>
-            {t('pages.clients.clearAll')}
-          </Button>,
-          <Button key="close" type="primary" onClick={() => setIpsModalOpen(false)}>
-            {t('close')}
-          </Button>,
-        ]}
-      >
-        {clientIps.length > 0 ? (
-          <div style={{ maxHeight: 360, overflowY: 'auto' }}>
-            {clientIps.map((entry, idx) => (
-              <Tag
-                key={idx}
-                color="blue"
-                style={{
-                  display: 'block',
-                  width: 'fit-content',
-                  maxWidth: '100%',
-                  marginBottom: 6,
-                  padding: '2px 8px',
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                }}
-              >
-                <bdi dir="ltr">{entry.ip}{entry.timestamp ? ` (${hwidDateLabel(entry.timestamp)})` : entry.time ? ` (${entry.time})` : ''}</bdi>
-                {entry.node ? (
-                  <span style={{ marginInlineStart: 6, opacity: 0.85, fontWeight: 600 }}>@ {entry.node}</span>
-                ) : null}
-              </Tag>
-            ))}
-          </div>
-        ) : (
-          <Tag>{t('tgbot.noIpRecord')}</Tag>
-        )}
-      </Modal>
+        onRefresh={loadIps}
+        onClear={clearIps}
+        onClose={() => setIpsModalOpen(false)}
+      />
 
       <ClientHwidListModal
         open={hwidsModalOpen}

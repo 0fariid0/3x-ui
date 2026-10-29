@@ -158,6 +158,9 @@ func TestGetClientIpsWithNodes_LabelsNodes(t *testing.T) {
 	byIP := map[string]string{}
 	for _, in := range infos {
 		byIP[in.IP] = in.Node
+		if in.NodeID == nil || (in.IP == "1.1.1.1" && *in.NodeID != 0) || (in.IP == "2.2.2.2" && *in.NodeID <= 0) {
+			t.Fatalf("IP needs an exact server ID: %+v", in)
+		}
 		if in.Timestamp != now*1000 || in.Time == "" {
 			t.Fatalf("IP timestamp must preserve the legacy time and expose milliseconds: %+v", in)
 		}

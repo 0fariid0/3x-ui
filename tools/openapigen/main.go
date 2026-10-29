@@ -74,6 +74,9 @@ func run(root, outDir string) error {
 				"HostGroup",
 				"DisplayHostPriority",
 				"SubscriptionDisplayHost",
+				"IPBlockEntry",
+				"IPBlockStatus",
+				"IPBlockChange",
 			),
 		},
 		{

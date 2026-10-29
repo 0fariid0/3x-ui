@@ -1,0 +1,8 @@
+.ip-manager { display: grid; gap: 14px; }
+.ip-manager-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ip-manager-toolbar > .ant-select { min-width: 210px; }
+.ip-manager-toolbar > .ant-input-affix-wrapper,
+.ip-manager-toolbar > .ant-input-search,
+.ip-manager-toolbar > input { flex: 1; min-width: 200px; }
+.ip-manager-address { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
+.ip-manager-confirm { display: grid; gap: 5px; max-width: 320px; }

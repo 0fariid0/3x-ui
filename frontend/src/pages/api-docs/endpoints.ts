@@ -273,6 +273,25 @@ export const sections: readonly Section[] = [
       },
       {
         method: 'GET',
+        path: '/panel/api/server/ipBlocks',
+        summary: 'Read the live 3x-ipl Fail2ban ban list. Includes manual and automatic bans, even when they no longer appear in client IP logs. Source and time are best-effort metadata; live membership comes from Fail2ban. Does not enumerate other firewall chains or SSH jails. nodeId=0 targets this host; positive IDs target an enabled configured node over its authenticated connection. Both panels must support this endpoint.',
+        params: [{ name: 'nodeId', in: 'query', type: 'integer', optional: true, defaultValue: 0, desc: 'Configured node ID, or 0 for this panel.' }],
+        responseSchema: 'IPBlockStatus',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/server/ipBlocks/change',
+        summary: 'Ban or unban one literal IPv4/IPv6 address in the selected host 3x-ipl jail, using that jail configured ban duration. The rule applies to the entire host, not one client. Duplicate requests are idempotent. Verifies live state after the command and records a client audit event; auditWarning=true means the firewall operation succeeded but audit persistence failed. Does not change automatic IP limits or Fail2ban configuration. Unbanned IPs can be banned again if the automatic limit is still exceeded.',
+        params: [
+          { name: 'nodeId', in: 'body', type: 'integer', optional: true, defaultValue: 0, desc: 'Configured node ID, or 0 for this panel.' },
+          { name: 'ip', in: 'body', type: 'string', desc: 'One literal IPv4 or IPv6 address; no CIDRs, hostnames or shell syntax.' },
+          { name: 'action', in: 'body', type: 'string', desc: 'ban or unban.' },
+          { name: 'email', in: 'body', type: 'string', optional: true, desc: 'Client email for audit attribution.' },
+        ],
+        responseSchema: 'IPBlockStatus',
+      },
+      {
+        method: 'GET',
         path: '/panel/api/server/cpuHistory/:bucket',
         summary: 'Legacy: aggregated CPU history. Use /history/cpu/:bucket instead — same data with a uniform {t, v} shape.',
         params: [

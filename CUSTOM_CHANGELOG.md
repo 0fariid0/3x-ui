@@ -1,3 +1,12 @@
+## v3.9.6 — IP block management
+
+- Add manual IPv4/IPv6 block and unblock controls to the existing client IP log, with confirmation of the selected server and an independent active-blocks tab.
+- Read actual Fail2ban 3x-ipl membership, including automatic bans; display manual/automatic origin and timestamps when metadata is available. Missing metadata remains unknown.
+- Address nodes by numeric ID, authenticate remote requests, and keep node caches separate. Remote nodes require this release too.
+- Validate addresses, invoke Fail2ban without a shell, serialize manual changes, verify their result, and persist manual actions independently of usage retention.
+- Preserve existing log-clear behavior, selected Jalali calendar, renewal history, subscription priorities, naming and build targets. No source files or settings removed.
+- Requires the existing Linux Fail2ban 3x-ipl jail and permissions. Ban duration follows its configuration; this does not manage unrelated firewall or SSH bans.
+
 ## v3.9.5 — Focused renewal history
 
 - Hide subscription-link visibility and external-link change events in the panel history, including existing entries. Keep their stored records and the actual link settings unchanged.

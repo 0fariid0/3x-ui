@@ -3105,6 +3105,111 @@ export const SCHEMAS: Record<string, unknown> = {
     ],
     "type": "object"
   },
+  "IPBlockChange": {
+    "properties": {
+      "action": {
+        "example": "ban",
+        "type": "string"
+      },
+      "email": {
+        "example": "customer-a",
+        "type": "string"
+      },
+      "ip": {
+        "example": "203.0.113.25",
+        "type": "string"
+      },
+      "nodeId": {
+        "example": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "action",
+      "email",
+      "ip",
+      "nodeId"
+    ],
+    "type": "object"
+  },
+  "IPBlockEntry": {
+    "properties": {
+      "bannedAt": {
+        "example": 1793102400000,
+        "format": "int64",
+        "type": "integer"
+      },
+      "email": {
+        "example": "customer-a",
+        "type": "string"
+      },
+      "expiresAt": {
+        "example": 1793104200000,
+        "format": "int64",
+        "type": "integer"
+      },
+      "ip": {
+        "example": "203.0.113.25",
+        "type": "string"
+      },
+      "permanent": {
+        "example": false,
+        "type": "boolean"
+      },
+      "source": {
+        "example": "manual",
+        "type": "string"
+      }
+    },
+    "required": [
+      "bannedAt",
+      "email",
+      "expiresAt",
+      "ip",
+      "permanent",
+      "source"
+    ],
+    "type": "object"
+  },
+  "IPBlockStatus": {
+    "properties": {
+      "auditWarning": {
+        "example": false,
+        "type": "boolean"
+      },
+      "available": {
+        "example": true,
+        "type": "boolean"
+      },
+      "banSeconds": {
+        "example": 1800,
+        "format": "int64",
+        "type": "integer"
+      },
+      "blocks": {
+        "items": {
+          "$ref": "#/components/schemas/IPBlockEntry"
+        },
+        "type": "array"
+      },
+      "jail": {
+        "example": "3x-ipl",
+        "type": "string"
+      },
+      "reason": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "auditWarning",
+      "available",
+      "banSeconds",
+      "blocks",
+      "jail",
+      "reason"
+    ],
+    "type": "object"
+  },
   "Inbound": {
     "description": "Inbound represents an Xray inbound configuration with traffic statistics and settings.",
     "properties": {

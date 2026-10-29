@@ -731,6 +731,31 @@ export interface HostGroup {
   vlessRoute: string;
 }
 
+export interface IPBlockChange {
+  action: string;
+  email: string;
+  ip: string;
+  nodeId: number;
+}
+
+export interface IPBlockEntry {
+  bannedAt: number;
+  email: string;
+  expiresAt: number;
+  ip: string;
+  permanent: boolean;
+  source: string;
+}
+
+export interface IPBlockStatus {
+  auditWarning: boolean;
+  available: boolean;
+  banSeconds: number;
+  blocks: IPBlockEntry[];
+  jail: string;
+  reason: string;
+}
+
 export interface Inbound {
   clientStats: ClientTraffic[];
   down: number;

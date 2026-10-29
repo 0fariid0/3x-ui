@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Divider, Modal, Popover, Tag, Tooltip, message } from 'antd';
-import { CopyOutlined, DownloadOutlined, EyeOutlined, QrcodeOutlined, ReloadOutlined } from '@ant-design/icons';
+import { CopyOutlined, DownloadOutlined, EyeOutlined, QrcodeOutlined } from '@ant-design/icons';
 
 import { ClipboardManager, FileManager, HttpUtil, IntlUtil, SizeFormatter } from '@/utils';
 import { formatInboundLabel } from '@/lib/inbounds/label';
@@ -14,6 +14,7 @@ import { isPostQuantumLink } from '@/lib/xray/inbound-link';
 import { LinkTags, linkMetaText, parseLinkParts } from '@/lib/xray/link-label';
 import { QrPanel } from '@/pages/inbounds/qr';
 import ClientHwidListModal from '@/components/clients/ClientHwidList';
+import ClientIpManagerModal from './ClientIpManagerModal';
 import ConfigBlock from '@/components/clients/ConfigBlock';
 import { buildWireguardClientConfig, findWireguardInbound, isWireguardClient } from './wireguardConfig';
 import './ClientInfoModal.css';
@@ -653,49 +654,17 @@ export default function ClientInfoModal({
         )}
       </Modal>
 
-      <Modal
+      <ClientIpManagerModal
+        key={client?.email}
         open={ipsModalOpen}
-        title={`${t('pages.inbounds.IPLimitlog')}${client?.email ? ` — ${client.email}` : ''}`}
-        width={440}
-        onCancel={() => setIpsModalOpen(false)}
-        footer={[
-          <Button key="refresh" icon={<ReloadOutlined />} loading={ipsLoading} onClick={loadIps}>
-            {t('refresh')}
-          </Button>,
-          <Button key="clear" danger loading={ipsClearing} disabled={clientIps.length === 0} onClick={clearIps}>
-            {t('pages.clients.clearAll')}
-          </Button>,
-          <Button key="close" type="primary" onClick={() => setIpsModalOpen(false)}>
-            {t('close')}
-          </Button>,
-        ]}
-      >
-        {clientIps.length > 0 ? (
-          <div style={{ maxHeight: 360, overflowY: 'auto' }}>
-            {clientIps.map((entry, idx) => (
-              <Tag
-                key={idx}
-                color="blue"
-                style={{
-                  display: 'block',
-                  width: 'fit-content',
-                  maxWidth: '100%',
-                  marginBottom: 6,
-                  padding: '2px 8px',
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                }}
-              >
-                <bdi dir="ltr">{entry.ip}{entry.timestamp ? ` (${dateLabel(entry.timestamp)})` : entry.time ? ` (${entry.time})` : ''}</bdi>
-                {entry.node ? (
-                  <span style={{ marginInlineStart: 6, opacity: 0.85, fontWeight: 600 }}>@ {entry.node}</span>
-                ) : null}
-              </Tag>
-            ))}
-          </div>
-        ) : (
-          <Tag>{t('tgbot.noIpRecord')}</Tag>
-        )}
-      </Modal>
+        email={client?.email}
+        ips={clientIps}
+        loading={ipsLoading}
+        clearing={ipsClearing}
+        onRefresh={loadIps}
+        onClear={clearIps}
+        onClose={() => setIpsModalOpen(false)}
+      />
 
       <ClientHwidListModal
         open={hwidsModalOpen}

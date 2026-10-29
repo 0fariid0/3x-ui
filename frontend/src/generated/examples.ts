@@ -864,6 +864,37 @@ export const EXAMPLES: Record<string, unknown> = {
     "verifyPeerCertByName": "",
     "vlessRoute": ""
   },
+  "IPBlockChange": {
+    "action": "ban",
+    "email": "customer-a",
+    "ip": "203.0.113.25",
+    "nodeId": 0
+  },
+  "IPBlockEntry": {
+    "bannedAt": 1793102400000,
+    "email": "customer-a",
+    "expiresAt": 1793104200000,
+    "ip": "203.0.113.25",
+    "permanent": false,
+    "source": "manual"
+  },
+  "IPBlockStatus": {
+    "auditWarning": false,
+    "available": true,
+    "banSeconds": 1800,
+    "blocks": [
+      {
+        "bannedAt": 1793102400000,
+        "email": "customer-a",
+        "expiresAt": 1793104200000,
+        "ip": "203.0.113.25",
+        "permanent": false,
+        "source": "manual"
+      }
+    ],
+    "jail": "3x-ipl",
+    "reason": ""
+  },
   "Inbound": {
     "clientStats": [
       {

@@ -1162,7 +1162,7 @@ func (s *ClientInsightService) RestoreExpiredActions(inboundSvc *InboundService,
 			continue
 		}
 		var manualChanges int64
-		_ = db.Model(&model.ClientEvent{}).Where("email = ? AND created_at > ? AND kind NOT IN ?", row.Email, row.CreatedAt, []string{"anomaly", "anomaly_restored", "activated"}).Count(&manualChanges).Error
+		_ = db.Model(&model.ClientEvent{}).Where("email = ? AND created_at > ? AND kind NOT IN ?", row.Email, row.CreatedAt, []string{"anomaly", "anomaly_restored", "activated", "ip_blocked", "ip_unblocked"}).Count(&manualChanges).Error
 		if manualChanges > 0 {
 			now := time.Now().UnixMilli()
 			db.Model(row).Updates(map[string]any{"status": "resolved_manual_change", "resolved_at": now, "details": row.Details + ": automatic restore skipped after a later client change"})
@@ -1429,7 +1429,7 @@ func (s *ClientInsightService) Cleanup(historyDays int) error {
 			eventCutoff = oldestActive.CreatedAt
 		}
 		if err := tx.Where("created_at < ? AND kind NOT IN ?", eventCutoff,
-			[]string{"renewed", "limits_changed", "activated", "traffic_reset", "traffic_adjusted"}).Delete(&model.ClientEvent{}).Error; err != nil {
+			[]string{"renewed", "limits_changed", "activated", "traffic_reset", "traffic_adjusted", "ip_blocked", "ip_unblocked"}).Delete(&model.ClientEvent{}).Error; err != nil {
 			return err
 		}
 		if err := tx.Where("created_at < ? AND status <> ?", dayCutoff, "acted").Delete(&model.ClientAnomaly{}).Error; err != nil {
