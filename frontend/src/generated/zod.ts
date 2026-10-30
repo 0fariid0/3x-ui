@@ -814,6 +814,20 @@ export const IPBlockStatusSchema = z.object({
 });
 export type IPBlockStatus = z.infer<typeof IPBlockStatusSchema>;
 
+export const IPSharedClientSchema = z.object({
+  email: z.string(),
+  lastSeen: z.number().int(),
+});
+export type IPSharedClient = z.infer<typeof IPSharedClientSchema>;
+
+export const IPSharedClientsSchema = z.object({
+  checkedAt: z.number().int(),
+  clients: z.array(z.lazy(() => IPSharedClientSchema)),
+  ip: z.string(),
+  windowSeconds: z.number().int(),
+});
+export type IPSharedClients = z.infer<typeof IPSharedClientsSchema>;
+
 export const InboundSchema = z.object({
   clientStats: z.array(z.lazy(() => ClientTrafficSchema)),
   down: z.number().int(),

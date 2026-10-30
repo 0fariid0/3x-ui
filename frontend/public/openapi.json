@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.9.6",
+    "version": "3.9.7",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -3236,6 +3236,55 @@
         ],
         "type": "object"
       },
+      "IPSharedClient": {
+        "properties": {
+          "email": {
+            "example": "customer-a",
+            "type": "string"
+          },
+          "lastSeen": {
+            "example": 1793102400000,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "email",
+          "lastSeen"
+        ],
+        "type": "object"
+      },
+      "IPSharedClients": {
+        "properties": {
+          "checkedAt": {
+            "example": 1793102400000,
+            "format": "int64",
+            "type": "integer"
+          },
+          "clients": {
+            "items": {
+              "$ref": "#/components/schemas/IPSharedClient"
+            },
+            "type": "array"
+          },
+          "ip": {
+            "example": "203.0.113.25",
+            "type": "string"
+          },
+          "windowSeconds": {
+            "example": 1800,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "checkedAt",
+          "clients",
+          "ip",
+          "windowSeconds"
+        ],
+        "type": "object"
+      },
       "Inbound": {
         "description": "Inbound represents an Xray inbound configuration with traffic statistics and settings.",
         "properties": {
@@ -5694,12 +5743,79 @@
         }
       }
     },
+    "/panel/api/server/ipBlocks/clients": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "List recent users of this IP on the exact selected server, including last-seen timestamps and retention window. Uses attributed observations, not proof of simultaneous online sessions. Empty results do not guarantee an exclusive IP. Works independently of Fail2ban availability. Remote nodes must support this endpoint.",
+        "operationId": "get_panel_api_server_ipBlocks_clients",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "query",
+            "required": false,
+            "description": "Configured node ID, or 0 for this panel.",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "ip",
+            "in": "query",
+            "required": true,
+            "description": "One literal IPv4 or IPv6 address.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/IPSharedClients"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "checkedAt": 1793102400000,
+                    "clients": [
+                      {
+                        "email": "customer-a",
+                        "lastSeen": 1793102400000
+                      }
+                    ],
+                    "ip": "203.0.113.25",
+                    "windowSeconds": 1800
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/panel/api/server/ipBlocks/change": {
       "post": {
         "tags": [
           "Server"
         ],
-        "summary": "Ban or unban one literal IPv4/IPv6 address in the selected host 3x-ipl jail, using that jail configured ban duration. The rule applies to the entire host, not one client. Duplicate requests are idempotent. Verifies live state after the command and records a client audit event; auditWarning=true means the firewall operation succeeded but audit persistence failed. Does not change automatic IP limits or Fail2ban configuration. Unbanned IPs can be banned again if the automatic limit is still exceeded.",
+        "summary": "Accepts JSON or form-encoded bodies. Ban or unban one literal IPv4/IPv6 address in the selected host 3x-ipl jail, using that jail configured ban duration. The rule applies to the entire host, not one client. Duplicate requests are idempotent. Verifies live state after the command and records a client audit event; auditWarning=true means the firewall operation succeeded but audit persistence failed. Does not change automatic IP limits or Fail2ban configuration. Unbanned IPs can be banned again if the automatic limit is still exceeded.",
         "operationId": "post_panel_api_server_ipBlocks_change",
         "requestBody": {
           "required": true,

@@ -18,14 +18,16 @@ export function useIPBlocks(open: boolean, nodeId: number) {
     },
   });
   const mutation = useMutation({
-    mutationFn: async (request: IPBlockMutation) => {
-      const payload = IPBlockMutationSchema.parse(request);
-      const response = await HttpUtil.post('/panel/api/server/ipBlocks/change', payload, { silent: true });
-      if (!response?.success) throw new Error(response?.msg || 'IP block operation failed');
-      return IPBlockStatusSchema.parse(response.obj);
-    },
+    mutationFn: changeIPBlock,
     onSuccess: (status, request) => client.setQueryData(blockKey(request.nodeId), status),
     onError: (_error, request) => { void client.invalidateQueries({ queryKey: blockKey(request.nodeId) }); },
   });
   return { query, mutation };
+}
+
+export async function changeIPBlock(request: IPBlockMutation) {
+  const payload = IPBlockMutationSchema.parse(request);
+  const response = await HttpUtil.post('/panel/api/server/ipBlocks/change', payload, { silent: true, headers: { 'Content-Type': 'application/json' } });
+  if (!response?.success) throw new Error(response?.msg || 'IP block operation failed');
+  return IPBlockStatusSchema.parse(response.obj);
 }

@@ -66,6 +66,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.GET("/clientIps", a.getClientIps)
 	g.GET("/fail2banStatus", a.getFail2banStatus)
 	g.GET("/ipBlocks", a.getIPBlocks)
+ g.GET("/ipBlocks/clients", a.getIPSharedClients)
 	g.POST("/ipBlocks/change", a.changeIPBlock)
 
 	g.POST("/stopXrayService", a.stopXrayService)

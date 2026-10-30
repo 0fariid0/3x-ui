@@ -24,3 +24,14 @@ type IPBlockChange struct {
 	Action string `json:"action" form:"action" example:"ban"`
 	Email  string `json:"email" form:"email" example:"customer-a"`
 }
+
+type IPSharedClient struct {
+	Email    string `json:"email" example:"customer-a"`
+	LastSeen int64  `json:"lastSeen" example:"1793102400000"`
+}
+type IPSharedClients struct {
+	IP            string           `json:"ip" example:"203.0.113.25"`
+	Clients       []IPSharedClient `json:"clients"`
+	WindowSeconds int64            `json:"windowSeconds" example:"1800"`
+	CheckedAt     int64            `json:"checkedAt" example:"1793102400000"`
+}

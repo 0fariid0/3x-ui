@@ -44,3 +44,18 @@ func TestRemoteIPBlocksUseConfiguredNodeAndDoNotForwardNodeID(t *testing.T) {
 		t.Fatalf("wrong target or payload: %+v (%d)", received, requests)
 	}
 }
+
+func TestRemoteSharedIPClientsUsesAuthenticatedExactTarget(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" || r.URL.Path != "/panel/api/server/ipBlocks/clients" || r.URL.Query().Get("ip") != "2001:db8::1" || r.URL.Query().Has("nodeId") || r.Header.Get("Authorization") != "Bearer tok" {
+			t.Errorf("wrong request: %s", r.URL.String())
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "obj": entity.IPSharedClients{IP: "2001:db8::1", Clients: []entity.IPSharedClient{{Email: "remote-user", LastSeen: 123000}}, WindowSeconds: 1800, CheckedAt: 123000}})
+	}))
+	defer srv.Close()
+	remote := NewRemote(nodeForPlainServer(t, srv, "verify", "tok"), nil)
+	result, err := remote.SharedIPClients(context.Background(), "2001:db8::1")
+	if err != nil || len(result.Clients) != 1 || result.Clients[0].Email != "remote-user" {
+		t.Fatalf("wrong matches: %+v %v", result, err)
+	}
+}

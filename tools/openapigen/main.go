@@ -76,6 +76,8 @@ func run(root, outDir string) error {
 				"SubscriptionDisplayHost",
 				"IPBlockEntry",
 				"IPBlockStatus",
+				"IPSharedClient",
+				"IPSharedClients",
 				"IPBlockChange",
 			),
 		},

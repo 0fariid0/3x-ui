@@ -41,3 +41,15 @@ func (s *NodeService) ChangeIPBlock(ctx context.Context, req entity.IPBlockChang
 	}
 	return remote.ChangeIPBlock(ctx, req)
 }
+
+func (s *NodeService) SharedIPClients(ctx context.Context, id int, ip string) (*entity.IPSharedClients, error) {
+	canonical, err := normalizeBlockIP(ip)
+	if err != nil {
+		return nil, err
+	}
+	remote, err := s.ipBlockRemote(id)
+	if err != nil {
+		return nil, err
+	}
+	return remote.SharedIPClients(ctx, canonical)
+}

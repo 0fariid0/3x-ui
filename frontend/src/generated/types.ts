@@ -756,6 +756,18 @@ export interface IPBlockStatus {
   reason: string;
 }
 
+export interface IPSharedClient {
+  email: string;
+  lastSeen: number;
+}
+
+export interface IPSharedClients {
+  checkedAt: number;
+  clients: IPSharedClient[];
+  ip: string;
+  windowSeconds: number;
+}
+
 export interface Inbound {
   clientStats: ClientTraffic[];
   down: number;

@@ -15,7 +15,7 @@ function show() {
   renderWithProviders(<ClientIpManagerModal open email="client" ips={[{ ip: '192.0.2.1', node: '', nodeId: 0, time: '' }, { ip: '192.0.2.2', node: 'remote', nodeId: 9, time: '' }]} loading={false} clearing={false} onRefresh={vi.fn()} onClear={vi.fn()} onClose={vi.fn()} />);
 }
 
-beforeEach(() => { vi.spyOn(HttpUtil, 'get').mockResolvedValue({ success: true, msg: '', obj: [] }); mock.error = false; mock.mutateAsync.mockReset().mockResolvedValue({ auditWarning: false }); });
+beforeEach(() => { vi.spyOn(HttpUtil, 'get').mockImplementation(async <T,>(url: string) => ({ success: true, msg: '', obj: (url.includes('/ipBlocks/clients?') ? { ip: new URL(url, 'http://localhost').searchParams.get('ip'), clients: [{ email: 'client', lastSeen: 1 }, { email: url.includes('nodeId=9') ? 'remote-peer' : 'shared-peer', lastSeen: 2 }], windowSeconds: 1800, checkedAt: 3 } : []) as T })); mock.error = false; mock.mutateAsync.mockReset().mockResolvedValue({ auditWarning: false }); });
 
 describe('IP manager', () => {
   it('lists automatic blocks that are absent from the client report and confirms unblock', async () => {
@@ -26,7 +26,8 @@ describe('IP manager', () => {
     fireEvent.click(screen.getByText('Unblock').closest('button')!);
     expect(mock.mutateAsync).not.toHaveBeenCalled();
     const dialog = screen.getByText('Unblock this IP?').closest('[role=dialog]') as HTMLElement;
-    expect(within(dialog).getByText('This server')).toBeTruthy();
+    expect(within(dialog).getAllByText('This server').length).toBeGreaterThan(0);
+    await waitFor(() => expect(within(dialog).getByText('shared-peer')).toBeTruthy());
     fireEvent.click(within(dialog).getByText('Unblock').closest('button')!);
     await waitFor(() => expect(mock.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ nodeId: 0, ip: '192.0.2.99', action: 'unban', email: 'other' })));
   });
@@ -44,4 +45,21 @@ describe('IP manager', () => {
     expect(within(row).getByText('Unknown')).toBeTruthy();
     expect((within(row).getByText('Block').closest('button') as HTMLButtonElement).disabled).toBe(true);
   });
+  it('looks up a remote IP by exact node ID', async () => {
+    show();
+    const row = screen.getByText('192.0.2.2').closest('tr')!;
+    fireEvent.click(within(row).getByText('Show users').closest('button')!);
+    await waitFor(() => expect(screen.getByText('remote-peer')).toBeTruthy());
+    expect(HttpUtil.get).toHaveBeenCalledWith('/panel/api/server/ipBlocks/clients?nodeId=9&ip=192.0.2.2', undefined, { silent: true });
+    expect(mock.mutateAsync).not.toHaveBeenCalled();
+  });
+  it('does not present a lookup failure as absence of other users', async () => {
+    vi.spyOn(HttpUtil, 'get').mockResolvedValue({ success: false, msg: 'node offline', obj: null });
+    show();
+    const row = screen.getByText('192.0.2.1').closest('tr')!;
+    fireEvent.click(within(row).getByText('Show users').closest('button')!);
+    await waitFor(() => expect(screen.getByText('Could not check users sharing this IP. Their absence is not confirmed.')).toBeTruthy());
+    expect(screen.queryByText('No recent users were found in this server’s IP report.')).toBeNull();
+  });
+
 });

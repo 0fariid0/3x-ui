@@ -1,3 +1,10 @@
+## v3.9.7 — Fix IP block requests and show shared-IP users
+
+- Send explicit JSON for block/unblock; accept JSON and form bodies for cached older frontends. Display errors inside confirmation.
+- Show recent users sharing an IP with last-seen times on the exact selected server, in both IP tabs, manual lookup and confirmation.
+- Canonicalize IPv6/mapped IPv4 and deduplicate names within existing 30-minute observation retention. Do not mix other servers or imply simultaneous online sessions.
+- Preserve all previous files, settings, subscription behavior and platform release targets. No database migration or firewall configuration change.
+
 ## v3.9.6 — IP block management
 
 - Add manual IPv4/IPv6 block and unblock controls to the existing client IP log, with confirmation of the selected server and an independent active-blocks tab.

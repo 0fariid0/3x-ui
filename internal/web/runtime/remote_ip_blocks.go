@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/web/entity"
 )
@@ -31,4 +32,16 @@ func (r *Remote) ChangeIPBlock(ctx context.Context, req entity.IPBlockChange) (*
 		return nil, err
 	}
 	return &status, nil
+}
+
+func (r *Remote) SharedIPClients(ctx context.Context, ip string) (*entity.IPSharedClients, error) {
+	env, err := r.do(ctx, http.MethodGet, "panel/api/server/ipBlocks/clients?ip="+url.QueryEscape(ip), nil)
+	if err != nil {
+		return nil, err
+	}
+	var result entity.IPSharedClients
+	if err := json.Unmarshal(env.Obj, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
 }

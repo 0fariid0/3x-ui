@@ -3210,6 +3210,55 @@ export const SCHEMAS: Record<string, unknown> = {
     ],
     "type": "object"
   },
+  "IPSharedClient": {
+    "properties": {
+      "email": {
+        "example": "customer-a",
+        "type": "string"
+      },
+      "lastSeen": {
+        "example": 1793102400000,
+        "format": "int64",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "email",
+      "lastSeen"
+    ],
+    "type": "object"
+  },
+  "IPSharedClients": {
+    "properties": {
+      "checkedAt": {
+        "example": 1793102400000,
+        "format": "int64",
+        "type": "integer"
+      },
+      "clients": {
+        "items": {
+          "$ref": "#/components/schemas/IPSharedClient"
+        },
+        "type": "array"
+      },
+      "ip": {
+        "example": "203.0.113.25",
+        "type": "string"
+      },
+      "windowSeconds": {
+        "example": 1800,
+        "format": "int64",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "checkedAt",
+      "clients",
+      "ip",
+      "windowSeconds"
+    ],
+    "type": "object"
+  },
   "Inbound": {
     "description": "Inbound represents an Xray inbound configuration with traffic statistics and settings.",
     "properties": {

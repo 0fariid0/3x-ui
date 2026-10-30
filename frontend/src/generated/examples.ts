@@ -895,6 +895,21 @@ export const EXAMPLES: Record<string, unknown> = {
     "jail": "3x-ipl",
     "reason": ""
   },
+  "IPSharedClient": {
+    "email": "customer-a",
+    "lastSeen": 1793102400000
+  },
+  "IPSharedClients": {
+    "checkedAt": 1793102400000,
+    "clients": [
+      {
+        "email": "customer-a",
+        "lastSeen": 1793102400000
+      }
+    ],
+    "ip": "203.0.113.25",
+    "windowSeconds": 1800
+  },
   "Inbound": {
     "clientStats": [
       {

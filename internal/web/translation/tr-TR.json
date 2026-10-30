@@ -938,7 +938,14 @@
         "defaultDuration": "Configured block duration",
         "durationSeconds": "{seconds} seconds",
         "observed": "Client IPs",
-        "allBlocked": "All active server blocks"
+        "allBlocked": "All active server blocks",
+        "sharedTitle": "Users sharing this IP",
+        "viewClients": "Show users",
+        "sharedScope": "Recent observations on this server (last 30 minutes), not necessarily simultaneous connections. Blocking affects everyone using this IP, including users absent from these logs.",
+        "sharedCount": "Users found: {count}",
+        "sharedEmpty": "No recent users were found in this server’s IP report.",
+        "sharedFailed": "Could not check users sharing this IP. Their absence is not confirmed.",
+        "currentClient": "Current client"
       },
       "historyDetails": {
         "previousQuota": "Previous quota",

@@ -30,7 +30,7 @@ func (a *ServerController) getIPBlocks(c *gin.Context) {
 
 func (a *ServerController) changeIPBlock(c *gin.Context) {
 	var req entity.IPBlockChange
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBind(&req); err != nil {
 		jsonObj(c, nil, err)
 		return
 	}
@@ -46,4 +46,23 @@ func (a *ServerController) changeIPBlock(c *gin.Context) {
 		status, err = (&service.IPBlockService{}).Change(c.Request.Context(), req)
 	}
 	jsonObj(c, status, err)
+}
+
+func (a *ServerController) getIPSharedClients(c *gin.Context) {
+	id := 0
+	var err error
+	if raw := c.Query("nodeId"); raw != "" {
+		id, err = strconv.Atoi(raw)
+		if err != nil || id < 0 {
+			jsonObj(c, nil, fmt.Errorf("invalid node ID"))
+			return
+		}
+	}
+	var result *entity.IPSharedClients
+	if id > 0 {
+		result, err = (&service.NodeService{}).SharedIPClients(c.Request.Context(), id, c.Query("ip"))
+	} else {
+		result, err = (&service.IPBlockService{}).SharedClients(c.Query("ip"))
+	}
+	jsonObj(c, result, err)
 }
