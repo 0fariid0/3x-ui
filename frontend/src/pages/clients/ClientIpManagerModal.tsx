@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Button, Input, Modal, Popconfirm, Select, Space, Table, Tabs, Tag, Tooltip, Typography, message } from 'antd';
 import { CopyOutlined, LockOutlined, ReloadOutlined, UnlockOutlined } from '@ant-design/icons';
@@ -29,6 +29,21 @@ interface ClientIpManagerModalProps {
 }
 
 export default function ClientIpManagerModal({ open, initialNodeId = 0, email, ips, loading, clearing, zIndex, onRefresh, onClear, onClose }: ClientIpManagerModalProps) {
+  const refreshRef = useRef(onRefresh);
+  useEffect(() => { refreshRef.current = onRefresh; }, [onRefresh]);
+  useEffect(() => {
+    if (!open) return;
+    let busy = false;
+    const refresh = async () => {
+      if (busy || document.hidden) return;
+      busy = true;
+      try { await refreshRef.current(); } catch { /* Parent reports fetch errors. */ }
+      finally { busy = false; }
+    };
+    void refresh();
+    const timer = window.setInterval(() => { void refresh(); }, 10000);
+    return () => window.clearInterval(timer);
+  }, [open]);
   const { t } = useTranslation();
   const dateTime = usePanelDateTime();
   const [messageApi, contextHolder] = message.useMessage();

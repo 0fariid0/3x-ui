@@ -1335,6 +1335,14 @@
     },
     "settings": {
       "ipBlocking": {
+        "enabledHelp": "On: enforce each client IP limit. Off: stop new automatic bans; existing bans remain.",
+        "permanentHelp": "On: new bans need manual removal. Off: the configured duration applies.",
+        "banSecondsHelp": "Duration of future bans. Higher: longer blocking. Lower: earlier retry. Existing ban expiry is unchanged.",
+        "maxRetryHelp": "New violations within the counting window. Lower: earlier blocking. Higher: more attempts. 1 blocks on the first violation.",
+        "findSecondsHelp": "Window in which violations accumulate. Higher: include more widely spaced attempts. Lower: older violations leave the count sooner.",
+        "scanSecondsHelp": "Time between limit checks. Lower: faster reaction and more checks. Higher: longer enforcement delay. Must be a multiple of 10.",
+        "liveSecondsHelp": "Grace period for recently observed IPs. Higher: previous IPs hold slots longer. Lower: slots free sooner, but brief interruptions are more easily treated as departures.",
+        "historySecondsHelp": "Recent-IP retention for the internal limit report. Higher: longer history. Lower: earlier removal of old entries. This is not the ban duration.",
         "exemptIPs": "Exempt IPs (one IP or CIDR per line)",
         "exemptHelp": "Excluded from counting and new bans. Existing bans must be cleared separately. The four GRE-TUN local ranges are always exempt.",
         "title": "IP blocking",

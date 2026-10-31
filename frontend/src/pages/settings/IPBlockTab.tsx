@@ -42,7 +42,7 @@ function PolicyForm({ nodeId, initial, available, onDirty }: { nodeId: number; i
   }
   const field = (name: keyof Policy, min: number, max: number, step = 1) => (
     <Col xs={24} sm={12} lg={8} key={name}>
-      <Form.Item name={name} label={text(name)} rules={[{ required: true }, { type: 'integer', min, max }]}>
+      <Form.Item name={name} label={text(name)} extra={text(`${name}Help`)} rules={[{ required: true }, { type: 'integer', min, max }]}>
         <InputNumber min={min} max={max} step={step} style={{ width: '100%' }} />
       </Form.Item>
     </Col>
@@ -51,9 +51,9 @@ function PolicyForm({ nodeId, initial, available, onDirty }: { nodeId: number; i
     {contextHolder}
     <Form form={form} layout="vertical" initialValues={initial} onFinish={save} onValuesChange={() => { setDirty(true); onDirty(true); }} disabled={!available || busy}>
       <Row gutter={16}>
-        <Col xs={24} sm={12}><Form.Item name="enabled" label={text('enabled')} valuePropName="checked"><Switch /></Form.Item></Col>
-        <Col xs={24} sm={12}><Form.Item label={text('permanent')}><Switch checked={permanent} onChange={(checked) => { form.setFieldValue('banSeconds', checked ? -1 : 1800); setDirty(true); onDirty(true); }} /></Form.Item></Col>
-        <Col xs={24} sm={12} lg={8}><Form.Item name="banSeconds" label={text('banSeconds')} rules={[{ required: true }, { type: 'integer', min: permanent ? -1 : 1, max: 31536000 }]}><InputNumber disabled={permanent || !available || busy} min={permanent ? -1 : 1} max={31536000} style={{ width: '100%' }} /></Form.Item></Col>
+        <Col xs={24} sm={12}><Form.Item name="enabled" label={text('enabled')} extra={text('enabledHelp')} valuePropName="checked"><Switch /></Form.Item></Col>
+        <Col xs={24} sm={12}><Form.Item label={text('permanent')} extra={text('permanentHelp')}><Switch checked={permanent} onChange={(checked) => { form.setFieldValue('banSeconds', checked ? -1 : 1800); setDirty(true); onDirty(true); }} /></Form.Item></Col>
+        <Col xs={24} sm={12} lg={8}><Form.Item name="banSeconds" label={text('banSeconds')} extra={text('banSecondsHelp')} rules={[{ required: true }, { type: 'integer', min: permanent ? -1 : 1, max: 31536000 }]}><InputNumber disabled={permanent || !available || busy} min={permanent ? -1 : 1} max={31536000} style={{ width: '100%' }} /></Form.Item></Col>
         {field('maxRetry', 1, 100)}
         {field('findSeconds', 1, 86400)}
         {field('scanSeconds', 10, 300, 10)}

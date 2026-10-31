@@ -1,3 +1,12 @@
+## v3.9.10 — shared-IP protection and refreshed IP reports
+
+- Automatic limit enforcement prioritizes addresses recently observed for other accounts on this host. Select unshared excess addresses instead; if all excess addresses are shared, skip their global firewall ban. This is best-effort observation-based protection, not per-account firewall isolation.
+- Existing bans and manual host-wide bans remain unchanged. Unobserved users cannot be guaranteed protected; separate account/source enforcement requires core-level support.
+- IP report modal refreshes every 10 seconds while visible, without overlapping its own requests. Display expires entries outside the configured recent-IP grace window, preferring actual observation timestamps so long-running connections remain visible.
+- Core-reported lingering connections are not forcibly declared disconnected merely because their dispatch timestamp is old. Live API results remain authoritative; this does not infer individual devices behind one NAT.
+- Short per-setting help explains increasing/decreasing values in Persian and English (fallback in other locales).
+- All v3.9.9 source files and custom features retained. No live firewall changes or automatic clearing of old bans.
+
 ## v3.9.9 — keep accepted IPs and manage blocking from panel settings
 
 - Preserve accepted live IP slots across scans and job restarts, even when their last activity becomes newer. Reject new excess IPs; deterministic ordering on first observation. Enforce the first scan instead of silently accepting all IPs.

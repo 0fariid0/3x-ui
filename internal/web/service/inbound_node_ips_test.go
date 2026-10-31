@@ -172,3 +172,23 @@ func TestGetClientIpsWithNodes_LabelsNodes(t *testing.T) {
 		t.Fatalf("node IP should be labelled edge-1, got %q", byIP["2.2.2.2"])
 	}
 }
+
+func TestIPDisplayExpiresOldButRetainsRecentlyObservedLongConnection(t *testing.T) {
+	setupClientIpTestDB(t)
+	now := time.Now().Unix()
+	raw, _ := json.Marshal([]model.ClientIpEntry{{IP: "192.0.2.1", Timestamp: now - 7200}, {IP: "192.0.2.2", Timestamp: now - 7200}})
+	if err := database.GetDB().Create(&model.InboundClientIps{ClientEmail: "refresh", Ips: string(raw)}).Error; err != nil {
+		t.Fatal(err)
+	}
+	guid, err := (&SettingService{}).GetPanelGuid()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := (&InboundService{}).RecordLocalClientIps(guid, map[string][]model.ClientIpEntry{"refresh": {{IP: "192.0.2.2", Timestamp: now}}}); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := (&InboundService{}).GetClientIpsWithNodes("refresh")
+	if err != nil || len(rows) != 1 || rows[0].IP != "192.0.2.2" || rows[0].Timestamp != now*1000 {
+		t.Fatalf("wrong display: %+v %v", rows, err)
+	}
+}

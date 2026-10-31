@@ -75,3 +75,21 @@ func TestNodeMergedNewIPCannotDisplaceAdmittedIP(t *testing.T) {
 		t.Fatalf("node merge evicted accepted IP: %v", j.disAllowedIps)
 	}
 }
+
+func TestSharedIPProtectedAndOtherExcessSelected(t *testing.T) {
+	setupIntegrationDB(t)
+	inbound := seedInboundOnlyWithClient(t, "shared-safe", "shared-user", 1)
+	now := time.Now().Unix()
+	row := seedClientIps(t, "shared-user", []IPWithTimestamp{{IP: "192.0.2.1", Timestamp: now - 10}})
+	j := NewCheckClientIpJob()
+	j.sharedIPs = map[string]map[string]bool{"192.0.2.2": {"shared-user": true, "innocent": true}}
+	_, banned := j.updateInboundClientIps(database.GetDB(), row, inbound, "shared-user", 1, []IPWithTimestamp{{IP: "192.0.2.1", Timestamp: now}, {IP: "192.0.2.2", Timestamp: now}}, true, true)
+	if !banned || len(j.disAllowedIps) != 1 || j.disAllowedIps[0] != "192.0.2.1" {
+		t.Fatalf("shared address endangered: %v", j.disAllowedIps)
+	}
+	j.sharedIPs["192.0.2.1"] = map[string]bool{"innocent": true}
+	_, banned = j.updateInboundClientIps(database.GetDB(), row, inbound, "shared-user", 1, []IPWithTimestamp{{IP: "192.0.2.1", Timestamp: now + 1}, {IP: "192.0.2.2", Timestamp: now + 1}}, true, true)
+	if banned || len(j.disAllowedIps) != 0 {
+		t.Fatalf("all-shared addresses banned: %v", j.disAllowedIps)
+	}
+}

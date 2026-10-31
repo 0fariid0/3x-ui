@@ -40,6 +40,7 @@ type CheckClientIpJob struct {
 	policy          entity.IPBlockSettings
 	disAllowedIps   []string
 	bannedSeen      map[string]int64
+	sharedIPs       map[string]map[string]bool
 	xrayService     service.XrayService
 }
 
@@ -293,6 +294,41 @@ func (j *CheckClientIpJob) processObserved(observed map[string]map[string]int64,
 	limitByEmail := j.loadClientLimits(emails)
 	inboundByEmail := j.loadInboundsByEmails(emails)
 	ipRowByEmail := j.loadClientIpRows(emails)
+	// Collect shared source addresses before the write transaction. Never ban an
+	// address reported for another account on this host.
+	j.sharedIPs = make(map[string]map[string]bool)
+	addOwner := func(ip, email string) {
+		if j.sharedIPs[ip] == nil {
+			j.sharedIPs[ip] = make(map[string]bool)
+		}
+		j.sharedIPs[ip][email] = true
+	}
+	guid, guidErr := (&service.SettingService{}).GetPanelGuid()
+	var rows []model.NodeClientIp
+	if guidErr != nil {
+		j.checkError(guidErr)
+		return false
+	}
+	if err := database.GetDB().Where("node_guid = ?", guid).Find(&rows).Error; err != nil {
+		j.checkError(err)
+		return false
+	}
+	for _, row := range rows {
+		var entries []model.ClientIpEntry
+		if json.Unmarshal([]byte(row.Ips), &entries) != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if entry.Timestamp >= now-int64(policy.LiveSeconds) {
+				addOwner(entry.IP, row.Email)
+			}
+		}
+	}
+	for owner, ips := range observed {
+		for ip := range ips {
+			addOwner(ip, owner)
+		}
+	}
 
 	// attribution accumulates this scan's local observations per email so they can
 	// be recorded under this panel's own guid for cross-node IP attribution.
@@ -592,7 +628,27 @@ func (j *CheckClientIpJob) updateInboundClientIps(tx *gorm.DB, inboundClientIps 
 	j.disAllowedIps = []string{}
 
 	// historical db-only ips are excluded from this count on purpose.
+	// Shared addresses get priority over unshared ones. If all addresses are
+	// shared, leave the excess unblocked rather than disconnect innocent users.
+	protected := make(map[string]bool)
+	for _, entry := range liveIps {
+		for owner := range j.sharedIPs[entry.IP] {
+			if owner != clientEmail {
+				protected[entry.IP] = true
+			}
+		}
+	}
+	sort.SliceStable(liveIps, func(i, k int) bool { return protected[liveIps[i].IP] && !protected[liveIps[k].IP] })
 	keptLive, bannedLive := selectIpsToBanWithPolicy(liveIps, limitIp, policy)
+	safeBans := bannedLive[:0]
+	for _, entry := range bannedLive {
+		if protected[entry.IP] {
+			keptLive = append(keptLive, entry)
+		} else {
+			safeBans = append(safeBans, entry)
+		}
+	}
+	bannedLive = safeBans
 	actionable := j.filterAdvancedSinceLastBan(clientEmail, bannedLive)
 	if len(actionable) > 0 {
 		shouldCleanLog = true

@@ -249,6 +249,27 @@ func (s *InboundService) GetClientIpsWithNodes(email string) ([]ClientIpInfo, er
 		return []ClientIpInfo{}, nil
 	}
 
+	policy, policyErr := LoadIPBlockSettings()
+	if policyErr != nil {
+		return nil, policyErr
+	}
+	cutoff := time.Now().Unix() - int64(policy.LiveSeconds)
+	var observations []model.NodeClientIp
+	if err := database.GetDB().Where("email = ?", email).Find(&observations).Error; err != nil {
+		return nil, err
+	}
+	latest := make(map[string]int64)
+	for _, row := range observations {
+		var values []model.ClientIpEntry
+		if json.Unmarshal([]byte(row.Ips), &values) != nil {
+			continue
+		}
+		for _, value := range values {
+			if value.Timestamp > latest[value.IP] {
+				latest[value.IP] = value.Timestamp
+			}
+		}
+	}
 	attr, _ := s.GetClientIpNodeAttribution(email)
 	guidInfo := s.nodeGuidInfoMap()
 	localGuid, _ := (&SettingService{}).GetPanelGuid()
@@ -256,6 +277,14 @@ func (s *InboundService) GetClientIpsWithNodes(email string) ([]ClientIpInfo, er
 	out := make([]ClientIpInfo, 0, len(entries))
 	for _, e := range entries {
 		if e.IP == "" {
+			continue
+		}
+		// Prefer observation time over the core's last-dispatch timestamp: a long
+		// running connection can be live despite an old dispatch timestamp.
+		if ts := latest[e.IP]; ts > e.Timestamp {
+			e.Timestamp = ts
+		}
+		if e.Timestamp < cutoff {
 			continue
 		}
 		info := ClientIpInfo{IP: e.IP}
