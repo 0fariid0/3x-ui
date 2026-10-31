@@ -59,3 +59,33 @@ func TestRemoteSharedIPClientsUsesAuthenticatedExactTarget(t *testing.T) {
 		t.Fatalf("wrong matches: %+v %v", result, err)
 	}
 }
+
+func TestRemoteIPBlockSettingsExactNodeAndJSON(t *testing.T) {
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if r.URL.Path != "/panel/api/server/ipBlocks/settings" || r.URL.RawQuery != "" || r.Header.Get("Authorization") != "Bearer tok" {
+			t.Errorf("wrong target: %s", r.URL)
+		}
+		v := entity.IPBlockSettings{Enabled: true, BanSeconds: 600, MaxRetry: 1, FindSeconds: 32, ScanSeconds: 10, LiveSeconds: 120, HistorySeconds: 1800}
+		if r.Method == "POST" {
+			var body entity.IPBlockSettings
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body != v {
+				t.Errorf("bad JSON: %+v %v", body, err)
+			}
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "obj": entity.IPBlockSettingsStatus{Settings: v, Available: true}})
+	}))
+	defer srv.Close()
+	remote := NewRemote(nodeForPlainServer(t, srv, "verify", "tok"), nil)
+	result, err := remote.IPBlockSettings(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = remote.SaveIPBlockSettings(context.Background(), result.Settings); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 2 {
+		t.Fatal(calls)
+	}
+}

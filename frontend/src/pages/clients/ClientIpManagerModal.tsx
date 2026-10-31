@@ -17,6 +17,7 @@ import './ClientIpManagerModal.css';
 
 interface ClientIpManagerModalProps {
   open: boolean;
+  initialNodeId?: number;
   email?: string;
   ips: ClientIpInfo[];
   loading: boolean;
@@ -27,11 +28,11 @@ interface ClientIpManagerModalProps {
   onClose: () => void;
 }
 
-export default function ClientIpManagerModal({ open, email, ips, loading, clearing, zIndex, onRefresh, onClear, onClose }: ClientIpManagerModalProps) {
+export default function ClientIpManagerModal({ open, initialNodeId = 0, email, ips, loading, clearing, zIndex, onRefresh, onClear, onClose }: ClientIpManagerModalProps) {
   const { t } = useTranslation();
   const dateTime = usePanelDateTime();
   const [messageApi, contextHolder] = message.useMessage();
-  const [nodeId, setNodeId] = useState(0);
+  const [nodeId, setNodeId] = useState(initialNodeId);
   const [search, setSearch] = useState('');
   const [manualIP, setManualIP] = useState('');
   const [sharedTarget, setSharedTarget] = useState<{ ip: string; nodeId: number; serverName: string } | null>(null);
@@ -150,7 +151,7 @@ export default function ClientIpManagerModal({ open, email, ips, loading, cleari
           <Typography.Text type="secondary">{text('defaultDuration')}: <bdi dir="auto">{banDuration}</bdi></Typography.Text>
         </div>
         {open && sharedTarget ? <div><IPSharedClientsPanel key={`${sharedTarget.nodeId}:${sharedTarget.ip}`} {...sharedTarget} email={email} /><Button size="small" onClick={() => setSharedTarget(null)}>{t('close')}</Button></div> : null}
-        <Tabs items={[
+        <Tabs defaultActiveKey={email ? "observed" : "blocked"} items={[
           { key: 'observed', label: `${text('observed')} (${clientIPs.length})`, children: <Table size="small" loading={loading} columns={observedColumns} dataSource={visibleIPs} rowKey={(row) => `${row.node}:${row.ip}`} pagination={{ pageSize: 10, showSizeChanger: false }} scroll={{ x: 900 }} /> },
           { key: 'blocked', label: `${text('allBlocked')} (${ready ? active.size : '—'})`, children: <Table size="small" loading={query.isFetching} columns={blockColumns} dataSource={ready ? visibleBlocks : []} rowKey="ip" pagination={{ pageSize: 10, showSizeChanger: false }} scroll={{ x: 900 }} /> },
         ]} />

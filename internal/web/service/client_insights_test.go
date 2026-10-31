@@ -58,7 +58,7 @@ func TestClientInsightReportAggregatesUsageAndRecentMetadata(t *testing.T) {
 	}
 	localMidnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	buckets := []model.ClientTrafficBucket{
-		{Email: email, BucketStart: localMidnight.AddDate(0, 0, -1).Add(12 * time.Hour).UnixMilli(), Up: 100, Down: 200},
+		{Email: email, BucketStart: localMidnight.AddDate(0, 0, -1).Add(time.Duration((now.Hour()+1)%24) * time.Hour).UnixMilli(), Up: 100, Down: 200},
 		{Email: email, BucketStart: now.Truncate(time.Minute).UnixMilli(), Up: 300, Down: 400},
 	}
 	if err := db.Create(&buckets).Error; err != nil {

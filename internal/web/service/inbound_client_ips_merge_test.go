@@ -209,3 +209,12 @@ func TestMergeInboundClientIps_SkipsBlankRows(t *testing.T) {
 		t.Fatalf("blank rows should be skipped, but %d row(s) created", count)
 	}
 }
+
+func TestMergePreservesAdmissionWhenRemoteActivityIsNewer(t *testing.T) {
+	old := []clientIpEntry{{IP: "192.0.2.1", Timestamp: 100, AdmittedAt: 50}}
+	incoming := []clientIpEntry{{IP: "192.0.2.1", Timestamp: 200}, {IP: "192.0.2.2", Timestamp: 300}}
+	result := mergeClientIpEntries(old, incoming, 1)
+	if len(result) != 2 || result[0].IP != "192.0.2.2" || result[0].AdmittedAt != 0 || result[1].AdmittedAt != 50 || result[1].Timestamp != 200 {
+		t.Fatalf("admission lost during node merge: %+v", result)
+	}
+}

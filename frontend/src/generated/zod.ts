@@ -804,6 +804,26 @@ export const IPBlockEntrySchema = z.object({
 });
 export type IPBlockEntry = z.infer<typeof IPBlockEntrySchema>;
 
+export const IPBlockSettingsSchema = z.object({
+  banSeconds: z.number().int(),
+  disconnect: z.boolean(),
+  enabled: z.boolean(),
+  exemptIPs: z.string(),
+  findSeconds: z.number().int(),
+  historySeconds: z.number().int(),
+  liveSeconds: z.number().int(),
+  maxRetry: z.number().int(),
+  scanSeconds: z.number().int(),
+});
+export type IPBlockSettings = z.infer<typeof IPBlockSettingsSchema>;
+
+export const IPBlockSettingsStatusSchema = z.object({
+  available: z.boolean(),
+  reason: z.string(),
+  settings: z.lazy(() => IPBlockSettingsSchema),
+});
+export type IPBlockSettingsStatus = z.infer<typeof IPBlockSettingsStatusSchema>;
+
 export const IPBlockStatusSchema = z.object({
   auditWarning: z.boolean(),
   available: z.boolean(),

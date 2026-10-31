@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.9.8",
+    "version": "3.9.9",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -3197,6 +3197,68 @@
         ],
         "type": "object"
       },
+      "IPBlockSettings": {
+        "properties": {
+          "banSeconds": {
+            "type": "integer"
+          },
+          "disconnect": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "exemptIPs": {
+            "type": "string"
+          },
+          "findSeconds": {
+            "type": "integer"
+          },
+          "historySeconds": {
+            "type": "integer"
+          },
+          "liveSeconds": {
+            "type": "integer"
+          },
+          "maxRetry": {
+            "type": "integer"
+          },
+          "scanSeconds": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "banSeconds",
+          "disconnect",
+          "enabled",
+          "exemptIPs",
+          "findSeconds",
+          "historySeconds",
+          "liveSeconds",
+          "maxRetry",
+          "scanSeconds"
+        ],
+        "type": "object"
+      },
+      "IPBlockSettingsStatus": {
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/IPBlockSettings"
+          }
+        },
+        "required": [
+          "available",
+          "reason",
+          "settings"
+        ],
+        "type": "object"
+      },
       "IPBlockStatus": {
         "properties": {
           "auditWarning": {
@@ -5671,6 +5733,149 @@
                     "installed": true,
                     "usable": true,
                     "windows": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/server/ipBlocks/settings": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Read IP-limit policy and actual live Fail2ban bantime/findtime/maxretry for this server. Requires v3.9.9 on the selected node.",
+        "operationId": "get_panel_api_server_ipBlocks_settings",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "query",
+            "required": false,
+            "description": "Exact node ID, 0 for this panel.",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/IPBlockSettingsStatus"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "available": false,
+                    "reason": "",
+                    "settings": {
+                      "banSeconds": 0,
+                      "disconnect": false,
+                      "enabled": false,
+                      "exemptIPs": "",
+                      "findSeconds": 0,
+                      "historySeconds": 0,
+                      "liveSeconds": 0,
+                      "maxRetry": 0,
+                      "scanSeconds": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Accepts a full JSON IPBlockSettings object. Saves policy in the panel database and a dedicated Fail2ban override; sets and verifies live jail timing without clearing active bans. Partial failures roll back live settings and the override. Existing bans keep their duration. Automatic limits retain accepted IPs and ban new excess IPs. Exempt IPs/CIDRs do not consume slots; GRE-TUN ranges are always exempt. Does not install Fail2ban or edit SSH jails, filters or firewall action scripts.",
+        "operationId": "post_panel_api_server_ipBlocks_settings",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "query",
+            "required": false,
+            "description": "Exact node ID, 0 for this panel.",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "enabled": true,
+                "banSeconds": 1800,
+                "findSeconds": 32,
+                "maxRetry": 1,
+                "scanSeconds": 10,
+                "liveSeconds": 120,
+                "historySeconds": 1800,
+                "disconnect": false,
+                "exemptIPs": ""
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {
+                      "$ref": "#/components/schemas/IPBlockSettingsStatus"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "available": false,
+                    "reason": "",
+                    "settings": {
+                      "banSeconds": 0,
+                      "disconnect": false,
+                      "enabled": false,
+                      "exemptIPs": "",
+                      "findSeconds": 0,
+                      "historySeconds": 0,
+                      "liveSeconds": 0,
+                      "maxRetry": 0,
+                      "scanSeconds": 0
+                    }
                   }
                 }
               }

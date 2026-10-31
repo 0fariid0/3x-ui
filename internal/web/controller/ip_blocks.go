@@ -66,3 +66,45 @@ func (a *ServerController) getIPSharedClients(c *gin.Context) {
 	}
 	jsonObj(c, result, err)
 }
+
+func (a *ServerController) getIPBlockSettings(c *gin.Context) {
+	id, err := ipBlockSettingsNode(c)
+	if err != nil {
+		jsonObj(c, nil, err)
+		return
+	}
+	var result *entity.IPBlockSettingsStatus
+	if id > 0 {
+		result, err = (&service.NodeService{}).IPBlockSettings(c.Request.Context(), id)
+	} else {
+		result, err = (&service.IPBlockService{}).Settings(c.Request.Context())
+	}
+	jsonObj(c, result, err)
+}
+func ipBlockSettingsNode(c *gin.Context) (int, error) {
+	raw := c.DefaultQuery("nodeId", "0")
+	id, err := strconv.Atoi(raw)
+	if err != nil || id < 0 {
+		return 0, fmt.Errorf("invalid node ID")
+	}
+	return id, nil
+}
+func (a *ServerController) saveIPBlockSettings(c *gin.Context) {
+	id, err := ipBlockSettingsNode(c)
+	if err != nil {
+		jsonObj(c, nil, err)
+		return
+	}
+	var req entity.IPBlockSettings
+	if err = c.ShouldBindJSON(&req); err != nil {
+		jsonObj(c, nil, err)
+		return
+	}
+	var result *entity.IPBlockSettingsStatus
+	if id > 0 {
+		result, err = (&service.NodeService{}).SaveIPBlockSettings(c.Request.Context(), id, req)
+	} else {
+		result, err = (&service.IPBlockService{}).SaveSettings(c.Request.Context(), req)
+	}
+	jsonObj(c, result, err)
+}

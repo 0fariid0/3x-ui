@@ -1,3 +1,14 @@
+## v3.9.9 — keep accepted IPs and manage blocking from panel settings
+
+- Preserve accepted live IP slots across scans and job restarts, even when their last activity becomes newer. Reject new excess IPs; deterministic ordering on first observation. Enforce the first scan instead of silently accepting all IPs.
+- New Settings → IP blocking section: select this server or an enabled node, automatic enforcement toggle, ban duration/permanent bans, retry count/window, check interval, recent-IP grace/retention, explicit IP/CIDR exclusions, and optional whole-user disconnect.
+- Whole-user disconnect defaults off so accepted sessions are not deliberately interrupted. GRE-TUN local exclusions remain mandatory and visible as before.
+- Persist timing in a dedicated Fail2ban override and panel policy in the database; verify runtime setters and roll back partial failures. No service restart or active-ban flush on save. Existing bans retain their previous expiry.
+- Open the existing blocked-IP manager directly for the selected server. Preserve shared-IP lookup and existing manual block/unblock checks.
+- All enforcing nodes require this version. Settings target one server, not a cluster-wide broadcast. Automatic blocking off does not remove old bans. Exemptions do not automatically unban existing entries.
+- Preserve legacy Fail2ban log wording for compatibility with installed filters. IP bans still affect other users sharing that public IP on the same host.
+- Fix a time-dependent test fixture that selected yesterday at the current hour; report behavior is unchanged.
+
 ## v3.9.8 — Preserve tunnel observations without counting them toward IP limits
 
 - Exclude GRE-TUN internal ranges 10.10.0.0/16, 10.20.0.0/16, 10.30.0.0/16 and 10.40.0.0/16 from IP-limit counting and automatic ban selection, including IPv4-mapped IPv6 forms. Preserve observations and per-node attribution.

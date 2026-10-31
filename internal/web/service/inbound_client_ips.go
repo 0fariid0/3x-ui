@@ -28,8 +28,9 @@ const clientIpStaleAfterSeconds = int64(30 * 60)
 // clientIpEntry is the on-disk shape of each element of InboundClientIps.Ips. Tags
 // match job.IPWithTimestamp so the blob round-trips with the access.log scanner.
 type clientIpEntry struct {
-	IP        string `json:"ip"`
-	Timestamp int64  `json:"timestamp"`
+	IP         string `json:"ip"`
+	Timestamp  int64  `json:"timestamp"`
+	AdmittedAt int64  `json:"admittedAt,omitempty"`
 }
 
 // mergeClientIpEntries unions old and incoming IP observations, dropping anything
@@ -37,6 +38,14 @@ type clientIpEntry struct {
 // result sorted newest-first.
 func mergeClientIpEntries(old, incoming []clientIpEntry, cutoff int64) []clientIpEntry {
 	ipMap := make(map[string]int64, len(old)+len(incoming))
+	admitted := make(map[string]int64)
+	for _, group := range [][]clientIpEntry{old, incoming} {
+		for _, entry := range group {
+			if entry.Timestamp >= cutoff && entry.AdmittedAt > 0 && (admitted[entry.IP] == 0 || entry.AdmittedAt < admitted[entry.IP]) {
+				admitted[entry.IP] = entry.AdmittedAt
+			}
+		}
+	}
 	for _, e := range old {
 		if e.Timestamp < cutoff {
 			continue
@@ -53,7 +62,7 @@ func mergeClientIpEntries(old, incoming []clientIpEntry, cutoff int64) []clientI
 	}
 	out := make([]clientIpEntry, 0, len(ipMap))
 	for ip, ts := range ipMap {
-		out = append(out, clientIpEntry{IP: ip, Timestamp: ts})
+		out = append(out, clientIpEntry{IP: ip, Timestamp: ts, AdmittedAt: admitted[ip]})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Timestamp > out[j].Timestamp })
 	return out
@@ -191,8 +200,9 @@ func (s *InboundService) GetInboundClientIps(clientEmail string) (string, error)
 
 	// Try to parse as new format (with timestamps)
 	type IPWithTimestamp struct {
-		IP        string `json:"ip"`
-		Timestamp int64  `json:"timestamp"`
+		IP         string `json:"ip"`
+		Timestamp  int64  `json:"timestamp"`
+		AdmittedAt int64  `json:"admittedAt,omitempty"`
 	}
 
 	var ipsWithTime []IPWithTimestamp

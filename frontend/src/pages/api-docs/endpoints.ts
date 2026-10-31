@@ -273,6 +273,22 @@ export const sections: readonly Section[] = [
       },
       {
         method: 'GET',
+        path: '/panel/api/server/ipBlocks/settings',
+        summary: 'Read IP-limit policy and actual live Fail2ban bantime/findtime/maxretry for this server. Requires v3.9.9 on the selected node.',
+        params: [{ name: 'nodeId', in: 'query', type: 'integer', optional: true, defaultValue: 0, desc: 'Exact node ID, 0 for this panel.' }],
+        responseSchema: 'IPBlockSettingsStatus',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/server/ipBlocks/settings',
+        summary: 'Accepts a full JSON IPBlockSettings object. Saves policy in the panel database and a dedicated Fail2ban override; sets and verifies live jail timing without clearing active bans. Partial failures roll back live settings and the override. Existing bans keep their duration. Automatic limits retain accepted IPs and ban new excess IPs. Exempt IPs/CIDRs do not consume slots; GRE-TUN ranges are always exempt. Does not install Fail2ban or edit SSH jails, filters or firewall action scripts.',
+        params: [{ name: 'nodeId', in: 'query', type: 'integer', optional: true, defaultValue: 0, desc: 'Exact node ID, 0 for this panel.' }],
+        body: '{"enabled":true,"banSeconds":1800,"findSeconds":32,"maxRetry":1,"scanSeconds":10,"liveSeconds":120,"historySeconds":1800,"disconnect":false,"exemptIPs":""}',
+
+        responseSchema: 'IPBlockSettingsStatus',
+      },
+      {
+        method: 'GET',
         path: '/panel/api/server/ipBlocks',
         summary: 'Read the live 3x-ipl Fail2ban ban list. Includes manual and automatic bans, even when they no longer appear in client IP logs. Source and time are best-effort metadata; live membership comes from Fail2ban. Does not enumerate other firewall chains or SSH jails. nodeId=0 targets this host; positive IDs target an enabled configured node over its authenticated connection. Both panels must support this endpoint.',
         params: [{ name: 'nodeId', in: 'query', type: 'integer', optional: true, defaultValue: 0, desc: 'Configured node ID, or 0 for this panel.' }],

@@ -747,6 +747,24 @@ export interface IPBlockEntry {
   source: string;
 }
 
+export interface IPBlockSettings {
+  banSeconds: number;
+  disconnect: boolean;
+  enabled: boolean;
+  exemptIPs: string;
+  findSeconds: number;
+  historySeconds: number;
+  liveSeconds: number;
+  maxRetry: number;
+  scanSeconds: number;
+}
+
+export interface IPBlockSettingsStatus {
+  available: boolean;
+  reason: string;
+  settings: IPBlockSettings;
+}
+
 export interface IPBlockStatus {
   auditWarning: boolean;
   available: boolean;

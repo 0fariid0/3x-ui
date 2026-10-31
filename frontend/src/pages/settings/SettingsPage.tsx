@@ -23,6 +23,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useAllSettings } from '@/api/queries/useAllSettings';
 import { AllSettingSchema } from '@/schemas/setting';
 import AppSidebar from '@/layouts/AppSidebar';
+import IPBlockTab from './IPBlockTab';
 import GeneralTab from './GeneralTab';
 import SecurityTab from './SecurityTab';
 import TelegramTab from './TelegramTab';
@@ -35,7 +36,7 @@ interface ApiMsg {
   success?: boolean;
 }
 
-const tabSlugs = ['general', 'security', 'telegram', 'email', 'subscription', 'subscription-formats'];
+const tabSlugs = ['general', 'ip-blocking', 'security', 'telegram', 'email', 'subscription', 'subscription-formats'];
 
 function isIp(h: string): boolean {
   if (typeof h !== 'string') return false;
@@ -197,6 +198,7 @@ export default function SettingsPage() {
 
   const categoryBody = useMemo(() => {
     switch (activeSlug) {
+      case 'ip-blocking': return <IPBlockTab />;
       case 'security': return <SecurityTab allSetting={allSetting} updateSetting={updateSetting} saveSetting={savePayload} />;
       case 'telegram': return <TelegramTab allSetting={allSetting} updateSetting={updateSetting} />;
       case 'email': return <EmailTab allSetting={allSetting} updateSetting={updateSetting} />;
@@ -239,7 +241,7 @@ export default function SettingsPage() {
                   )}
 
                   <Row gutter={[isMobile ? 8 : 16, isMobile ? 0 : 12]}>
-                    <Col span={24}>
+                    {activeSlug !== 'ip-blocking' && <Col span={24}>
                       <Card hoverable>
                         <Row className="header-row">
                           <Col xs={24} sm={10} className="header-actions">
@@ -258,7 +260,7 @@ export default function SettingsPage() {
                           </Col>
                         </Row>
                       </Card>
-                    </Col>
+                    </Col>}
 
                     <Col span={24}>
                       <Card hoverable>

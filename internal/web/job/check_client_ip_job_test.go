@@ -116,13 +116,13 @@ func TestSelectIpsToBan(t *testing.T) {
 		{IP: "C", Timestamp: 300},
 	}
 
-	// over the limit: oldest connections are banned, newest keep the slots
+	// over the limit: oldest connections keep their slots, new excess connections are banned
 	kept, banned := selectIpsToBan(live, 1)
-	if got := collectIps(kept); !reflect.DeepEqual(got, []string{"C"}) {
-		t.Fatalf("newest ip must keep the slot, got %v", got)
+	if got := collectIps(kept); !reflect.DeepEqual(got, []string{"A"}) {
+		t.Fatalf("oldest ip must keep the slot, got %v", got)
 	}
-	if got := collectIps(banned); !reflect.DeepEqual(got, []string{"A", "B"}) {
-		t.Fatalf("older ips must be banned oldest-first, got %v", got)
+	if got := collectIps(banned); !reflect.DeepEqual(got, []string{"B", "C"}) {
+		t.Fatalf("new excess ips must be banned, got %v", got)
 	}
 
 	// at the limit: nothing banned

@@ -53,3 +53,18 @@ func (s *NodeService) SharedIPClients(ctx context.Context, id int, ip string) (*
 	}
 	return remote.SharedIPClients(ctx, canonical)
 }
+
+func (s *NodeService) IPBlockSettings(ctx context.Context, id int) (*entity.IPBlockSettingsStatus, error) {
+	remote, err := s.ipBlockRemote(id)
+	if err != nil {
+		return nil, err
+	}
+	return remote.IPBlockSettings(ctx)
+}
+func (s *NodeService) SaveIPBlockSettings(ctx context.Context, id int, v entity.IPBlockSettings) (*entity.IPBlockSettingsStatus, error) {
+	remote, err := s.ipBlockRemote(id)
+	if err != nil {
+		return nil, err
+	}
+	return remote.SaveIPBlockSettings(ctx, v)
+}

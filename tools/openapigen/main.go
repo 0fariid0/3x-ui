@@ -79,6 +79,8 @@ func run(root, outDir string) error {
 				"IPSharedClient",
 				"IPSharedClients",
 				"IPBlockChange",
+				"IPBlockSettings",
+				"IPBlockSettingsStatus",
 			),
 		},
 		{

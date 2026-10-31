@@ -32,14 +32,14 @@ func TestTunnelIPsRemainVisibleWithoutCountingOrBans(t *testing.T) {
 	}
 	observed = append(observed, IPWithTimestamp{IP: "203.0.113.25", Timestamp: now + 1})
 	_, banned = j.updateInboundClientIps(database.GetDB(), row, inbound, email, 1, observed, true, true)
-	if !banned || len(j.disAllowedIps) != 1 || j.disAllowedIps[0] != "5.210.158.87" {
+	if !banned || len(j.disAllowedIps) != 1 || j.disAllowedIps[0] != "203.0.113.25" {
 		t.Fatalf("real IP limit stopped working: %v", j.disAllowedIps)
 	}
 	data, err := os.ReadFile(readIpLimitLogPath())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(data), "10.30.") || strings.Contains(string(data), "10.40.") || !strings.Contains(string(data), "5.210.158.87") {
+	if strings.Contains(string(data), "10.30.") || strings.Contains(string(data), "10.40.") || !strings.Contains(string(data), "203.0.113.25") {
 		t.Fatalf("wrong ban targets: %s", data)
 	}
 	got = ipSet(readClientIps(t, email))

@@ -45,3 +45,26 @@ func (r *Remote) SharedIPClients(ctx context.Context, ip string) (*entity.IPShar
 	}
 	return &result, nil
 }
+
+func (r *Remote) IPBlockSettings(ctx context.Context) (*entity.IPBlockSettingsStatus, error) {
+	env, err := r.do(ctx, http.MethodGet, "panel/api/server/ipBlocks/settings", nil)
+	if err != nil {
+		return nil, err
+	}
+	var v entity.IPBlockSettingsStatus
+	if err = json.Unmarshal(env.Obj, &v); err != nil {
+		return nil, err
+	}
+	return &v, nil
+}
+func (r *Remote) SaveIPBlockSettings(ctx context.Context, v entity.IPBlockSettings) (*entity.IPBlockSettingsStatus, error) {
+	env, err := r.do(ctx, http.MethodPost, "panel/api/server/ipBlocks/settings", v)
+	if err != nil {
+		return nil, err
+	}
+	var result entity.IPBlockSettingsStatus
+	if err = json.Unmarshal(env.Obj, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}

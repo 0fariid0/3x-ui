@@ -15,17 +15,19 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/logger"
-	"github.com/mhsanaei/3x-ui/v3/internal/util/clientip"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/entity"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
+	"sync"
 
 	"gorm.io/gorm"
 )
 
 // IPWithTimestamp tracks an IP address with its last seen timestamp
 type IPWithTimestamp struct {
-	IP        string `json:"ip"`
-	Timestamp int64  `json:"timestamp"`
+	IP         string `json:"ip"`
+	Timestamp  int64  `json:"timestamp"`
+	AdmittedAt int64  `json:"admittedAt,omitempty"`
 }
 
 // CheckClientIpJob monitors client IP addresses and manages IP blocking based
@@ -33,9 +35,12 @@ type IPWithTimestamp struct {
 // API; no access log is involved. On a core too old to expose that API the job
 // simply skips the run (the bundled core always supports it).
 type CheckClientIpJob struct {
-	disAllowedIps []string
-	bannedSeen    map[string]int64
-	xrayService   service.XrayService
+	mu              sync.Mutex
+	lastEnforcement time.Time
+	policy          entity.IPBlockSettings
+	disAllowedIps   []string
+	bannedSeen      map[string]int64
+	xrayService     service.XrayService
 }
 
 var job *CheckClientIpJob
@@ -51,6 +56,8 @@ func NewCheckClientIpJob() *CheckClientIpJob {
 }
 
 func (j *CheckClientIpJob) Run() {
+	j.mu.Lock()
+	defer j.mu.Unlock()
 	observed, apiMode := j.collectFromOnlineAPI()
 	if !apiMode {
 		// xray is down or predates the online-stats API. There is no access-log
@@ -263,6 +270,18 @@ func (j *CheckClientIpJob) loadClientIpRows(emails []string) map[string]*model.I
 // several per observed email.
 func (j *CheckClientIpJob) processObserved(observed map[string]map[string]int64, enforce, observedAreLive bool) bool {
 	shouldCleanLog := false
+	policy, err := service.LoadIPBlockSettings()
+	if err != nil {
+		j.checkError(err)
+		return false
+	}
+	j.policy = policy
+	enforce = enforce && policy.Enabled
+	// Collect every scan; throttle enforcement without replacing the accepted set.
+	runLimit := enforce && (j.lastEnforcement.IsZero() || time.Now().Unix()-j.lastEnforcement.Unix() >= int64(policy.ScanSeconds))
+	if runLimit {
+		j.lastEnforcement = time.Now()
+	}
 	now := time.Now().Unix()
 
 	emails := make([]string, 0, len(observed))
@@ -342,20 +361,15 @@ func (j *CheckClientIpJob) processObserved(observed map[string]map[string]int64,
 
 		clientIpsRecord, ok := ipRowByEmail[email]
 		if !ok {
-			jsonIps, err := json.Marshal(ipsWithTime)
-			if err != nil {
-				j.checkError(err)
-				continue
-			}
-			if err := tx.Save(&model.InboundClientIps{ClientEmail: email, Ips: string(jsonIps)}).Error; err != nil {
-				j.checkError(err)
-			}
+			clientIpsRecord = &model.InboundClientIps{ClientEmail: email}
+		}
+		if enforce && !runLimit {
 			continue
 		}
 
 		cleaned, banned := j.updateInboundClientIps(tx, clientIpsRecord, inbound, email, limitByEmail[email], ipsWithTime, enforce, observedAreLive)
 		shouldCleanLog = cleaned || shouldCleanLog
-		if banned {
+		if banned && policy.Disconnect {
 			disconnects = append(disconnects, pendingDisconnect{inbound: inbound, email: email})
 		}
 	}
@@ -423,15 +437,18 @@ func mergeClientIps(old, new []IPWithTimestamp, staleCutoff int64, newAlwaysLive
 }
 
 // selectIpsToBan splits the live IPs (sorted oldest-first by partitionLiveIps)
-// into the newest `limit` entries to keep and the older remainder to ban.
+// into the oldest accepted `limit` entries to keep and the new remainder to ban.
 func selectIpsToBan(live []IPWithTimestamp, limit int) (kept, banned []IPWithTimestamp) {
+	return selectIpsToBanWithPolicy(live, limit, service.DefaultIPBlockSettings())
+}
+func selectIpsToBanWithPolicy(live []IPWithTimestamp, limit int, policy entity.IPBlockSettings) (kept, banned []IPWithTimestamp) {
 	if limit <= 0 {
 		return live, nil
 	}
 	counted := make([]IPWithTimestamp, 0, len(live))
 	exempt := make([]IPWithTimestamp, 0)
 	for _, entry := range live {
-		if clientip.IsTunnelLocal(entry.IP) {
+		if service.IsIPBlockExempt(entry.IP, policy) {
 			exempt = append(exempt, entry)
 		} else {
 			counted = append(counted, entry)
@@ -440,11 +457,13 @@ func selectIpsToBan(live []IPWithTimestamp, limit int) (kept, banned []IPWithTim
 	if len(counted) <= limit {
 		return live, nil
 	}
-	cutoff := len(counted) - limit
-	return append(exempt, counted[cutoff:]...), counted[:cutoff]
+	return append(exempt, counted[:limit]...), counted[limit:]
 }
 
 func partitionLiveIps(ipMap map[string]int64, observedThisScan map[string]bool) (live, historical []IPWithTimestamp) {
+	return partitionLiveIpsWindow(ipMap, observedThisScan, 120)
+}
+func partitionLiveIpsWindow(ipMap map[string]int64, observedThisScan map[string]bool, window int) (live, historical []IPWithTimestamp) {
 	live = make([]IPWithTimestamp, 0, len(observedThisScan))
 	historical = make([]IPWithTimestamp, 0, len(ipMap))
 	now := time.Now().Unix()
@@ -453,13 +472,18 @@ func partitionLiveIps(ipMap map[string]int64, observedThisScan map[string]bool) 
 		// Consider an IP "live" if it was seen locally in this scan, OR if its
 		// timestamp from the synced database is very recent (e.g. within 2 minutes).
 		// This ensures cluster-wide limits work even if the IP was seen on another node.
-		if observedThisScan[ip] || now-ts < 120 {
+		if observedThisScan[ip] || now-ts < int64(window) {
 			live = append(live, entry)
 		} else {
 			historical = append(historical, entry)
 		}
 	}
-	sort.Slice(live, func(i, j int) bool { return live[i].Timestamp < live[j].Timestamp })
+	sort.Slice(live, func(i, j int) bool {
+		if live[i].Timestamp == live[j].Timestamp {
+			return live[i].IP < live[j].IP
+		}
+		return live[i].Timestamp < live[j].Timestamp
+	})
 	sort.Slice(historical, func(i, j int) bool { return historical[i].Timestamp < historical[j].Timestamp })
 	return live, historical
 }
@@ -522,7 +546,11 @@ func (j *CheckClientIpJob) updateInboundClientIps(tx *gorm.DB, inboundClientIps 
 		_ = json.Unmarshal([]byte(inboundClientIps.Ips), &oldIpsWithTime)
 	}
 
-	ipMap := mergeClientIps(oldIpsWithTime, newIpsWithTime, time.Now().Unix()-ipStaleAfterSeconds, observedAreLive)
+	policy := j.policy
+	if policy.HistorySeconds == 0 {
+		policy = service.DefaultIPBlockSettings()
+	}
+	ipMap := mergeClientIps(oldIpsWithTime, newIpsWithTime, time.Now().Unix()-int64(policy.HistorySeconds), observedAreLive)
 
 	// only ips seen in this scan count toward the limit. see
 	// partitionLiveIps.
@@ -530,12 +558,41 @@ func (j *CheckClientIpJob) updateInboundClientIps(tx *gorm.DB, inboundClientIps 
 	for _, ipTime := range newIpsWithTime {
 		observedThisScan[ipTime.IP] = true
 	}
-	liveIps, historicalIps := partitionLiveIps(ipMap, observedThisScan)
+	liveIps, historicalIps := partitionLiveIpsWindow(ipMap, observedThisScan, policy.LiveSeconds)
+	// An already accepted IP keeps its slot even if lastSeen advances. Only live
+	// entries are considered; disconnected/historical addresses cannot hold slots.
+	prior := make(map[string]IPWithTimestamp, len(oldIpsWithTime))
+	for _, entry := range oldIpsWithTime {
+		if observedThisScan[entry.IP] || time.Now().Unix()-entry.Timestamp < int64(policy.LiveSeconds) {
+			prior[entry.IP] = entry
+		}
+	}
+	sort.SliceStable(liveIps, func(i, k int) bool {
+		a, oldA := prior[liveIps[i].IP]
+		b, oldB := prior[liveIps[k].IP]
+		admittedA, admittedB := a.AdmittedAt > 0, b.AdmittedAt > 0
+		if admittedA != admittedB {
+			return admittedA
+		}
+		if admittedA {
+			if a.AdmittedAt != b.AdmittedAt {
+				return a.AdmittedAt < b.AdmittedAt
+			}
+			return liveIps[i].IP < liveIps[k].IP
+		}
+		if oldA != oldB {
+			return oldA
+		}
+		if oldA && a.Timestamp != b.Timestamp {
+			return a.Timestamp < b.Timestamp
+		}
+		return false
+	})
 
 	j.disAllowedIps = []string{}
 
 	// historical db-only ips are excluded from this count on purpose.
-	keptLive, bannedLive := selectIpsToBan(liveIps, limitIp)
+	keptLive, bannedLive := selectIpsToBanWithPolicy(liveIps, limitIp, policy)
 	actionable := j.filterAdvancedSinceLastBan(clientEmail, bannedLive)
 	if len(actionable) > 0 {
 		shouldCleanLog = true
@@ -563,6 +620,12 @@ func (j *CheckClientIpJob) updateInboundClientIps(tx *gorm.DB, inboundClientIps 
 	// recently seen ips. banned live ips are already in the fail2ban log
 	// and will reappear in the next scan if they reconnect.
 	dbIps := make([]IPWithTimestamp, 0, len(keptLive)+len(historicalIps))
+	for i := range keptLive {
+		keptLive[i].AdmittedAt = prior[keptLive[i].IP].AdmittedAt
+		if keptLive[i].AdmittedAt == 0 && !service.IsIPBlockExempt(keptLive[i].IP, policy) {
+			keptLive[i].AdmittedAt = time.Now().UnixMilli()
+		}
+	}
 	dbIps = append(dbIps, keptLive...)
 	dbIps = append(dbIps, historicalIps...)
 	jsonIps, _ := json.Marshal(dbIps)
@@ -574,7 +637,7 @@ func (j *CheckClientIpJob) updateInboundClientIps(tx *gorm.DB, inboundClientIps 
 	}
 
 	if len(j.disAllowedIps) > 0 {
-		logger.Infof("[LIMIT_IP] Client %s: Kept %d live IPs, queued %d old IPs for fail2ban", clientEmail, len(keptLive), len(j.disAllowedIps))
+		logger.Infof("[LIMIT_IP] Client %s: Kept %d live IPs, queued %d excess IPs for fail2ban", clientEmail, len(keptLive), len(j.disAllowedIps))
 	}
 
 	return shouldCleanLog, banned

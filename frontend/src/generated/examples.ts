@@ -878,6 +878,32 @@ export const EXAMPLES: Record<string, unknown> = {
     "permanent": false,
     "source": "manual"
   },
+  "IPBlockSettings": {
+    "banSeconds": 0,
+    "disconnect": false,
+    "enabled": false,
+    "exemptIPs": "",
+    "findSeconds": 0,
+    "historySeconds": 0,
+    "liveSeconds": 0,
+    "maxRetry": 0,
+    "scanSeconds": 0
+  },
+  "IPBlockSettingsStatus": {
+    "available": false,
+    "reason": "",
+    "settings": {
+      "banSeconds": 0,
+      "disconnect": false,
+      "enabled": false,
+      "exemptIPs": "",
+      "findSeconds": 0,
+      "historySeconds": 0,
+      "liveSeconds": 0,
+      "maxRetry": 0,
+      "scanSeconds": 0
+    }
+  },
   "IPBlockStatus": {
     "auditWarning": false,
     "available": true,

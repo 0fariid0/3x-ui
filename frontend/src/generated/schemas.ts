@@ -3171,6 +3171,68 @@ export const SCHEMAS: Record<string, unknown> = {
     ],
     "type": "object"
   },
+  "IPBlockSettings": {
+    "properties": {
+      "banSeconds": {
+        "type": "integer"
+      },
+      "disconnect": {
+        "type": "boolean"
+      },
+      "enabled": {
+        "type": "boolean"
+      },
+      "exemptIPs": {
+        "type": "string"
+      },
+      "findSeconds": {
+        "type": "integer"
+      },
+      "historySeconds": {
+        "type": "integer"
+      },
+      "liveSeconds": {
+        "type": "integer"
+      },
+      "maxRetry": {
+        "type": "integer"
+      },
+      "scanSeconds": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "banSeconds",
+      "disconnect",
+      "enabled",
+      "exemptIPs",
+      "findSeconds",
+      "historySeconds",
+      "liveSeconds",
+      "maxRetry",
+      "scanSeconds"
+    ],
+    "type": "object"
+  },
+  "IPBlockSettingsStatus": {
+    "properties": {
+      "available": {
+        "type": "boolean"
+      },
+      "reason": {
+        "type": "string"
+      },
+      "settings": {
+        "$ref": "#/components/schemas/IPBlockSettings"
+      }
+    },
+    "required": [
+      "available",
+      "reason",
+      "settings"
+    ],
+    "type": "object"
+  },
   "IPBlockStatus": {
     "properties": {
       "auditWarning": {

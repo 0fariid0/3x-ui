@@ -222,6 +222,15 @@ func (s *IPBlockService) Change(ctx context.Context, req entity.IPBlockChange) (
 	}
 	ipBlockMutationMu.Lock()
 	defer ipBlockMutationMu.Unlock()
+	if req.Action == "ban" {
+		policy, err := LoadIPBlockSettings()
+		if err != nil {
+			return nil, err
+		}
+		if IsIPBlockExempt(ip, policy) {
+			return nil, fmt.Errorf("this IP is exempt from IP blocking")
+		}
+	}
 	before, err := s.Status(ctx)
 	if err != nil {
 		return nil, err
