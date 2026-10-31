@@ -41,6 +41,6 @@ try:
  else:
   output=Path(sys.argv[1]).resolve();output.parent.mkdir(parents=True,exist_ok=True)
   shutil.copyfile(src/'LICENSE',output.parent/'LICENSE.xray')
-  (output.parent/'CORE_SOURCE.txt').write_text('Xray core '+version+'\n'+meta['Sum']+'\nSource: https://github.com/XTLS/Xray-core/tree/5ca6f4b7d4dc\nFara modifications: https://github.com/0fariid0/3x-ui/tree/v3.9.13/tools/core-overlay\nShared gate source: https://github.com/0fariid0/3x-ui/tree/v3.9.13/internal/util/sessiongate\n')
-  subprocess.run([go,'build','-trimpath','-ldflags=-s -w -X github.com/xtls/xray-core/core.build=Fara-3.9.13','-o',str(output),'./main'],cwd=src,env=env,check=True)
+  (output.parent/'CORE_SOURCE.txt').write_text('Xray core '+version+'\n'+meta['Sum']+'\nSource: https://github.com/XTLS/Xray-core/tree/5ca6f4b7d4dc\nFara modifications: https://github.com/0fariid0/3x-ui/tree/v3.9.14/tools/core-overlay\nShared gate source: https://github.com/0fariid0/3x-ui/tree/v3.9.14/internal/util/sessiongate\n')
+  subprocess.run([go,'build','-trimpath','-ldflags=-s -w -X github.com/xtls/xray-core/core.build=Fara-3.9.14','-o',str(output),'./main'],cwd=src,env=env,check=True)
 finally:shutil.rmtree(work)

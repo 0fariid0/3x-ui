@@ -1,3 +1,7 @@
+## v3.9.14 — hide generic settings-change notices
+
+- Hide all generic updated events, including historical records, from both report tabs. Exclude them from service-history retrieval budgets. Preserve specific quota, expiry, inbound and IP events and stored audit data.
+
 ## v3.9.13 — keep the IP tab exclusive to IP events
 
 - Move all non-IP changes, including legacy user-settings events, back to change history. Only ip_ events enter the IP tab.

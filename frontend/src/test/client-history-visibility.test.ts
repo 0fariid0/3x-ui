@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { remainingDaysAtChange, visibleClientEvents } from '@/lib/clients/history';
 
 describe('focused client renewal history', () => {
-  it('hides only the two link-setting kinds without mutating stored responses', () => {
-    const events = ['renewed', 'subscription_links', 'traffic_reset', 'external_links', 'limits_changed', 'created'].map((kind, id) => ({ kind, id }));
+  it('hides generic settings and link-setting events without mutating stored responses', () => {
+    const events = ['renewed', 'subscription_links', 'traffic_reset', 'external_links', 'limits_changed', 'created', 'updated'].map((kind, id) => ({ kind, id }));
     expect(visibleClientEvents(events).map((event) => event.kind)).toEqual(['renewed', 'traffic_reset', 'limits_changed', 'created']);
-    expect(events).toHaveLength(6);
-    expect(visibleClientEvents([{ kind: 'subscription_links' }, { kind: 'external_links' }])).toEqual([]);
+    expect(events).toHaveLength(7);
+    expect(visibleClientEvents([{ kind: 'subscription_links' }, { kind: 'external_links' }, {kind:'updated'}])).toEqual([]);
   });
 
   it('measures remaining days from the event time, including expired and first-use cases', () => {

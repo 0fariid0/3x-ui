@@ -1,4 +1,4 @@
-const hiddenEventKinds = new Set(['subscription_links', 'external_links']);
+const hiddenEventKinds = new Set(['subscription_links', 'external_links', 'updated']);
 
 export function visibleClientEvents<T extends { kind: string }>(events: readonly T[]): T[] {
   return events.filter((event) => !hiddenEventKinds.has(event.kind));

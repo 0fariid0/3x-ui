@@ -911,7 +911,7 @@ func (s *ClientInsightService) GetReportForRange(email string, days, hours int) 
 	})
 	var events, activity []model.ClientEvent
 	// Match the UI: only IP-prefixed events belong to IP activity.
-	if err := db.Where("email = ? AND substr(kind, 1, 3) <> ?", email, "ip_").Order("created_at DESC, id DESC").Limit(200).Find(&events).Error; err != nil {
+	if err := db.Where("email = ? AND substr(kind, 1, 3) <> ? AND kind <> ?", email, "ip_", "updated").Order("created_at DESC, id DESC").Limit(200).Find(&events).Error; err != nil {
 		return nil, err
 	}
 	if err := db.Where("email = ? AND substr(kind, 1, 3) = ?", email, "ip_").Order("created_at DESC, id DESC").Limit(200).Find(&activity).Error; err != nil {
