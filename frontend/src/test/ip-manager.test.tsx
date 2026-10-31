@@ -20,7 +20,7 @@ beforeEach(() => { vi.spyOn(HttpUtil, 'get').mockImplementation(async <T,>(url: 
 describe('IP manager', () => {
   it('lists automatic blocks that are absent from the client report and confirms unblock', async () => {
     show();
-    fireEvent.click(screen.getByText(/All active server blocks/));
+    fireEvent.click(screen.getByText(/Active blocks/));
     expect(screen.getByText('192.0.2.99')).toBeTruthy();
     expect(screen.getByText('Automatic IP limit')).toBeTruthy();
     fireEvent.click(screen.getByText('Unblock').closest('button')!);
@@ -75,3 +75,10 @@ describe('IP manager', () => {
   });
 
 });
+
+  it('does not show another account scoped block as a block of the current account',async()=>{
+    renderWithProviders(<ClientIpManagerModal open email="client" ips={[{ip:'192.0.2.99',node:'',nodeId:0,time:''}]} loading={false} clearing={false} onRefresh={vi.fn()} onClear={vi.fn()} onClose={vi.fn()}/>);
+    const row=screen.getByText('192.0.2.99').closest('tr')!;
+    expect(within(row).getByText('Not blocked')).toBeTruthy();
+    expect((within(row).getByText('Block').closest('button') as HTMLButtonElement).disabled).toBe(false);
+  });

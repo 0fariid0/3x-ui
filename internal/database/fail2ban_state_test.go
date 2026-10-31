@@ -107,3 +107,34 @@ func TestResetIpLimitsKeepsConfiguredLimitsWhenProbeFails(t *testing.T) {
 		t.Fatalf("seeder history rows = %d, want 0", count)
 	}
 }
+
+func TestScopedPolicyPreservesLimitsWithoutFail2ban(t *testing.T) {
+	t.Setenv("XUI_DB_FOLDER", t.TempDir())
+	if err := InitDB(config.GetDBPath()); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = CloseDB() })
+	if err := db.Where("seeder_name = ?", "ResetIpLimitNoFail2ban").Delete(&model.HistoryOfSeeders{}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&model.Setting{Key: "ipBlockPolicy", Value: `{"enforcementScope":"client"}`}).Error; err != nil {
+		t.Fatal(err)
+	}
+	record := model.ClientRecord{Email: "preserved-core", LimitIP: 3}
+	if err := db.Create(&record).Error; err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("XUI_ENABLE_FAIL2BAN", "false")
+	if err := resetIpLimitsWithoutFail2ban(); err != nil {
+		t.Fatal(err)
+	}
+	var got model.ClientRecord
+	if err := db.First(&got, record.Id).Error; err != nil || got.LimitIP != 3 {
+		t.Fatal(got, err)
+	}
+	var n int64
+	db.Model(&model.HistoryOfSeeders{}).Where("seeder_name = ?", "ResetIpLimitNoFail2ban").Count(&n)
+	if n != 1 {
+		t.Fatal("missing preservation marker")
+	}
+}

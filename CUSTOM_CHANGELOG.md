@@ -1,3 +1,17 @@
+## v3.9.11 — account/source isolation, IP-limit evidence and reporting
+
+- Add the pinned Fara Xray core build: a reviewed dispatcher/transport hook closes only authenticated account/source streams, including the raw splice path. Preserve the outer traffic stats writer so user quota accounting remains intact. No extra listener/port. The original core APIs and protocols remain present.
+- Account+IP enforcement is selectable in IP settings; manual IP-manager actions default to this safer scope. Legacy API requests with no scope and host enforcement keep their original host-wide behavior. Missing core support is an error; never fall back to a host firewall ban.
+- Persist scoped blocks and restore after core restart without extending expiry; keep independent blocks for accounts sharing the same IP. Use core live state for listing. Refuse stock-core replacement while scoped enforcement or active scoped blocks require Fara capabilities.
+- Add configurable network-switch grace and consecutive-scan confirmation. Defaults preserve previous timing. Reset evidence after an intervening scan without that account/excess. Add persisted account-specific or host-wide reconnect grace after manual unban.
+- Recheck host-wide shared-IP observations immediately before queuing a Fail2ban log action. This remains best-effort; use account scope for isolation.
+- Add IP observation states and scan freshness. A failed scan does not claim that clients disconnected. History uses actual observation time, not an old dispatch/start timestamp.
+- Record changed IP-limit decisions with retained/excess/protected addresses and reason. Add per-server diagnostics, exact account/IP/reason search, selectable time range, recent history and active-ban countdowns. Dates use the panel calendar.
+- Add named, expiring IP/CIDR exceptions while preserving existing exemptions and mandatory tunnel exclusions. Add optional rate-limited Telegram decision notifications through the existing internal bot; off by default.
+- Add settings timing preview and parameter help. Existing host bans are not automatically cleared by changing mode, disabling enforcement or adding an exemption.
+- Deliberately excluded: per-user/inbound policy overrides (8), report-only enforcement mode (9), progressive bans (11), new cluster-wide limit policy (12), and IPv6 device/prefix grouping (13). Core source-literal decoding is only for interoperability with its existing bracketed address representation.
+- All v3.9.10 tracked files retained. All enforcing nodes need this version and the bundled core for scoped disconnects. Protocol paths without an authenticated account/source identity cannot be isolated by this mechanism; this is not device identification behind NAT. MTProto sidecar is not an Xray dispatcher stream.
+
 ## v3.9.10 — shared-IP protection and refreshed IP reports
 
 - Automatic limit enforcement prioritizes addresses recently observed for other accounts on this host. Select unshared excess addresses instead; if all excess addresses are shared, skip their global firewall ban. This is best-effort observation-based protection, not per-account firewall isolation.

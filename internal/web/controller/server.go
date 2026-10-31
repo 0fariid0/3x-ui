@@ -65,6 +65,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.GET("/getNewVlessEnc", a.getNewVlessEnc)
 	g.GET("/clientIps", a.getClientIps)
 	g.GET("/fail2banStatus", a.getFail2banStatus)
+	g.GET("/ipBlocks/overview", a.getIPLimitOverview)
 	g.GET("/ipBlocks/settings", a.getIPBlockSettings)
 	g.POST("/ipBlocks/settings", a.saveIPBlockSettings)
 	g.GET("/ipBlocks", a.getIPBlocks)

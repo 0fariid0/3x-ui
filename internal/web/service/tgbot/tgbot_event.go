@@ -2,6 +2,8 @@ package tgbot
 
 import (
 	"fmt"
+	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
+	"html"
 	"os"
 	"strconv"
 	"strings"
@@ -30,6 +32,17 @@ var tgEventLimiter = eventbus.NewRateLimiter(1 * time.Minute)
 // HandleEvent is the eventbus subscriber callback. It formats incoming events
 // as Telegram messages and sends them to all admin chats.
 func (t *Tgbot) HandleEvent(e eventbus.Event) {
+	if e.Type == eventbus.EventIPLimit {
+		p, err := service.LoadIPBlockSettings()
+		if err != nil || !p.NotifyTelegram {
+			return
+		}
+		if !tgEventLimiter.Allow(e.Type, e.Source) {
+			return
+		}
+		t.SendMsgToTgbotAdmins("IP limit / " + html.EscapeString(getHostname()) + "\nAccount: " + html.EscapeString(e.Source) + "\nDecision: " + html.EscapeString(fmt.Sprint(e.Data)))
+		return
+	}
 	if !t.isEventEnabled(e.Type) {
 		return
 	}

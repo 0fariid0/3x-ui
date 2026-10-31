@@ -1,0 +1,136 @@
+package dispatcher
+
+import (
+	"context"
+	"github.com/xtls/xray-core/app/stats/sessiongate"
+	"github.com/xtls/xray-core/common"
+	"github.com/xtls/xray-core/common/buf"
+	"github.com/xtls/xray-core/features/stats"
+	"github.com/xtls/xray-core/transport"
+	"sync"
+	"time"
+)
+
+type gateReader struct {
+	buf.Reader
+	done func()
+}
+
+func (r *gateReader) ReadMultiBuffer() (buf.MultiBuffer, error) {
+	b, e := r.Reader.ReadMultiBuffer()
+	if e != nil {
+		r.done()
+	}
+	return b, e
+}
+func (r *gateReader) Interrupt()   { common.Interrupt(r.Reader); r.done() }
+func (r *gateReader) Close() error { e := common.Close(r.Reader); r.done(); return e }
+
+type gateWriter struct {
+	buf.Writer
+	done func()
+}
+
+func (w *gateWriter) WriteMultiBuffer(b buf.MultiBuffer) error {
+	e := w.Writer.WriteMultiBuffer(b)
+	if e != nil {
+		w.done()
+	}
+	return e
+}
+func (w *gateWriter) Close() error { e := common.Close(w.Writer); w.done(); return e }
+func (w *gateWriter) Interrupt()   { common.Interrupt(w.Writer); w.done() }
+
+// Track only the authenticated stream. Closing these links never closes the
+// shared listener, a different account, or the same account's other source IP.
+func trackClientIP(ctx context.Context, sm stats.Manager, email, ip string, link *transport.Link, trackOnline bool) {
+	var om stats.OnlineMap
+	if trackOnline {
+		om, _ = sm.GetOrRegisterOnlineMap("user>>>" + email + ">>>online")
+		if om != nil {
+			om.AddIP(ip)
+		}
+	}
+	reader, writer := link.Reader, link.Writer
+	var mu sync.Mutex
+	var once sync.Once
+	var release func()
+	var stop func() bool
+	ended := false
+	readDone, writeDone := false, false
+	finish := func() {
+		once.Do(func() {
+			if om != nil {
+				om.RemoveIP(ip)
+			}
+			mu.Lock()
+			ended = true
+			r := release
+			s := stop
+			mu.Unlock()
+			if s != nil {
+				s()
+			}
+			if r != nil {
+				r()
+			}
+		})
+	}
+	closeStream := func() {
+		sessiongate.CloseTransport(ctx)
+		common.Interrupt(reader)
+		common.Interrupt(writer)
+		finish()
+	}
+	r, accepted, err := sessiongate.Default.Register(email, ip, closeStream, time.Now())
+	mu.Lock()
+	release = r
+	alreadyEnded := ended
+	mu.Unlock()
+	if alreadyEnded && r != nil {
+		r()
+	}
+	if err != nil {
+		finish()
+		return
+	}
+	if !accepted {
+		closeStream()
+		return
+	}
+	mark := func(read bool) {
+		mu.Lock()
+		if read {
+			readDone = true
+		} else {
+			writeDone = true
+		}
+		both := readDone && writeDone
+		mu.Unlock()
+		if both {
+			finish()
+		}
+	}
+	// Preserve the timeout wrapper used by sniffing and per-user uplink stats.
+	if timeoutReader, ok := reader.(*buf.TimeoutWrapperReader); ok {
+		timeoutReader.Reader = &gateReader{timeoutReader.Reader, func() { mark(true) }}
+		link.Reader = timeoutReader
+	} else {
+		link.Reader = &gateReader{reader, func() { mark(true) }}
+	}
+	// Preserve the outer stats writer: splice accounting recognizes its type.
+	if statWriter, ok := writer.(*SizeStatWriter); ok {
+		statWriter.Writer = &gateWriter{statWriter.Writer, func() { mark(false) }}
+		link.Writer = statWriter
+	} else {
+		link.Writer = &gateWriter{writer, func() { mark(false) }}
+	}
+	stopFunc := context.AfterFunc(ctx, finish)
+	mu.Lock()
+	stop = stopFunc
+	alreadyEnded = ended
+	mu.Unlock()
+	if alreadyEnded {
+		stopFunc()
+	}
+}

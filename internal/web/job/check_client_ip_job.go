@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
+	"github.com/mhsanaei/3x-ui/v3/internal/eventbus"
 	"github.com/mhsanaei/3x-ui/v3/internal/logger"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/entity"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
@@ -30,6 +32,43 @@ type IPWithTimestamp struct {
 	AdmittedAt int64  `json:"admittedAt,omitempty"`
 }
 
+type excessObservation struct {
+	First int64
+	Scans int
+}
+
+// confirmExcess counts consecutive enforcement scans, not repeat dispatches.
+// Returning below capacity clears pending evidence so isolated spikes never add up.
+func (j *CheckClientIpJob) confirmExcess(email string, candidates []IPWithTimestamp, policy entity.IPBlockSettings, now int64) []IPWithTimestamp {
+	if j.pendingExcess == nil {
+		j.pendingExcess = make(map[string]map[string]excessObservation)
+	}
+	previous := j.pendingExcess[email]
+	current := make(map[string]excessObservation, len(candidates))
+	ready := make([]IPWithTimestamp, 0, len(candidates))
+	scans := policy.ConfirmScans
+	if scans < 1 {
+		scans = 1
+	}
+	for _, entry := range candidates {
+		observation, exists := previous[entry.IP]
+		if !exists {
+			observation.First = now
+		}
+		observation.Scans++
+		current[entry.IP] = observation
+		if observation.Scans >= scans && now-observation.First >= int64(policy.SwitchGraceSeconds) {
+			ready = append(ready, entry)
+		}
+	}
+	if len(current) == 0 {
+		delete(j.pendingExcess, email)
+	} else {
+		j.pendingExcess[email] = current
+	}
+	return ready
+}
+
 // CheckClientIpJob monitors client IP addresses and manages IP blocking based
 // on configured limits. The per-client IPs come from the core's online-stats
 // API; no access log is involved. On a core too old to expose that API the job
@@ -41,6 +80,14 @@ type CheckClientIpJob struct {
 	disAllowedIps   []string
 	bannedSeen      map[string]int64
 	sharedIPs       map[string]map[string]bool
+	pendingExcess   map[string]map[string]excessObservation
+	scopedQueue     []entity.IPBlockChange
+	unbanGrace      []service.IPUnbanGrace
+	decisions       []model.ClientEvent
+	lastDecisions   map[string]string
+	localGuid       string
+	localSources    map[string]map[string]bool
+	remoteRecent    map[string]map[string]bool
 	xrayService     service.XrayService
 }
 
@@ -59,7 +106,15 @@ func NewCheckClientIpJob() *CheckClientIpJob {
 func (j *CheckClientIpJob) Run() {
 	j.mu.Lock()
 	defer j.mu.Unlock()
+	var restoreErr error
+	if database.GetDB() != nil {
+		restoreErr = service.ReconcileScopedIPBlocks(context.Background())
+		if restoreErr != nil {
+			j.checkError(restoreErr)
+		}
+	}
 	observed, apiMode := j.collectFromOnlineAPI()
+	service.RecordIPScan(observed, apiMode)
 	if !apiMode {
 		// xray is down or predates the online-stats API. There is no access-log
 		// fallback anymore, so there is nothing to do this run.
@@ -68,10 +123,11 @@ func (j *CheckClientIpJob) Run() {
 	}
 
 	insightObserved := make(map[string][]model.ClientIpEntry, len(observed))
+	observedAt := time.Now().Unix()
 	for email, ips := range observed {
 		entries := make([]model.ClientIpEntry, 0, len(ips))
-		for ip, timestamp := range ips {
-			entries = append(entries, model.ClientIpEntry{IP: ip, Timestamp: timestamp})
+		for ip := range ips {
+			entries = append(entries, model.ClientIpEntry{IP: ip, Timestamp: observedAt})
 		}
 		insightObserved[email] = entries
 	}
@@ -79,7 +135,20 @@ func (j *CheckClientIpJob) Run() {
 		logger.Debug("[ClientInsights] record IP history failed:", err)
 	}
 
+	policy, policyErr := service.LoadIPBlockSettings()
+	if policyErr != nil {
+		j.checkError(policyErr)
+		return
+	}
+	if policy.EnforcementScope == "client" {
+		if restoreErr != nil {
+			return
+		}
+		j.processObserved(observed, j.hasLimitIp(), true)
+		return
+	}
 	if !isFail2BanEnabled() {
+		j.processObserved(observed, false, true)
 		return
 	}
 
@@ -271,10 +340,28 @@ func (j *CheckClientIpJob) loadClientIpRows(emails []string) map[string]*model.I
 // several per observed email.
 func (j *CheckClientIpJob) processObserved(observed map[string]map[string]int64, enforce, observedAreLive bool) bool {
 	shouldCleanLog := false
+	j.scopedQueue = nil
+	j.decisions = nil
+	grace, graceErr := service.LoadUnbanGrace()
+	if graceErr != nil {
+		j.checkError(graceErr)
+		return false
+	}
+	j.unbanGrace = grace
 	policy, err := service.LoadIPBlockSettings()
 	if err != nil {
 		j.checkError(err)
 		return false
+	}
+	for email := range j.lastDecisions {
+		if _, exists := observed[email]; !exists {
+			delete(j.lastDecisions, email)
+		}
+	}
+	for email := range j.pendingExcess {
+		if _, exists := observed[email]; !exists {
+			delete(j.pendingExcess, email)
+		}
 	}
 	j.policy = policy
 	enforce = enforce && policy.Enabled
@@ -304,6 +391,7 @@ func (j *CheckClientIpJob) processObserved(observed map[string]map[string]int64,
 		j.sharedIPs[ip][email] = true
 	}
 	guid, guidErr := (&service.SettingService{}).GetPanelGuid()
+	j.localGuid = guid
 	var rows []model.NodeClientIp
 	if guidErr != nil {
 		j.checkError(guidErr)
@@ -312,6 +400,41 @@ func (j *CheckClientIpJob) processObserved(observed map[string]map[string]int64,
 	if err := database.GetDB().Where("node_guid = ?", guid).Find(&rows).Error; err != nil {
 		j.checkError(err)
 		return false
+	}
+	j.localSources = make(map[string]map[string]bool)
+	j.remoteRecent = make(map[string]map[string]bool)
+	for _, row := range rows {
+		var entries []model.ClientIpEntry
+		if json.Unmarshal([]byte(row.Ips), &entries) != nil {
+			continue
+		}
+		if j.localSources[row.Email] == nil {
+			j.localSources[row.Email] = make(map[string]bool)
+		}
+		for _, entry := range entries {
+			j.localSources[row.Email][entry.IP] = true
+		}
+	}
+	for _, batch := range chunkEmails(emails, ipScanChunk) {
+		var remoteRows []model.NodeClientIp
+		if err := database.GetDB().Select("email, ips").Where("node_guid <> ? AND email IN ?", guid, batch).Find(&remoteRows).Error; err != nil {
+			j.checkError(err)
+			return false
+		}
+		for _, row := range remoteRows {
+			var entries []model.ClientIpEntry
+			if json.Unmarshal([]byte(row.Ips), &entries) != nil {
+				continue
+			}
+			for _, entry := range entries {
+				if entry.Timestamp >= now-int64(policy.LiveSeconds) {
+					if j.remoteRecent[row.Email] == nil {
+						j.remoteRecent[row.Email] = make(map[string]bool)
+					}
+					j.remoteRecent[row.Email][entry.IP] = true
+				}
+			}
+		}
 	}
 	for _, row := range rows {
 		var entries []model.ClientIpEntry
@@ -428,6 +551,20 @@ func (j *CheckClientIpJob) processObserved(observed map[string]map[string]int64,
 		j.disconnectClientTemporarily(d.inbound, d.email, clients)
 	}
 
+	for _, request := range j.scopedQueue {
+		if _, err := service.AutomaticScopedIPBlock(context.Background(), request); err != nil {
+			j.checkError(err)
+			delete(j.bannedSeen, request.Email+"|"+request.IP)
+		}
+	}
+	for _, event := range j.decisions {
+		if err := database.GetDB().Create(&event).Error; err != nil {
+			j.checkError(err)
+		}
+		if policy.NotifyTelegram && EventBus != nil && event.Summary == "excess_selected" {
+			EventBus.Publish(eventbus.Event{Type: eventbus.EventIPLimit, Source: event.Email, Data: event.Summary})
+		}
+	}
 	j.recordLocalAttribution(attribution)
 
 	return shouldCleanLog
@@ -566,6 +703,7 @@ func (j *CheckClientIpJob) updateInboundClientIps(tx *gorm.DB, inboundClientIps 
 	}
 
 	if !enforce || limitIp <= 0 || !inbound.Enable {
+		delete(j.pendingExcess, clientEmail)
 		// Nothing to enforce (collection-only run, no limit on the clients row,
 		// or inbound disabled): record the observed IPs for the panel and return.
 		jsonIps, _ := json.Marshal(newIpsWithTime)
@@ -595,6 +733,21 @@ func (j *CheckClientIpJob) updateInboundClientIps(tx *gorm.DB, inboundClientIps 
 		observedThisScan[ipTime.IP] = true
 	}
 	liveIps, historicalIps := partitionLiveIpsWindow(ipMap, observedThisScan, policy.LiveSeconds)
+	// An address absent from this complete live snapshot must not reserve a
+	// local slot merely because it was recently connected. Keep the existing
+	// recent-observation policy for addresses still attributed to remote nodes.
+	if observedAreLive {
+		current := make([]IPWithTimestamp, 0, len(liveIps))
+		for _, entry := range liveIps {
+			if j.localSources[clientEmail][entry.IP] && !observedThisScan[entry.IP] && !j.remoteRecent[clientEmail][entry.IP] {
+				historicalIps = append(historicalIps, entry)
+			} else {
+				current = append(current, entry)
+			}
+		}
+		liveIps = current
+	}
+
 	// An already accepted IP keeps its slot even if lastSeen advances. Only live
 	// entries are considered; disconnected/historical addresses cannot hold slots.
 	prior := make(map[string]IPWithTimestamp, len(oldIpsWithTime))
@@ -633,7 +786,7 @@ func (j *CheckClientIpJob) updateInboundClientIps(tx *gorm.DB, inboundClientIps 
 	protected := make(map[string]bool)
 	for _, entry := range liveIps {
 		for owner := range j.sharedIPs[entry.IP] {
-			if owner != clientEmail {
+			if owner != clientEmail && policy.EnforcementScope != "client" {
 				protected[entry.IP] = true
 			}
 		}
@@ -649,7 +802,97 @@ func (j *CheckClientIpJob) updateInboundClientIps(tx *gorm.DB, inboundClientIps 
 		}
 	}
 	bannedLive = safeBans
-	actionable := j.filterAdvancedSinceLastBan(clientEmail, bannedLive)
+	graceSkipped := false
+	candidates := make([]IPWithTimestamp, 0, len(bannedLive))
+	for _, entry := range bannedLive {
+		skip := service.IsUnbanGraceActive(j.unbanGrace, clientEmail, entry.IP, time.Now().UnixMilli())
+		if skip {
+			graceSkipped = true
+		} else {
+			candidates = append(candidates, entry)
+		}
+	}
+	bannedLive = candidates
+	confirmed := j.confirmExcess(clientEmail, bannedLive, policy, time.Now().Unix())
+	actionable := j.filterAdvancedSinceLastBan(clientEmail, confirmed)
+	reason := "within_limit"
+	counted := 0
+	for _, entry := range liveIps {
+		if !service.IsIPBlockExempt(entry.IP, policy) {
+			counted++
+		}
+	}
+	if len(protected) > 0 && counted > limitIp {
+		reason = "shared_ip_protected"
+	}
+	if graceSkipped {
+		reason = "unban_grace"
+	}
+	if len(bannedLive) > 0 {
+		reason = "pending_confirmation"
+	}
+	if len(actionable) > 0 {
+		reason = "excess_selected"
+	}
+
+	if policy.EnforcementScope == "client" {
+		for _, entry := range actionable {
+			j.scopedQueue = append(j.scopedQueue, entity.IPBlockChange{Scope: "client", Email: clientEmail, IP: entry.IP, Action: "ban"})
+		}
+		actionable = nil
+	}
+	if policy.EnforcementScope != "client" && j.localGuid != "" {
+		checked := make([]IPWithTimestamp, 0, len(actionable))
+		for _, candidate := range actionable {
+			var records []model.NodeClientIp
+			err := tx.Where("node_guid = ? AND email <> ?", j.localGuid, clientEmail).Where("ips LIKE ?", "%"+candidate.IP+"%").Find(&records).Error
+			if err != nil {
+				j.checkError(err)
+				delete(j.bannedSeen, clientEmail+"|"+candidate.IP)
+				continue
+			}
+			shared := false
+			for _, record := range records {
+				var addresses []model.ClientIpEntry
+				if json.Unmarshal([]byte(record.Ips), &addresses) != nil {
+					shared = true
+					break
+				}
+				for _, entry := range addresses {
+					if entry.IP == candidate.IP && entry.Timestamp >= time.Now().Unix()-int64(policy.LiveSeconds) {
+						shared = true
+						break
+					}
+				}
+			}
+			if !shared {
+				checked = append(checked, candidate)
+			} else {
+				protected[candidate.IP] = true
+				delete(j.bannedSeen, clientEmail+"|"+candidate.IP)
+			}
+		}
+		actionable = checked
+	}
+	if policy.EnforcementScope != "client" && reason == "excess_selected" && len(actionable) == 0 {
+		if len(protected) > 0 {
+			reason = "shared_ip_protected"
+		} else {
+			reason = "enforcement_failed"
+		}
+	}
+	detail, _ := json.Marshal(map[string]any{"reason": reason, "limit": limitIp, "kept": keptLive, "excess": bannedLive, "scope": policy.EnforcementScope, "protected": protected})
+	if j.lastDecisions == nil {
+		j.lastDecisions = make(map[string]string)
+	}
+	signature := reason + "|" + fmt.Sprint(collectDecisionIPs(keptLive)) + "|" + fmt.Sprint(collectDecisionIPs(bannedLive))
+	if j.lastDecisions[clientEmail] != signature {
+		previous := j.lastDecisions[clientEmail]
+		j.lastDecisions[clientEmail] = signature
+		if reason != "within_limit" || previous != "" {
+			j.decisions = append(j.decisions, model.ClientEvent{Email: clientEmail, Kind: "ip_limit_decision", Summary: reason, Details: string(detail), CreatedAt: time.Now().UnixMilli()})
+		}
+	}
 	if len(actionable) > 0 {
 		shouldCleanLog = true
 		banned = true
@@ -677,6 +920,9 @@ func (j *CheckClientIpJob) updateInboundClientIps(tx *gorm.DB, inboundClientIps 
 	// and will reappear in the next scan if they reconnect.
 	dbIps := make([]IPWithTimestamp, 0, len(keptLive)+len(historicalIps))
 	for i := range keptLive {
+		if observedAreLive && observedThisScan[keptLive[i].IP] {
+			keptLive[i].Timestamp = time.Now().Unix()
+		}
 		keptLive[i].AdmittedAt = prior[keptLive[i].IP].AdmittedAt
 		if keptLive[i].AdmittedAt == 0 && !service.IsIPBlockExempt(keptLive[i].IP, policy) {
 			keptLive[i].AdmittedAt = time.Now().UnixMilli()
@@ -889,4 +1135,12 @@ func (j *CheckClientIpJob) getInboundByEmail(clientEmail string) (*model.Inbound
 	}
 
 	return nil, err
+}
+
+func collectDecisionIPs(v []IPWithTimestamp) []string {
+	out := make([]string, 0, len(v))
+	for _, r := range v {
+		out = append(out, r.IP)
+	}
+	return out
 }

@@ -15,12 +15,14 @@ export const IPBlockAddressSchema = z.union([z.ipv4(), z.ipv6()]).transform((val
 });
 
 export function canonicalBlockIP(value: string): string | null {
-  const parsed = IPBlockAddressSchema.safeParse(value.trim());
+  const source=value.trim();
+ const parsed = IPBlockAddressSchema.safeParse(source.startsWith('[') && source.endsWith(']') ? source.slice(1,-1) : source);
   return parsed.success ? parsed.data : null;
 }
 
 export const IPBlockMutationSchema = IPBlockChangeSchema.extend({
-  nodeId: z.number().int().min(0),
+  scope: z.enum(['host', 'client']).optional(),
+ nodeId: z.number().int().min(0),
   ip: IPBlockAddressSchema,
   action: z.enum(['ban', 'unban']),
   email: z.string().max(255),

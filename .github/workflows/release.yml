@@ -26,15 +26,41 @@ jobs:
       - name: Verify custom lifecycle and subscription behavior
         run: |
           set -o pipefail
-          go test -count=1 -p 1 ./internal/xray ./internal/database ./internal/web/service ./internal/web/service/tgbot ./internal/web/service/email ./internal/web/controller ./internal/web/job ./internal/web/runtime ./internal/sub ./internal/util/link 2>&1 | tee validation.log
+          go test -count=1 -p 1 ./internal/xray ./internal/database ./internal/web/service ./internal/web/service/tgbot ./internal/web/service/email ./internal/web/controller ./internal/web/job ./internal/web/runtime ./internal/sub ./internal/util/link ./internal/util/sessiongate 2>&1 | tee validation.log
       - name: Preserve validation report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: validation-report
           path: validation.log
+  validate-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      GOMAXPROCS: 2
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Verify patched core and exact account isolation
+        run: |
+          set -o pipefail
+          make dist-stub
+          python3 tools/build_core.py --test 2>&1 | tee core-validation.log
+          python3 tools/build_core.py "$RUNNER_TEMP/xray-fara" 2>&1 | tee -a core-validation.log
+          FARA_CORE_BINARY="$RUNNER_TEMP/xray-fara" XRAY_E2E_BINARY="$RUNNER_TEMP/xray-fara" go test -count=1 ./internal/xray -run 'TestXrayAPI_E2E|TestFaraCoreExactAccountIPLiveDisconnect' -v 2>&1 | tee -a core-validation.log
+      - name: Preserve core validation report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: core-validation-report
+          path: core-validation.log
+
   build:
-    needs: validate
+    needs: [validate, validate-core]
     permissions:
       contents: write
     strategy:
@@ -127,37 +153,8 @@ jobs:
           mkdir x-ui/bin
           cd x-ui/bin
 
-          # Download dependencies
-          Xray_URL="https://github.com/XTLS/Xray-core/releases/download/v26.7.28/"
-          if [ "${{ matrix.platform }}" == "amd64" ]; then
-            fetch ${Xray_URL}Xray-linux-64.zip
-            unzip Xray-linux-64.zip
-            rm -f Xray-linux-64.zip
-          elif [ "${{ matrix.platform }}" == "arm64" ]; then
-            fetch ${Xray_URL}Xray-linux-arm64-v8a.zip
-            unzip Xray-linux-arm64-v8a.zip
-            rm -f Xray-linux-arm64-v8a.zip
-          elif [ "${{ matrix.platform }}" == "armv7" ]; then
-            fetch ${Xray_URL}Xray-linux-arm32-v7a.zip
-            unzip Xray-linux-arm32-v7a.zip
-            rm -f Xray-linux-arm32-v7a.zip
-          elif [ "${{ matrix.platform }}" == "armv6" ]; then
-            fetch ${Xray_URL}Xray-linux-arm32-v6.zip
-            unzip Xray-linux-arm32-v6.zip
-            rm -f Xray-linux-arm32-v6.zip
-          elif [ "${{ matrix.platform }}" == "386" ]; then
-            fetch ${Xray_URL}Xray-linux-32.zip
-            unzip Xray-linux-32.zip
-            rm -f Xray-linux-32.zip
-          elif [ "${{ matrix.platform }}" == "armv5" ]; then
-            fetch ${Xray_URL}Xray-linux-arm32-v5.zip
-            unzip Xray-linux-arm32-v5.zip
-            rm -f Xray-linux-arm32-v5.zip
-          elif [ "${{ matrix.platform }}" == "s390x" ]; then
-            fetch ${Xray_URL}Xray-linux-s390x.zip
-            unzip Xray-linux-s390x.zip
-            rm -f Xray-linux-s390x.zip
-          fi
+          # Build the pinned Fara core for the same target as this panel.
+          python3 ../../tools/build_core.py "$PWD/xray"
           rm -f geoip.dat geosite.dat
           fetch https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat
           fetch https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat
@@ -203,7 +200,7 @@ jobs:
   #  Windows Build
   # =================================
   build-windows:
-    needs: validate
+    needs: [validate, validate-core]
     name: Build for Windows
     permissions:
       contents: write
@@ -279,11 +276,11 @@ jobs:
           mkdir x-ui\bin
           cd x-ui\bin
 
-          # Download Xray for Windows
-          $Xray_URL = "https://github.com/XTLS/Xray-core/releases/download/v26.7.28/"
-          Invoke-WebRequest @retry -Uri "${Xray_URL}Xray-windows-64.zip" -OutFile "Xray-windows-64.zip"
-          Expand-Archive -Path "Xray-windows-64.zip" -DestinationPath .
-          Remove-Item "Xray-windows-64.zip"
+          # Build the pinned Fara core; no stock binary fallback.
+          $env:GOOS = "windows"
+          $env:GOARCH = "amd64"
+          python ../../tools/build_core.py "$PWD/xray.exe"
+          if ($LASTEXITCODE -ne 0) { throw "Fara core build failed" }
           Remove-Item geoip.dat, geosite.dat -ErrorAction SilentlyContinue
           Invoke-WebRequest @retry -Uri "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat" -OutFile "geoip.dat"
           Invoke-WebRequest @retry -Uri "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat" -OutFile "geosite.dat"

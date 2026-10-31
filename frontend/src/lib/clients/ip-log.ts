@@ -2,6 +2,8 @@
 // POST /panel/api/clients/ips/:email. `node` is the name of the node the IP is
 // connecting through, or '' when it is on this local panel (or unattributed).
 export type ClientIpInfo = {
+  state?: string;
+  reportStale?: boolean;
   ip: string;
   time: string;
   node: string;
@@ -26,6 +28,8 @@ export function normalizeClientIps(obj: unknown): ClientIpInfo[] {
       if (!ip) continue;
       out.push({
         ip,
+        ...(typeof o.state === 'string' ? {state:o.state}:{}),
+        ...(typeof o.reportStale === 'boolean' ? {reportStale:o.reportStale}:{}),
         time: typeof o.time === 'string' ? o.time : '',
         node: typeof o.node === 'string' ? o.node : '',
         ...(typeof o.timestamp === 'number' && o.timestamp > 0 ? { timestamp: o.timestamp } : {}),

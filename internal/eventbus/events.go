@@ -6,6 +6,7 @@ import "time"
 type EventType string
 
 const (
+	EventIPLimit EventType = "ip.limit"
 	// Outbound health (observatory-driven)
 	EventOutboundDown EventType = "outbound.down"
 	EventOutboundUp   EventType = "outbound.up"

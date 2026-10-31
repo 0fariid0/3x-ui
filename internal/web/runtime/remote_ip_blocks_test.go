@@ -89,3 +89,36 @@ func TestRemoteIPBlockSettingsExactNodeAndJSON(t *testing.T) {
 		t.Fatal(calls)
 	}
 }
+
+func TestRemoteScopedIPStatusAndChangeKeepScope(t *testing.T) {
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if r.Header.Get("Authorization") != "Bearer tok" {
+			t.Error("missing authentication")
+		}
+		if r.Method == "GET" {
+			if r.URL.Query().Get("scope") != "client" {
+				t.Error("missing scope")
+			}
+		} else {
+			var req entity.IPBlockChange
+			_ = json.NewDecoder(r.Body).Decode(&req)
+			if req.Scope != "client" || req.Email != "account-a" || req.NodeID != 0 {
+				t.Errorf("bad target %+v", req)
+			}
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "obj": entity.IPBlockStatus{Available: true, Blocks: []entity.IPBlockEntry{}}})
+	}))
+	defer srv.Close()
+	remote := NewRemote(nodeForPlainServer(t, srv, "verify", "tok"), nil)
+	if _, e := remote.ScopedIPBlocks(context.Background()); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := remote.ChangeIPBlock(context.Background(), entity.IPBlockChange{NodeID: 7, Scope: "client", Email: "account-a", IP: "192.0.2.1", Action: "ban"}); e != nil {
+		t.Fatal(e)
+	}
+	if calls != 2 {
+		t.Fatal(calls)
+	}
+}

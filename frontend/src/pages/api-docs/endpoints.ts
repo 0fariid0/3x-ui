@@ -268,8 +268,15 @@ export const sections: readonly Section[] = [
       {
         method: 'GET',
         path: '/panel/api/server/fail2banStatus',
-        summary: 'Reports whether per-client IP limits can be enforced on this host. The panel uses it to gate the "IP Limit" field, since enforcement depends on Fail2ban being installed.',
+        summary: 'Reports Fail2ban capability and, when configured, enforcementScope/client and enforcementAvailable for the bundled Fara core. Fail2ban fields retain their original meaning.',
         response: '{\n  "success": true,\n  "obj": {\n    "enabled": true,\n    "installed": true,\n    "usable": true,\n    "windows": false\n  }\n}',
+      },
+      {
+        method: 'GET',
+        path: '/panel/api/server/ipBlocks/overview',
+        summary: 'Read latest successful IP-scan time and stale state, core/Fail2ban/log diagnostics, and at most 200 recent decisions plus 200 IP-history entries. Does not mutate firewall rules. Search is exact account/IP/reason. Time range is 1..744 hours. Remote nodes require v3.9.11.',
+        params: [{name:'nodeId',in:'query',type:'integer',optional:true,defaultValue:0},{name:'search',in:'query',type:'string',optional:true},{name:'hours',in:'query',type:'integer',optional:true,defaultValue:24}],
+        response: '{"success":true,"obj":{"checkedAt":1793500000000,"health":{"checkedAt":1793500000000,"lastSuccess":1793500000000,"available":true,"stale":false,"reason":""},"checks":{"scopedCore":"ready"},"events":[],"history":[]}}',
       },
       {
         method: 'GET',
@@ -281,7 +288,7 @@ export const sections: readonly Section[] = [
       {
         method: 'POST',
         path: '/panel/api/server/ipBlocks/settings',
-        summary: 'Accepts a full JSON IPBlockSettings object. Saves policy in the panel database and a dedicated Fail2ban override; sets and verifies live jail timing without clearing active bans. Partial failures roll back live settings and the override. Existing bans keep their duration. Automatic limits retain accepted IPs and ban new excess IPs. Exempt IPs/CIDRs do not consume slots; GRE-TUN ranges are always exempt. Does not install Fail2ban or edit SSH jails, filters or firewall action scripts.',
+        summary: 'Accepts a full or partial JSON IPBlockSettings object; omitted fields retain their current values. Remote policy mutations require policyRevision=1 or newer. Saves policy in the panel database and a dedicated Fail2ban override; sets and verifies live jail timing without clearing active bans. Partial failures roll back live settings and the override. Existing bans keep their duration. enforcementScope=client uses the bundled Fara core and does not require Fail2ban. confirmScans and switchGraceSeconds control evidence and network-switch grace. unbanGraceSeconds prevents immediate automatic reblocking. namedExemptions is a JSON string of name/address/expiresAt objects (milliseconds, 0 permanent). notifyTelegram is off by default. Automatic limits retain accepted IPs and ban new excess IPs. Exempt IPs/CIDRs do not consume slots; GRE-TUN ranges are always exempt. Does not install Fail2ban or edit SSH jails, filters or firewall action scripts.',
         params: [{ name: 'nodeId', in: 'query', type: 'integer', optional: true, defaultValue: 0, desc: 'Exact node ID, 0 for this panel.' }],
         body: '{"enabled":true,"banSeconds":1800,"findSeconds":32,"maxRetry":1,"scanSeconds":10,"liveSeconds":120,"historySeconds":1800,"disconnect":false,"exemptIPs":""}',
 
@@ -290,8 +297,8 @@ export const sections: readonly Section[] = [
       {
         method: 'GET',
         path: '/panel/api/server/ipBlocks',
-        summary: 'Read the live 3x-ipl Fail2ban ban list. Includes manual and automatic bans, even when they no longer appear in client IP logs. Source and time are best-effort metadata; live membership comes from Fail2ban. Does not enumerate other firewall chains or SSH jails. nodeId=0 targets this host; positive IDs target an enabled configured node over its authenticated connection. Both panels must support this endpoint.',
-        params: [{ name: 'nodeId', in: 'query', type: 'integer', optional: true, defaultValue: 0, desc: 'Configured node ID, or 0 for this panel.' }],
+        summary: 'Read the live ban list. scope=client reads account/IP blocks from the bundled Fara core; otherwise reads 3x-ipl Fail2ban. Includes manual and automatic bans, even when they no longer appear in client IP logs. Source and time are best-effort metadata; live membership comes from Fail2ban. Does not enumerate other firewall chains or SSH jails. nodeId=0 targets this host; positive IDs target an enabled configured node over its authenticated connection. Both panels must support this endpoint.',
+        params: [{ name: 'nodeId', in: 'query', type: 'integer', optional: true, defaultValue: 0, desc: 'Configured node ID, or 0 for this panel.' }, {name:'scope',in:'query',type:'string',optional:true,defaultValue:'host',desc:'host or client; client requires the bundled Fara core on the selected node.'}],
         responseSchema: 'IPBlockStatus',
       },
       {
@@ -307,11 +314,12 @@ export const sections: readonly Section[] = [
       {
         method: 'POST',
         path: '/panel/api/server/ipBlocks/change',
-        summary: 'Accepts JSON or form-encoded bodies. Ban or unban one literal IPv4/IPv6 address in the selected host 3x-ipl jail, using that jail configured ban duration. The rule applies to the entire host, not one client. Duplicate requests are idempotent. Verifies live state after the command and records a client audit event; auditWarning=true means the firewall operation succeeded but audit persistence failed. New bans of GRE-TUN local ranges (10.10/16, 10.20/16, 10.30/16, 10.40/16) are rejected; unban remains allowed for recovery. Does not change automatic IP limits or Fail2ban configuration. Unbanned IPs can be banned again if the automatic limit is still exceeded.',
+        summary: 'Accepts JSON or form-encoded bodies. scope=client requires an exact account email and closes only matching account/source streams; it never falls back to a global firewall rule. Active scoped blocks are persisted for restart recovery. Without scope (or host), ban or unban one literal IPv4/IPv6 address in the selected host 3x-ipl jail, using that jail configured ban duration. The rule applies to the entire host, not one client. Duplicate requests are idempotent. Verifies live state after the command and records a client audit event; auditWarning=true means the firewall operation succeeded but audit persistence failed. New bans of GRE-TUN local ranges (10.10/16, 10.20/16, 10.30/16, 10.40/16) are rejected; unban remains allowed for recovery. Does not change automatic IP limits or Fail2ban configuration. Unbanned IPs can be banned again if the automatic limit is still exceeded.',
         params: [
           { name: 'nodeId', in: 'body', type: 'integer', optional: true, defaultValue: 0, desc: 'Configured node ID, or 0 for this panel.' },
           { name: 'ip', in: 'body', type: 'string', desc: 'One literal IPv4 or IPv6 address; no CIDRs, hostnames or shell syntax.' },
           { name: 'action', in: 'body', type: 'string', desc: 'ban or unban.' },
+          { name: 'scope', in: 'body', type: 'string', optional:true, defaultValue:'host', desc:'host (legacy) or client. client requires email and the bundled Fara core.' },
           { name: 'email', in: 'body', type: 'string', optional: true, desc: 'Client email for audit attribution.' },
         ],
         responseSchema: 'IPBlockStatus',

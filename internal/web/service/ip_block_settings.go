@@ -21,10 +21,29 @@ const ipBlockSettingsKey = "ipBlockPolicy"
 var ipBlockSettingsPath = "/etc/fail2ban/jail.d/zz-3x-ui-panel.local"
 
 func DefaultIPBlockSettings() entity.IPBlockSettings {
-	return entity.IPBlockSettings{Enabled: true, BanSeconds: 1800, FindSeconds: 32, MaxRetry: 1, ScanSeconds: 10, LiveSeconds: 120, HistorySeconds: 1800}
+	return entity.IPBlockSettings{Enabled: true, UnbanGraceSeconds: 30, EnforcementScope: "host", ConfirmScans: 1, BanSeconds: 1800, FindSeconds: 32, MaxRetry: 1, ScanSeconds: 10, LiveSeconds: 120, HistorySeconds: 1800}
 }
 
 func validateIPBlockSettings(v entity.IPBlockSettings) error {
+	if v.UnbanGraceSeconds < 0 || v.UnbanGraceSeconds > 600 {
+		return fmt.Errorf("invalid unban grace")
+	}
+	extra, e := activeExemptionAddresses(v.NamedExemptions, 0)
+	if e != nil {
+		return e
+	}
+	v.ExemptIPs += "\n" + extra
+
+	if v.EnforcementScope != "" && v.EnforcementScope != "host" && v.EnforcementScope != "client" {
+		return fmt.Errorf("invalid enforcement scope")
+	}
+	if v.ConfirmScans == 0 {
+		v.ConfirmScans = 1
+	}
+	if v.SwitchGraceSeconds < 0 || v.SwitchGraceSeconds > 300 || v.ConfirmScans < 1 || v.ConfirmScans > 10 {
+		return fmt.Errorf("invalid network switch grace or consecutive scan count")
+	}
+
 	if len(v.ExemptIPs) > 8192 || len(strings.Fields(v.ExemptIPs)) > 128 {
 		return fmt.Errorf("too many exempt IPs")
 	}
@@ -66,6 +85,12 @@ func LoadIPBlockSettings() (entity.IPBlockSettings, error) {
 	if err = json.Unmarshal([]byte(row.Value), &v); err != nil {
 		return v, err
 	}
+	if v.EnforcementScope == "" {
+		v.EnforcementScope = "host"
+	}
+	if v.ConfirmScans == 0 {
+		v.ConfirmScans = 1
+	}
 	return v, validateIPBlockSettings(v)
 }
 
@@ -97,11 +122,18 @@ func (s *IPBlockService) settingsUnlocked(ctx context.Context) (*entity.IPBlockS
 	if err != nil {
 		return nil, err
 	}
+	if v.EnforcementScope == "client" {
+		_, err := runCoreIPControl(ctx, "status", "", "", 0)
+		if err != nil {
+			return &entity.IPBlockSettingsStatus{PolicyRevision: 1, Settings: v, Available: false, Reason: err.Error()}, nil
+		}
+		return &entity.IPBlockSettingsStatus{PolicyRevision: 1, Settings: v, Available: true}, nil
+	}
 	status, err := s.Status(ctx)
 	if err != nil {
-		return nil, err
+		return &entity.IPBlockSettingsStatus{PolicyRevision: 1, Settings: v, Available: false, Reason: err.Error()}, nil
 	}
-	result := &entity.IPBlockSettingsStatus{Settings: v, Available: status.Available, Reason: status.Reason}
+	result := &entity.IPBlockSettingsStatus{PolicyRevision: 1, Settings: v, Available: status.Available, Reason: status.Reason}
 	if status.Available {
 		if err = jailSettings(ctx, &result.Settings); err != nil {
 			return nil, err
@@ -155,17 +187,53 @@ func applyJailSettings(ctx context.Context, v entity.IPBlockSettings) error {
 }
 
 func (s *IPBlockService) SaveSettings(ctx context.Context, v entity.IPBlockSettings) (*entity.IPBlockSettingsStatus, error) {
+	if v.EnforcementScope == "" {
+		v.EnforcementScope = "host"
+	}
+	if v.ConfirmScans == 0 {
+		v.ConfirmScans = 1
+	}
 	if err := validateIPBlockSettings(v); err != nil {
 		return nil, err
 	}
 	ipBlockMutationMu.Lock()
 	defer ipBlockMutationMu.Unlock()
+	if v.EnforcementScope == "client" {
+		if _, err := runCoreIPControl(ctx, "status", "", "", 0); err != nil {
+			if !v.Enabled {
+				data, _ := json.Marshal(v)
+				if e := (&SettingService{}).saveSetting(ipBlockSettingsKey, string(data)); e != nil {
+					return nil, e
+				}
+				return &entity.IPBlockSettingsStatus{PolicyRevision: 1, Settings: v, Available: false, Reason: err.Error()}, nil
+			}
+			return nil, fmt.Errorf("Fara core capability required: %w", err)
+		}
+		data, _ := json.Marshal(v)
+		if err := (&SettingService{}).saveSetting(ipBlockSettingsKey, string(data)); err != nil {
+			return nil, err
+		}
+		return &entity.IPBlockSettingsStatus{PolicyRevision: 1, Settings: v, Available: true}, nil
+	}
 	before, err := s.settingsUnlocked(ctx)
 	if err != nil {
 		return nil, err
 	}
 	if !before.Available {
+		if !v.Enabled {
+			data, _ := json.Marshal(v)
+			if e := (&SettingService{}).saveSetting(ipBlockSettingsKey, string(data)); e != nil {
+				return nil, e
+			}
+			return &entity.IPBlockSettingsStatus{PolicyRevision: 1, Settings: v, Available: false, Reason: before.Reason}, nil
+		}
 		return nil, fmt.Errorf("IP blocking unavailable: %s", before.Reason)
+	}
+	if _, err := s.Status(ctx); err != nil {
+		return nil, err
+	}
+	if err := jailSettings(ctx, &before.Settings); err != nil {
+		return nil, err
 	}
 	old, readErr := os.ReadFile(ipBlockSettingsPath)
 	if readErr != nil && !os.IsNotExist(readErr) {
@@ -194,12 +262,18 @@ func (s *IPBlockService) SaveSettings(ctx context.Context, v entity.IPBlockSetti
 	if err = (&SettingService{}).saveSetting(ipBlockSettingsKey, string(blob)); err != nil {
 		return nil, rollback(err)
 	}
-	return &entity.IPBlockSettingsStatus{Settings: v, Available: true}, nil
+	return &entity.IPBlockSettingsStatus{PolicyRevision: 1, Settings: v, Available: true}, nil
 }
 
 // Exemptions never consume client slots and cannot be newly banned via the API.
 // Existing bans are deliberately left untouched; unban remains available.
 func IsIPBlockExempt(value string, policy entity.IPBlockSettings) bool {
+	value = strings.TrimSpace(value)
+	if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
+		value = value[1 : len(value)-1]
+	}
+	extra, _ := activeExemptionAddresses(policy.NamedExemptions, time.Now().UnixMilli())
+	policy.ExemptIPs += "\n" + extra
 	if clientip.IsTunnelLocal(value) {
 		return true
 	}

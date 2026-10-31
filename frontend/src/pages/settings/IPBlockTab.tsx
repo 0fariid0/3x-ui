@@ -6,10 +6,13 @@ import { z } from 'zod';
 import { HttpUtil } from '@/utils';
 import { NodeListSchema } from '@/schemas/node';
 import { keys } from '@/api/queryKeys';
+import NamedIPExemptions from './NamedIPExemptions';
+import IPLimitOverview from './IPLimitOverview';
 import ClientIpManagerModal from '@/pages/clients/ClientIpManagerModal';
 
 const PolicySchema = z.object({
-  exemptIPs: z.string(), enabled: z.boolean(), banSeconds: z.number().int(), findSeconds: z.number().int(),
+ namedExemptions:z.string().default(''),unbanGraceSeconds:z.number().int().default(30),notifyTelegram:z.boolean().default(false),
+  enforcementScope: z.enum(['host','client']).default('host'), switchGraceSeconds: z.number().int().default(0), confirmScans: z.number().int().default(1), exemptIPs: z.string(), enabled: z.boolean(), banSeconds: z.number().int(), findSeconds: z.number().int(),
   maxRetry: z.number().int(), scanSeconds: z.number().int(), liveSeconds: z.number().int(),
   historySeconds: z.number().int(), disconnect: z.boolean(),
 });
@@ -26,6 +29,8 @@ function PolicyForm({ nodeId, initial, available, onDirty }: { nodeId: number; i
   const client = useQueryClient();
   const banSeconds = Form.useWatch('banSeconds', form);
   const permanent = banSeconds === -1;
+ const watched=Form.useWatch([],form)||initial;
+ const estimate=((Math.max((watched.confirmScans||1)-1,Math.ceil((watched.switchGraceSeconds||0)/(watched.scanSeconds||10))))+1)*(watched.scanSeconds||10);
   async function save(values: Policy) {
     setBusy(true);
     try {
@@ -43,27 +48,34 @@ function PolicyForm({ nodeId, initial, available, onDirty }: { nodeId: number; i
   const field = (name: keyof Policy, min: number, max: number, step = 1) => (
     <Col xs={24} sm={12} lg={8} key={name}>
       <Form.Item name={name} label={text(name)} extra={text(`${name}Help`)} rules={[{ required: true }, { type: 'integer', min, max }]}>
-        <InputNumber min={min} max={max} step={step} style={{ width: '100%' }} />
+        <InputNumber min={min} max={max} step={step} style={{ width: '100%' }} disabled={busy || (watched.enforcementScope === 'client' && (name === 'maxRetry' || name === 'findSeconds'))} />
       </Form.Item>
     </Col>
   );
   return <>
     {contextHolder}
-    <Form form={form} layout="vertical" initialValues={initial} onFinish={save} onValuesChange={() => { setDirty(true); onDirty(true); }} disabled={!available || busy}>
+    <Form form={form} layout="vertical" initialValues={initial} onFinish={save} onValuesChange={() => { setDirty(true); onDirty(true); }} disabled={busy}>
       <Row gutter={16}>
+ <Col span={24}><Form.Item name="enforcementScope" label={text('enforcementScope')} extra={text('enforcementScopeHelp')}><Select options={[{value:'host',label:text('scopeHost')},{value:'client',label:text('scopeClient')}]} /></Form.Item></Col>
         <Col xs={24} sm={12}><Form.Item name="enabled" label={text('enabled')} extra={text('enabledHelp')} valuePropName="checked"><Switch /></Form.Item></Col>
         <Col xs={24} sm={12}><Form.Item label={text('permanent')} extra={text('permanentHelp')}><Switch checked={permanent} onChange={(checked) => { form.setFieldValue('banSeconds', checked ? -1 : 1800); setDirty(true); onDirty(true); }} /></Form.Item></Col>
-        <Col xs={24} sm={12} lg={8}><Form.Item name="banSeconds" label={text('banSeconds')} extra={text('banSecondsHelp')} rules={[{ required: true }, { type: 'integer', min: permanent ? -1 : 1, max: 31536000 }]}><InputNumber disabled={permanent || !available || busy} min={permanent ? -1 : 1} max={31536000} style={{ width: '100%' }} /></Form.Item></Col>
+        <Col xs={24} sm={12} lg={8}><Form.Item name="banSeconds" label={text('banSeconds')} extra={text('banSecondsHelp')} rules={[{ required: true }, { type: 'integer', min: permanent ? -1 : 1, max: 31536000 }]}><InputNumber disabled={permanent || busy} min={permanent ? -1 : 1} max={31536000} style={{ width: '100%' }} /></Form.Item></Col>
+        {field('switchGraceSeconds', 0, 300)}
+        {field('confirmScans', 1, 10)}
+        {field('unbanGraceSeconds',0,600)}
         {field('maxRetry', 1, 100)}
         {field('findSeconds', 1, 86400)}
         {field('scanSeconds', 10, 300, 10)}
         {field('liveSeconds', 10, 600)}
         {field('historySeconds', 10, 86400)}
-        <Col span={24}><Form.Item name="exemptIPs" label={text('exemptIPs')} extra={text('exemptHelp')}><Input.TextArea rows={3} maxLength={8192} dir="ltr" /></Form.Item></Col>
-        <Col span={24}><Form.Item name="disconnect" label={text('disconnect')} extra={text('disconnectHelp')} valuePropName="checked"><Switch /></Form.Item></Col>
+        <Col span={24}><Form.Item name="namedExemptions" label={text('namedExemptions')} extra={text('namedExemptionsHelp')}><NamedIPExemptions disabled={busy}/></Form.Item></Col>
+ <Col span={24}><Form.Item name="notifyTelegram" label={text('notifyTelegram')} extra={text('notifyTelegramHelp')} valuePropName="checked"><Switch/></Form.Item></Col>
+ <Col span={24}><Form.Item name="exemptIPs" label={text('exemptIPs')} extra={text('exemptHelp')}><Input.TextArea rows={3} maxLength={8192} dir="ltr" /></Form.Item></Col>
+        <Col span={24}><Form.Item name="disconnect" label={text('disconnect')} extra={text('disconnectHelp')} valuePropName="checked"><Switch disabled={busy || watched.enforcementScope === 'client'} /></Form.Item></Col>
       </Row>
-      <Typography.Paragraph type="secondary">{text('timingHelp')}</Typography.Paragraph>
-      <Space><Button htmlType="submit" type="primary" loading={busy} disabled={!available || !dirty || busy}>{text('save')}</Button><Button disabled={busy || !dirty} onClick={() => { form.resetFields(); setDirty(false); onDirty(false); }}>{text('reset')}</Button></Space>
+      <Alert type="info" title={text('estimate')} description={`${estimate} ${text('estimateSeconds')}`}/>
+ <Typography.Paragraph type="secondary">{text('timingHelp')}</Typography.Paragraph>
+      <Space><Button htmlType="submit" type="primary" loading={busy} disabled={(!available && watched.enforcementScope !== 'client' && watched.enabled !== false) || !dirty || busy}>{text('save')}</Button><Button disabled={busy || !dirty} onClick={() => { form.resetFields(); setDirty(false); onDirty(false); }}>{text('reset')}</Button></Space>
     </Form>
   </>;
 }
@@ -104,6 +116,7 @@ export default function IPBlockTab() {
         <PolicyForm key={`${nodeId}:${query.dataUpdatedAt}`} nodeId={nodeId} initial={query.data.settings} available={query.data.available} onDirty={setDirty} />
       </>}
     </Spin>
+    <IPLimitOverview nodeId={nodeId}/>
     {managerOpen && <ClientIpManagerModal open initialNodeId={nodeId} email="" ips={[]} loading={false} clearing={false} onRefresh={() => query.refetch().then(() => undefined)} onClear={() => undefined} onClose={() => setManagerOpen(false)} />}
   </Space>;
 }

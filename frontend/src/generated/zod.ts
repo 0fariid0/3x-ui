@@ -791,6 +791,7 @@ export const IPBlockChangeSchema = z.object({
   email: z.string(),
   ip: z.string(),
   nodeId: z.number().int(),
+  scope: z.string(),
 });
 export type IPBlockChange = z.infer<typeof IPBlockChangeSchema>;
 
@@ -800,25 +801,33 @@ export const IPBlockEntrySchema = z.object({
   expiresAt: z.number().int(),
   ip: z.string(),
   permanent: z.boolean(),
+  scope: z.string().optional(),
   source: z.string(),
 });
 export type IPBlockEntry = z.infer<typeof IPBlockEntrySchema>;
 
 export const IPBlockSettingsSchema = z.object({
   banSeconds: z.number().int(),
+  confirmScans: z.number().int(),
   disconnect: z.boolean(),
   enabled: z.boolean(),
+  enforcementScope: z.string(),
   exemptIPs: z.string(),
   findSeconds: z.number().int(),
   historySeconds: z.number().int(),
   liveSeconds: z.number().int(),
   maxRetry: z.number().int(),
+  namedExemptions: z.string(),
+  notifyTelegram: z.boolean(),
   scanSeconds: z.number().int(),
+  switchGraceSeconds: z.number().int(),
+  unbanGraceSeconds: z.number().int(),
 });
 export type IPBlockSettings = z.infer<typeof IPBlockSettingsSchema>;
 
 export const IPBlockSettingsStatusSchema = z.object({
   available: z.boolean(),
+  policyRevision: z.number().int(),
   reason: z.string(),
   settings: z.lazy(() => IPBlockSettingsSchema),
 });

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -20,7 +21,13 @@ func (a *ServerController) getIPBlocks(c *gin.Context) {
 		}
 	}
 	var status *entity.IPBlockStatus
-	if id > 0 {
+	if c.Query("scope") == "client" {
+		if id > 0 {
+			status, err = (&service.NodeService{}).ScopedIPBlocks(c.Request.Context(), id)
+		} else {
+			status, err = service.ScopedIPBlockStatus(c.Request.Context())
+		}
+	} else if id > 0 {
 		status, err = (&service.NodeService{}).IPBlocks(c.Request.Context(), id)
 	} else {
 		status, err = (&service.IPBlockService{}).Status(c.Request.Context())
@@ -95,8 +102,39 @@ func (a *ServerController) saveIPBlockSettings(c *gin.Context) {
 		jsonObj(c, nil, err)
 		return
 	}
+	var raw json.RawMessage
+	if err = c.ShouldBindJSON(&raw); err != nil {
+		jsonObj(c, nil, err)
+		return
+	}
+	var fields map[string]json.RawMessage
+	if err = json.Unmarshal(raw, &fields); err != nil || len(fields) == 0 {
+		jsonObj(c, nil, fmt.Errorf("a nonempty JSON settings object is required"))
+		return
+	}
+	for _, v := range fields {
+		if string(v) == "null" {
+			jsonObj(c, nil, fmt.Errorf("null settings values are not supported"))
+			return
+		}
+	}
 	var req entity.IPBlockSettings
-	if err = c.ShouldBindJSON(&req); err != nil {
+	if id > 0 {
+		current, e := (&service.NodeService{}).IPBlockSettings(c.Request.Context(), id)
+		if e != nil {
+			jsonObj(c, nil, e)
+			return
+		}
+		req = current.Settings
+	} else {
+		current, e := service.LoadIPBlockSettings()
+		if e != nil {
+			jsonObj(c, nil, e)
+			return
+		}
+		req = current
+	}
+	if err = json.Unmarshal(raw, &req); err != nil {
 		jsonObj(c, nil, err)
 		return
 	}
@@ -107,4 +145,24 @@ func (a *ServerController) saveIPBlockSettings(c *gin.Context) {
 		result, err = (&service.IPBlockService{}).SaveSettings(c.Request.Context(), req)
 	}
 	jsonObj(c, result, err)
+}
+
+func (a *ServerController) getIPLimitOverview(c *gin.Context) {
+	hours, parseErr := strconv.Atoi(c.DefaultQuery("hours", "24"))
+	if parseErr != nil || hours < 1 || hours > 744 {
+		jsonObj(c, nil, fmt.Errorf("invalid time range"))
+		return
+	}
+	id, err := ipBlockSettingsNode(c)
+	if err != nil {
+		jsonObj(c, nil, err)
+		return
+	}
+	if id > 0 {
+		v, e := (&service.NodeService{}).IPLimitOverview(c.Request.Context(), id, c.Query("search"), hours)
+		jsonObj(c, v, e)
+		return
+	}
+	v, e := service.ReadIPLimitOverview(c.Request.Context(), c.Query("search"), hours)
+	jsonObj(c, v, e)
 }

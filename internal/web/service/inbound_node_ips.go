@@ -216,11 +216,13 @@ func (s *InboundService) GetClientIpNodeAttribution(email string) (map[string]st
 // ClientIpInfo is one IP shown in the panel's per-client IP log, labelled with
 // the node it is connecting through ("" = this local panel).
 type ClientIpInfo struct {
-	IP        string `json:"ip"`
-	Time      string `json:"time"`
-	Node      string `json:"node"`
-	Timestamp int64  `json:"timestamp,omitempty"`
-	NodeID    *int   `json:"nodeId,omitempty"`
+	State       string `json:"state"`
+	ReportStale bool   `json:"reportStale"`
+	IP          string `json:"ip"`
+	Time        string `json:"time"`
+	Node        string `json:"node"`
+	Timestamp   int64  `json:"timestamp,omitempty"`
+	NodeID      *int   `json:"nodeId,omitempty"`
 }
 
 // GetClientIpsWithNodes returns a client's recorded IPs (from the flat
@@ -287,7 +289,8 @@ func (s *InboundService) GetClientIpsWithNodes(email string) ([]ClientIpInfo, er
 		if e.Timestamp < cutoff {
 			continue
 		}
-		info := ClientIpInfo{IP: e.IP}
+		state, health := IPObservationState(email, e.IP, e.Timestamp, policy.LiveSeconds)
+		info := ClientIpInfo{IP: e.IP, State: state, ReportStale: health.Stale}
 		if e.Timestamp > 0 {
 			info.Time = time.Unix(e.Timestamp, 0).Local().Format("2006-01-02 15:04:05")
 			info.Timestamp = e.Timestamp * 1000

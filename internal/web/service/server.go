@@ -202,10 +202,12 @@ func (s *ServerService) LastStatus() *Status {
 // actually be enforced. Enforcement depends on fail2ban, so a limit set
 // without it would silently do nothing.
 type Fail2banStatus struct {
-	Enabled   bool `json:"enabled"`
-	Installed bool `json:"installed"`
-	Usable    bool `json:"usable"`
-	Windows   bool `json:"windows"`
+	EnforcementScope     string `json:"enforcementScope,omitempty"`
+	EnforcementAvailable bool   `json:"enforcementAvailable,omitempty"`
+	Enabled              bool   `json:"enabled"`
+	Installed            bool   `json:"installed"`
+	Usable               bool   `json:"usable"`
+	Windows              bool   `json:"windows"`
 }
 
 const fail2banInstalledCacheTTL = 30 * time.Second
@@ -218,7 +220,15 @@ func (s *ServerService) GetFail2banStatus() Fail2banStatus {
 		installed = s.isFail2banInstalled()
 	}
 
+	scope := ""
+	available := false
+	if p, e := LoadIPBlockSettings(); e == nil && p.EnforcementScope == "client" {
+		scope = "client"
+		_, e := runCoreIPControl(context.Background(), "status", "", "", 0)
+		available = e == nil
+	}
 	return Fail2banStatus{
+		EnforcementScope: scope, EnforcementAvailable: available,
 		Enabled:   enabled,
 		Installed: installed,
 		Usable:    enabled && installed,
@@ -1024,6 +1034,23 @@ func parseXrayDigestSHA256(dgst []byte) (string, error) {
 }
 
 func (s *ServerService) UpdateXray(version string) error {
+	entries, entriesErr := scopedEntries()
+	if entriesErr != nil {
+		return entriesErr
+	}
+	for _, entry := range entries {
+		if entry.Permanent || entry.ExpiresAt > time.Now().UnixMilli() {
+			return fmt.Errorf("active account/IP blocks require the bundled Fara core; clear them or wait for expiry before installing a stock core")
+		}
+	}
+	policy, policyErr := LoadIPBlockSettings()
+	if policyErr != nil {
+		return policyErr
+	}
+	if policy.Enabled && policy.EnforcementScope == "client" {
+		return fmt.Errorf("scoped IP enforcement requires the bundled Fara core; update the complete panel release or disable scoped enforcement before installing a stock core")
+	}
+
 	versions, err := s.GetXrayVersions()
 	if err != nil {
 		return err

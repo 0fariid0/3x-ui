@@ -3122,13 +3122,17 @@ export const SCHEMAS: Record<string, unknown> = {
       "nodeId": {
         "example": 0,
         "type": "integer"
+      },
+      "scope": {
+        "type": "string"
       }
     },
     "required": [
       "action",
       "email",
       "ip",
-      "nodeId"
+      "nodeId",
+      "scope"
     ],
     "type": "object"
   },
@@ -3156,6 +3160,9 @@ export const SCHEMAS: Record<string, unknown> = {
         "example": false,
         "type": "boolean"
       },
+      "scope": {
+        "type": "string"
+      },
       "source": {
         "example": "manual",
         "type": "string"
@@ -3176,11 +3183,17 @@ export const SCHEMAS: Record<string, unknown> = {
       "banSeconds": {
         "type": "integer"
       },
+      "confirmScans": {
+        "type": "integer"
+      },
       "disconnect": {
         "type": "boolean"
       },
       "enabled": {
         "type": "boolean"
+      },
+      "enforcementScope": {
+        "type": "string"
       },
       "exemptIPs": {
         "type": "string"
@@ -3197,20 +3210,38 @@ export const SCHEMAS: Record<string, unknown> = {
       "maxRetry": {
         "type": "integer"
       },
+      "namedExemptions": {
+        "type": "string"
+      },
+      "notifyTelegram": {
+        "type": "boolean"
+      },
       "scanSeconds": {
+        "type": "integer"
+      },
+      "switchGraceSeconds": {
+        "type": "integer"
+      },
+      "unbanGraceSeconds": {
         "type": "integer"
       }
     },
     "required": [
       "banSeconds",
+      "confirmScans",
       "disconnect",
       "enabled",
+      "enforcementScope",
       "exemptIPs",
       "findSeconds",
       "historySeconds",
       "liveSeconds",
       "maxRetry",
-      "scanSeconds"
+      "namedExemptions",
+      "notifyTelegram",
+      "scanSeconds",
+      "switchGraceSeconds",
+      "unbanGraceSeconds"
     ],
     "type": "object"
   },
@@ -3218,6 +3249,9 @@ export const SCHEMAS: Record<string, unknown> = {
     "properties": {
       "available": {
         "type": "boolean"
+      },
+      "policyRevision": {
+        "type": "integer"
       },
       "reason": {
         "type": "string"
@@ -3228,6 +3262,7 @@ export const SCHEMAS: Record<string, unknown> = {
     },
     "required": [
       "available",
+      "policyRevision",
       "reason",
       "settings"
     ],

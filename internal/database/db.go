@@ -1314,12 +1314,25 @@ func backfillEmptyHostGroupIds() error {
 }
 
 func resetIpLimitsWithoutFail2ban() error {
+
 	var history []string
 	if err := db.Model(&model.HistoryOfSeeders{}).Pluck("seeder_name", &history).Error; err != nil {
 		return err
 	}
 	if slices.Contains(history, "ResetIpLimitNoFail2ban") {
 		return nil
+	}
+
+	// A configured core gate does not depend on Fail2ban. Preserve administrator
+	// limits even before the core has started and its capability can be probed.
+	var corePolicy model.Setting
+	if err := db.Where("key = ?", "ipBlockPolicy").First(&corePolicy).Error; err == nil {
+		var p struct {
+			EnforcementScope string `json:"enforcementScope"`
+		}
+		if json.Unmarshal([]byte(corePolicy.Value), &p) == nil && p.EnforcementScope == "client" {
+			return db.Create(&model.HistoryOfSeeders{SeederName: "ResetIpLimitNoFail2ban"}).Error
+		}
 	}
 
 	state, probeErr := fail2banEnforcementState()

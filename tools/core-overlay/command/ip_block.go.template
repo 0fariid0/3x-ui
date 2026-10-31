@@ -1,0 +1,37 @@
+package command
+
+import (
+ "context"
+ "fmt"
+ "time"
+ "google.golang.org/grpc"
+ "google.golang.org/protobuf/types/known/structpb"
+ "github.com/xtls/xray-core/app/stats/sessiongate"
+)
+
+type clientIPServer interface{}
+func registerClientIP(server *grpc.Server) {
+ server.RegisterService(&grpc.ServiceDesc{ServiceName:"fara.core.ClientIP",HandlerType:(*clientIPServer)(nil),Methods:[]grpc.MethodDesc{{MethodName:"Control",Handler:clientIPControl}}},&struct{}{})
+}
+func clientIPControl(srv interface{},ctx context.Context,decode func(interface{})error,interceptor grpc.UnaryServerInterceptor)(interface{},error){
+ req:=new(structpb.Struct);if err:=decode(req);err!=nil{return nil,err}
+ call:=func(ctx context.Context,request interface{})(interface{},error){return controlClientIP(request.(*structpb.Struct))}
+ if interceptor==nil{return call(ctx,req)}
+ return interceptor(ctx,req,&grpc.UnaryServerInfo{Server:srv,FullMethod:"/fara.core.ClientIP/Control"},call)
+}
+func controlClientIP(req *structpb.Struct)(*structpb.Struct,error){
+ f:=req.GetFields();op:=f["action"].GetStringValue();email:=f["email"].GetStringValue();ip:=f["ip"].GetStringValue();closed:=0
+ if len(email)>255||len(ip)>128{return nil,fmt.Errorf("invalid target")}
+ switch op {
+ case "status":
+ case "ban":
+  seconds:=f["seconds"].GetNumberValue();if seconds!=float64(int64(seconds))||(seconds!=-1&&(seconds<1||seconds>31536000)){return nil,fmt.Errorf("invalid duration")}
+  until:=time.Time{};if seconds>0{until=time.Now().Add(time.Duration(seconds)*time.Second)}
+  var err error;closed,err=sessiongate.Default.Block(email,ip,until);if err!=nil{return nil,err}
+ case "unban":if err:=sessiongate.Default.Unblock(email,ip);err!=nil{return nil,err}
+ default:return nil,fmt.Errorf("invalid action")
+ }
+ blocks:=make([]interface{},0)
+ for _,v:=range sessiongate.Default.Blocks(time.Now()){blocks=append(blocks,map[string]interface{}{"email":v.Email,"ip":v.IP,"expiresAt":v.ExpiresAt})}
+ return structpb.NewStruct(map[string]interface{}{"version":1,"closed":closed,"blocks":blocks})
+}

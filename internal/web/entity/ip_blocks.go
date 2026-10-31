@@ -1,6 +1,7 @@
 package entity
 
 type IPBlockEntry struct {
+	Scope     string `json:"scope,omitempty"`
 	IP        string `json:"ip" example:"203.0.113.25"`
 	Source    string `json:"source" example:"manual"`
 	Email     string `json:"email" example:"customer-a"`
@@ -19,6 +20,7 @@ type IPBlockStatus struct {
 }
 
 type IPBlockChange struct {
+	Scope  string `json:"scope" form:"scope"`
 	NodeID int    `json:"nodeId" form:"nodeId" example:"0"`
 	IP     string `json:"ip" form:"ip" example:"203.0.113.25"`
 	Action string `json:"action" form:"action" example:"ban"`

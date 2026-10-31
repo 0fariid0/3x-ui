@@ -1,0 +1,57 @@
+package dispatcher
+
+import (
+	"context"
+	"github.com/xtls/xray-core/app/stats/sessiongate"
+	"github.com/xtls/xray-core/common/buf"
+	"github.com/xtls/xray-core/transport"
+	"github.com/xtls/xray-core/transport/pipe"
+	"testing"
+	"time"
+)
+
+func TestGateClosesOnlyExactAuthenticatedStream(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	makeLink := func(email, ip string) (*transport.Link, *pipe.Writer) {
+		r, w := pipe.New()
+		otherR, otherW := pipe.New()
+		link := &transport.Link{Reader: r, Writer: otherW}
+		trackClientIP(ctx, nil, email, ip, link, false)
+		t.Cleanup(func() { r.Interrupt(); w.Interrupt(); otherR.Interrupt(); otherW.Interrupt() })
+		return link, w
+	}
+	victim, _ := makeLink("gate-a", "192.0.2.1")
+	peer, peerWriter := makeLink("gate-b", "192.0.2.1")
+	other, otherWriter := makeLink("gate-a", "192.0.2.2")
+	count, err := sessiongate.Default.Block("gate-a", "192.0.2.1", time.Now().Add(time.Minute))
+	if err != nil || count != 1 {
+		t.Fatalf("wrong target: %d %v", count, err)
+	}
+	done := make(chan error, 1)
+	go func() { _, e := victim.Reader.ReadMultiBuffer(); done <- e }()
+	select {
+	case e := <-done:
+		if e == nil {
+			t.Fatal("victim still readable")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("live stream did not close immediately")
+	}
+	for _, v := range []struct {
+		link   *transport.Link
+		writer *pipe.Writer
+	}{{peer, peerWriter}, {other, otherWriter}} {
+		b := buf.New()
+		_, _ = b.Write([]byte("alive"))
+		if e := v.writer.WriteMultiBuffer(buf.MultiBuffer{b}); e != nil {
+			t.Fatal(e)
+		}
+		mb, e := v.link.Reader.ReadMultiBuffer()
+		if e != nil {
+			t.Fatalf("innocent stream interrupted: %v", e)
+		}
+		buf.ReleaseMulti(mb)
+	}
+	_ = sessiongate.Default.Unblock("gate-a", "192.0.2.1")
+}

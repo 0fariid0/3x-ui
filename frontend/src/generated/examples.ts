@@ -868,7 +868,8 @@ export const EXAMPLES: Record<string, unknown> = {
     "action": "ban",
     "email": "customer-a",
     "ip": "203.0.113.25",
-    "nodeId": 0
+    "nodeId": 0,
+    "scope": ""
   },
   "IPBlockEntry": {
     "bannedAt": 1793102400000,
@@ -876,32 +877,46 @@ export const EXAMPLES: Record<string, unknown> = {
     "expiresAt": 1793104200000,
     "ip": "203.0.113.25",
     "permanent": false,
+    "scope": "",
     "source": "manual"
   },
   "IPBlockSettings": {
     "banSeconds": 0,
+    "confirmScans": 0,
     "disconnect": false,
     "enabled": false,
+    "enforcementScope": "",
     "exemptIPs": "",
     "findSeconds": 0,
     "historySeconds": 0,
     "liveSeconds": 0,
     "maxRetry": 0,
-    "scanSeconds": 0
+    "namedExemptions": "",
+    "notifyTelegram": false,
+    "scanSeconds": 0,
+    "switchGraceSeconds": 0,
+    "unbanGraceSeconds": 0
   },
   "IPBlockSettingsStatus": {
     "available": false,
+    "policyRevision": 0,
     "reason": "",
     "settings": {
       "banSeconds": 0,
+      "confirmScans": 0,
       "disconnect": false,
       "enabled": false,
+      "enforcementScope": "",
       "exemptIPs": "",
       "findSeconds": 0,
       "historySeconds": 0,
       "liveSeconds": 0,
       "maxRetry": 0,
-      "scanSeconds": 0
+      "namedExemptions": "",
+      "notifyTelegram": false,
+      "scanSeconds": 0,
+      "switchGraceSeconds": 0,
+      "unbanGraceSeconds": 0
     }
   },
   "IPBlockStatus": {
@@ -915,6 +930,7 @@ export const EXAMPLES: Record<string, unknown> = {
         "expiresAt": 1793104200000,
         "ip": "203.0.113.25",
         "permanent": false,
+        "scope": "",
         "source": "manual"
       }
     ],

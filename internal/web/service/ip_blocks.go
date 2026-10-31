@@ -207,6 +207,12 @@ func (s *IPBlockService) Status(ctx context.Context) (*entity.IPBlockStatus, err
 }
 
 func (s *IPBlockService) Change(ctx context.Context, req entity.IPBlockChange) (*entity.IPBlockStatus, error) {
+	if req.Scope == "client" {
+		return ChangeScopedIPBlock(ctx, req)
+	}
+	if req.Scope != "" && req.Scope != "host" {
+		return nil, fmt.Errorf("invalid block scope")
+	}
 	ip, err := normalizeBlockIP(req.IP)
 	if err != nil {
 		return nil, err
@@ -268,6 +274,15 @@ func (s *IPBlockService) Change(ctx context.Context, req entity.IPBlockChange) (
 	}
 	if blocked != (req.Action == "ban") {
 		return nil, fmt.Errorf("fail2ban did not confirm the requested IP state; refresh before retrying")
+	}
+	if req.Action == "unban" {
+		p, e := LoadIPBlockSettings()
+		if e != nil {
+			return nil, e
+		}
+		if e = recordUnbanGrace("", ip, p.UnbanGraceSeconds); e != nil {
+			return nil, fmt.Errorf("unbanned but grace persistence failed: %w", e)
+		}
 	}
 	kind := "ip_blocked"
 	if req.Action == "unban" {

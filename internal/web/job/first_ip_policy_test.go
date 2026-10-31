@@ -93,3 +93,75 @@ func TestSharedIPProtectedAndOtherExcessSelected(t *testing.T) {
 		t.Fatalf("all-shared addresses banned: %v", j.disAllowedIps)
 	}
 }
+
+func TestConsecutiveEvidenceAndNetworkSwitchGrace(t *testing.T) {
+	j := NewCheckClientIpJob()
+	p := service.DefaultIPBlockSettings()
+	p.ConfirmScans = 2
+	p.SwitchGraceSeconds = 20
+	ips := []IPWithTimestamp{{IP: "192.0.2.9", Timestamp: 100}}
+	if len(j.confirmExcess("user", ips, p, 100)) != 0 {
+		t.Fatal("first observation must wait")
+	}
+	if len(j.confirmExcess("user", ips, p, 110)) != 0 {
+		t.Fatal("grace must hold")
+	}
+	if len(j.confirmExcess("user", ips, p, 120)) != 1 {
+		t.Fatal("confirmed excess should be actionable")
+	}
+	j.confirmExcess("user", nil, p, 130)
+	if len(j.confirmExcess("user", ips, p, 150)) != 0 {
+		t.Fatal("interrupted evidence must reset")
+	}
+	if len(j.confirmExcess("another", ips, p, 160)) != 0 {
+		t.Fatal("evidence must be account-specific")
+	}
+}
+
+func TestUnbanGraceAndLateSharedObservationPreventGlobalBan(t *testing.T) {
+	setupIntegrationDB(t)
+	const email = "late-protection"
+	now := time.Now().Unix()
+	inbound := seedInboundOnlyWithClient(t, "late", email, 1)
+	row := seedClientIps(t, email, []IPWithTimestamp{{IP: "192.0.2.1", Timestamp: now - 1}})
+	j := NewCheckClientIpJob()
+	j.unbanGrace = []service.IPUnbanGrace{{Email: email, IP: "192.0.2.2", ExpiresAt: time.Now().Add(time.Minute).UnixMilli()}}
+	_, banned := j.updateInboundClientIps(database.GetDB(), row, inbound, email, 1, []IPWithTimestamp{{IP: "192.0.2.1", Timestamp: now}, {IP: "192.0.2.2", Timestamp: now}}, true, true)
+	if banned {
+		t.Fatal("unban grace ignored")
+	}
+	j.unbanGrace = nil
+	j.localGuid = "local-guid"
+	raw, _ := json.Marshal([]model.ClientIpEntry{{IP: "192.0.2.2", Timestamp: now}})
+	if e := database.GetDB().Create(&model.NodeClientIp{NodeGuid: "local-guid", Email: "innocent", Ips: string(raw)}).Error; e != nil {
+		t.Fatal(e)
+	}
+	_, banned = j.updateInboundClientIps(database.GetDB(), row, inbound, email, 1, []IPWithTimestamp{{IP: "192.0.2.1", Timestamp: now}, {IP: "192.0.2.2", Timestamp: now}}, true, true)
+	if banned {
+		t.Fatal("late shared-IP observation ignored")
+	}
+}
+
+func TestNetworkSwitchReleasesConfirmedDepartedLocalSlot(t *testing.T) {
+	setupIntegrationDB(t)
+	const email = "network-switch"
+	seedLinkedInboundWithClient(t, "network-switch", email, 1)
+	now := time.Now().Unix()
+	seedClientIps(t, email, []IPWithTimestamp{{IP: "192.0.2.1", Timestamp: now, AdmittedAt: time.Now().Add(-time.Minute).UnixMilli()}})
+	guid, e := (&service.SettingService{}).GetPanelGuid()
+	if e != nil {
+		t.Fatal(e)
+	}
+	raw, _ := json.Marshal([]model.ClientIpEntry{{IP: "192.0.2.1", Timestamp: now}})
+	if e = database.GetDB().Create(&model.NodeClientIp{NodeGuid: guid, Email: email, Ips: string(raw)}).Error; e != nil {
+		t.Fatal(e)
+	}
+	j := NewCheckClientIpJob()
+	j.processObserved(map[string]map[string]int64{email: {"192.0.2.2": now}}, true, true)
+	if len(j.disAllowedIps) != 0 {
+		t.Fatalf("departed local IP still held a slot: %v", j.disAllowedIps)
+	}
+	if _, ok := ipSet(readClientIps(t, email))["192.0.2.2"]; !ok {
+		t.Fatal("new network was not admitted")
+	}
+}

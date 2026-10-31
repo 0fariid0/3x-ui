@@ -46,13 +46,17 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
   }, [open]);
   const { t } = useTranslation();
   const dateTime = usePanelDateTime();
+ const [clock,setClock]=useState(Date.now());
+ useEffect(()=>{if(!open)return;const timer=window.setInterval(()=>setClock(Date.now()),1000);return()=>window.clearInterval(timer);},[open]);
   const [messageApi, contextHolder] = message.useMessage();
   const [nodeId, setNodeId] = useState(initialNodeId);
+ const [scope, setScope] = useState<'host' | 'client'>('client');
   const [search, setSearch] = useState('');
   const [manualIP, setManualIP] = useState('');
+ const [manualAccount,setManualAccount]=useState('');
   const [sharedTarget, setSharedTarget] = useState<{ ip: string; nodeId: number; serverName: string } | null>(null);
   const [confirmation, setConfirmation] = useState<(IPBlockMutation & { serverName: string }) | null>(null);
-  const { query, mutation } = useIPBlocks(open, nodeId);
+  const { query, mutation } = useIPBlocks(open, nodeId, scope);
   const nodesQuery = useQuery({
     queryKey: keys.nodes.list(),
     enabled: open,
@@ -67,7 +71,8 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
   const serverName = nodeId === 0 ? t('pages.clients.ipManager.localServer') : nodeName || String(nodeId);
   const ready = query.data?.available === true && !query.isError;
   const busy = mutation.isPending || query.isFetching;
-  const active = useMemo(() => new Map((query.data?.blocks ?? []).map((row) => [row.ip, row])), [query.data?.blocks]);
+  const active = useMemo(() => new Map((query.data?.blocks ?? []).map((row) => [scope === 'client' ? `${row.email}\u0000${row.ip}` : row.ip, row])), [query.data?.blocks,scope]);
+ const blockedFor = (ip: string,owner: string) => active.has(scope === 'client' ? `${owner}\u0000${ip}` : ip);
   const searchText = search.trim().toLowerCase();
   const clientIPs = ips.filter((row) => !isTunnelLocalIP(row.ip));
   const localIPs = ips.filter((row) => isTunnelLocalIP(row.ip));
@@ -91,7 +96,7 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
     if (isTunnelLocalIP(ip)) return <Tag>{text('localTunnel')}</Tag>;
     return (
       <Tooltip title={wrongServer ? text('selectObservedServer') : undefined}>
-          <Button size="small" danger={!blocked} disabled={!ready || busy || !ip || wrongServer} loading={mutation.isPending && mutation.variables?.ip === ip} icon={blocked ? <UnlockOutlined /> : <LockOutlined />} onClick={() => setConfirmation({ nodeId, ip, action: blocked ? 'unban' : 'ban', email: owner, serverName })}>
+          <Button size="small" danger={!blocked} disabled={!ready || busy || !ip || wrongServer || (scope === 'client' && !owner)} loading={mutation.isPending && mutation.variables?.ip === ip} icon={blocked ? <UnlockOutlined /> : <LockOutlined />} onClick={() => setConfirmation({ nodeId, scope, ip, action: blocked ? 'unban' : 'ban', email: owner, serverName })}>
             {text(blocked ? 'unban' : 'ban')}
           </Button>
       </Tooltip>
@@ -108,6 +113,7 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
   }
 
   const blockColumns = [
+ {title:text('remainingBan'),key:'remaining',render:(_v:unknown,row:IPBlockEntry)=>row.permanent?text('permanent'):row.expiresAt>0?<bdi dir="ltr">{Math.max(0,Math.ceil((row.expiresAt-clock)/1000))} s</bdi>:text('unknown')},
     { title: text('ip'), dataIndex: 'ip', key: 'ip', render: ipText },
     { title: text('sharedTitle'), key: 'shared', render: (_value: unknown, row: IPBlockEntry) => <Button size="small" onClick={() => setSharedTarget({ ip: row.ip, nodeId, serverName })}>{text('viewClients')}</Button> },
     { title: text('source'), dataIndex: 'source', key: 'source', render: sourceTag },
@@ -118,6 +124,7 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
   ];
 
   const observedColumns = [
+ { title:text('observationState'), key:'state', render:(_v:unknown,row:ClientIpInfo)=><Tag color={row.reportStale?'orange':row.state==='connected'?'green':'default'}>{text(row.reportStale?'reportStale':row.state||'recent')}</Tag> },
     { title: text('ip'), dataIndex: 'ip', key: 'ip', render: ipText },
     { title: text('server'), key: 'node', render: (_value: unknown, row: ClientIpInfo) => <span dir="auto">{row.node || (row.nodeId === 0 ? text('localServer') : text('unknown'))}</span> },
     { title: text('sharedTitle'), key: 'shared', render: (_value: unknown, row: ClientIpInfo) => <Button size="small" disabled={row.nodeId === undefined || !canonicalBlockIP(row.ip)} onClick={() => { if (row.nodeId !== undefined) setSharedTarget({ ip: canonicalBlockIP(row.ip)!, nodeId: row.nodeId, serverName: row.node || (row.nodeId === 0 ? text('localServer') : text('unknown')) }); }}>{text('viewClients')}</Button> },
@@ -125,12 +132,12 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
     { title: text('status'), key: 'status', render: (_value: unknown, row: ClientIpInfo) => {
       const sameServer = row.nodeId === nodeId;
       const ip = canonicalBlockIP(row.ip);
-      return <Tag color={ready && sameServer && ip ? active.has(ip) ? 'red' : 'green' : 'default'}>{!ready || !sameServer || !ip ? text('unknown') : active.has(ip) ? text('blocked') : text('notBlocked')}</Tag>;
+      return <Tag color={ready && sameServer && ip ? blockedFor(ip,email||'') ? 'red' : 'green' : 'default'}>{!ready || !sameServer || !ip ? text('unknown') : blockedFor(ip,email||'') ? text('blocked') : text('notBlocked')}</Tag>;
     } },
     { title: text('action'), key: 'action', render: (_value: unknown, row: ClientIpInfo) => {
       const ip = canonicalBlockIP(row.ip) || '';
       const sameServer = row.nodeId === nodeId;
-      return actionButton(ip, active.has(ip), email || '', !sameServer);
+      return actionButton(ip, blockedFor(ip,email||''), email || '', !sameServer);
     } },
   ];
 
@@ -145,30 +152,32 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
       {contextHolder}
       <Modal width={640} open={open && confirmation !== null} title={text(confirmation?.action === 'unban' ? 'confirmUnban' : 'confirmBan')} zIndex={(zIndex ?? 1000) + 30} onCancel={() => setConfirmation(null)} onOk={() => confirmation && changeIP(confirmation)} confirmLoading={mutation.isPending} cancelButtonProps={{ disabled: mutation.isPending }} closable={!mutation.isPending} keyboard={!mutation.isPending} mask={{ closable: !mutation.isPending }} okButtonProps={{ danger: confirmation?.action === 'ban' }} okText={text(confirmation?.action === 'unban' ? 'unban' : 'ban')} cancelText={t('cancel')}>
         {mutation.isError ? <Alert type="error" showIcon title={text('operationFailed')} description={<bdi dir="auto">{mutation.error.message}</bdi>} /> : null}
-        <div className="ip-manager-confirm"><bdi dir="ltr">{confirmation?.ip}</bdi><span dir="auto">{confirmation?.serverName}</span><span>{text('serverScope')}</span></div>
+        <div className="ip-manager-confirm"><bdi dir="ltr">{confirmation?.ip}</bdi><span dir="auto">{confirmation?.serverName}</span><span>{scope==='client'?`${text('scopeClient')} — ${confirmation?.email}`:text('serverScope')}</span></div>
         {open && confirmation ? <IPSharedClientsPanel key={`${confirmation.nodeId}:${confirmation.ip}`} ip={confirmation.ip} nodeId={confirmation.nodeId} serverName={confirmation.serverName} email={email} /> : null}
       </Modal>
       <div className="ip-manager">
         {localIPs.length > 0 ? <div className="ip-manager-local"><Typography.Text type="secondary">{text('localConnected')} ({localIPs.length})</Typography.Text><Space size={[4, 4]} wrap>{localIPs.map((row) => <Tooltip key={`${row.nodeId ?? row.node}:${row.ip}`} title={<span>{text('localExcluded')} — <bdi dir="auto">{row.node || (row.nodeId === 0 ? text('localServer') : text('unknown'))}</bdi>{row.timestamp ? <> — <bdi dir="ltr">{dateTime.formatDateTime(row.timestamp)}</bdi></> : null}</span>}><Tag><bdi dir="ltr">{row.ip}</bdi></Tag></Tooltip>)}</Space></div> : null}
-        <Tooltip title={text('scopeDescription')}><Typography.Text type="secondary" className="ip-manager-scope">{text('scopeCompact')}</Typography.Text></Tooltip>
+        <Tooltip title={text(scope === 'client' ? 'clientScopeDescription' : 'scopeDescription')}><Typography.Text type="secondary" className="ip-manager-scope">{text('scopeCompact')}</Typography.Text></Tooltip>
         {nodesQuery.isError ? <Alert type="warning" title={text('nodesFailed')} /> : null}
         <div className="ip-manager-toolbar">
           <Select size="small" aria-label={text('server')} value={nodeId} disabled={mutation.isPending} onChange={(value) => { setNodeId(value); setSharedTarget(null); mutation.reset(); }} options={[{ value: 0, label: text('localServer') }, ...nodes.map((node) => ({ value: node.id, label: node.name || String(node.id), disabled: node.enable === false }))]} />
+          <Select size="small" aria-label={text('blockScope')} value={scope} disabled={mutation.isPending} onChange={(value)=>{setScope(value);setConfirmation(null);setSharedTarget(null);mutation.reset();}} options={[{value:'host',label:text('scopeHost')},{value:'client',label:text('scopeClient')}]} />
           <Input.Search aria-label={text('search')} placeholder={text('search')} size="small" allowClear value={search} onChange={(event) => setSearch(event.target.value)} />
         </div>
         {query.isError ? <Alert type="error" showIcon title={text('loadFailed')} description={<span dir="auto">{query.error.message}</span>} /> : null}
         {mutation.isError ? <Alert type="error" showIcon title={text('operationFailed')} description={<span dir="auto">{mutation.error.message}</span>} /> : null}
         {query.data && !query.data.available ? <Alert type="warning" showIcon title={text('unavailable')} description={text(`reason_${query.data.reason}`)} /> : null}
         <div className="ip-manager-toolbar">
+          {scope==='client'&&!email&&<Input size="small" aria-label={text('manualAccount')} placeholder={text('manualAccount')} value={manualAccount} maxLength={255} onChange={e=>setManualAccount(e.target.value)}/>}
           <Input size="small" aria-label={text('manualIP')} placeholder={text('manualIP')} dir="ltr" value={manualIP} maxLength={128} onChange={(event) => setManualIP(event.target.value)} />
-          {actionButton(canonicalBlockIP(manualIP) || '', active.has(canonicalBlockIP(manualIP) || ''), email || '')}
+          {actionButton(canonicalBlockIP(manualIP) || '', blockedFor(canonicalBlockIP(manualIP) || '',email || manualAccount), email || manualAccount)}
           <Button size="small" disabled={!canonicalBlockIP(manualIP) || isTunnelLocalIP(manualIP)} onClick={() => setSharedTarget({ ip: canonicalBlockIP(manualIP)!, nodeId, serverName })}>{text('viewClients')}</Button>
           <Typography.Text type="secondary">{text('defaultDuration')}: <bdi dir="auto">{banDuration}</bdi></Typography.Text>
         </div>
         {open && sharedTarget ? <div><IPSharedClientsPanel key={`${sharedTarget.nodeId}:${sharedTarget.ip}`} {...sharedTarget} email={email} /><Button size="small" onClick={() => setSharedTarget(null)}>{t('close')}</Button></div> : null}
         <Tabs defaultActiveKey={email ? "observed" : "blocked"} items={[
           { key: 'observed', label: `${text('observed')} (${clientIPs.length})`, children: <Table size="small" loading={loading} columns={observedColumns} dataSource={visibleIPs} rowKey={(row) => `${row.node}:${row.ip}`} pagination={{ pageSize: 10, showSizeChanger: false }} scroll={{ x: 900 }} /> },
-          { key: 'blocked', label: `${text('allBlocked')} (${ready ? active.size : '—'})`, children: <Table size="small" loading={query.isFetching} columns={blockColumns} dataSource={ready ? visibleBlocks : []} rowKey="ip" pagination={{ pageSize: 10, showSizeChanger: false }} scroll={{ x: 900 }} /> },
+          { key: 'blocked', label: `${text('allBlocked')} (${ready ? active.size : '—'})`, children: <Table size="small" loading={query.isFetching} columns={blockColumns} dataSource={ready ? visibleBlocks : []} rowKey={(row) => `${row.email}:${row.ip}`} pagination={{ pageSize: 10, showSizeChanger: false }} scroll={{ x: 900 }} /> },
         ]} />
       </div>
     </Modal>

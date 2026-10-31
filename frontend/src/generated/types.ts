@@ -736,6 +736,7 @@ export interface IPBlockChange {
   email: string;
   ip: string;
   nodeId: number;
+  scope: string;
 }
 
 export interface IPBlockEntry {
@@ -744,23 +745,31 @@ export interface IPBlockEntry {
   expiresAt: number;
   ip: string;
   permanent: boolean;
+  scope?: string;
   source: string;
 }
 
 export interface IPBlockSettings {
   banSeconds: number;
+  confirmScans: number;
   disconnect: boolean;
   enabled: boolean;
+  enforcementScope: string;
   exemptIPs: string;
   findSeconds: number;
   historySeconds: number;
   liveSeconds: number;
   maxRetry: number;
+  namedExemptions: string;
+  notifyTelegram: boolean;
   scanSeconds: number;
+  switchGraceSeconds: number;
+  unbanGraceSeconds: number;
 }
 
 export interface IPBlockSettingsStatus {
   available: boolean;
+  policyRevision: number;
   reason: string;
   settings: IPBlockSettings;
 }

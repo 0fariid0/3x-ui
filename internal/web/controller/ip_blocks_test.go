@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mhsanaei/3x-ui/v3/internal/database"
+	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/entity"
 )
 
@@ -66,5 +68,31 @@ else:sys.exit(1)
 		if !result.Available || len(result.Blocks) != tc.count {
 			t.Fatalf("incorrect state: %+v", result)
 		}
+	}
+}
+
+func TestIPPolicyPartialUpdatePreservesNewSettings(t *testing.T) {
+	newHostTestDB(t)
+	policy := `{"enforcementScope":"client","confirmScans":3,"switchGraceSeconds":20,"namedExemptions":"[{\"name\":\"office\",\"address\":\"192.0.2.1\",\"expiresAt\":0}]"}`
+	if e := database.GetDB().Create(&model.Setting{Key: "ipBlockPolicy", Value: policy}).Error; e != nil {
+		t.Fatal(e)
+	}
+	a := new(ServerController)
+	engine := gin.New()
+	engine.POST("/settings", a.saveIPBlockSettings)
+	req := httptest.NewRequest("POST", "/settings", strings.NewReader(`{"enabled":false}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	engine.ServeHTTP(w, req)
+	var env hostEnvelope
+	if e := json.Unmarshal(w.Body.Bytes(), &env); e != nil || !env.Success {
+		t.Fatal(w.Body.String(), e)
+	}
+	var result entity.IPBlockSettingsStatus
+	if e := json.Unmarshal(env.Obj, &result); e != nil {
+		t.Fatal(e)
+	}
+	if result.Settings.Enabled || result.Settings.EnforcementScope != "client" || result.Settings.ConfirmScans != 3 || result.Settings.SwitchGraceSeconds != 20 || result.Settings.NamedExemptions == "" {
+		t.Fatalf("settings lost: %+v", result)
 	}
 }

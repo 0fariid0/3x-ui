@@ -273,6 +273,7 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
     return value === key ? kind : value;
   };
   const eventName = (event: ReportEvent) => {
+ if(event.kind === 'ip_limit_decision') return t(`pages.settings.ipBlocking.${event.summary}`, {defaultValue:event.summary});
     const key = `pages.clients.eventKinds.${event.kind}`;
     const value = t(key);
     return value === key ? event.summary : value;
@@ -511,7 +512,7 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
           <small dir="auto">{t('pages.clients.historyDetails.hint')}</small>
           {historyEvents.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} /> : historyEvents.map((event) => (
             <div className="client-usage-list-row" key={event.id}>
-              <div><strong dir="auto">{eventName(event)}</strong><ClientHistoryDetails details={event.details} summary={event.summary} formatDateTime={panelDateTime.formatDateTime} recordedAt={event.createdAt} /></div>
+              <div><strong dir="auto">{eventName(event)}</strong>{event.kind !== 'ip_limit_decision' && <ClientHistoryDetails details={event.details} summary={event.summary} formatDateTime={panelDateTime.formatDateTime} recordedAt={event.createdAt} />}</div>
               <div><Tag>{eventName(event)}</Tag><small><bdi dir="ltr">{dateLabel(event.createdAt)}</bdi></small></div>
             </div>
           ))}

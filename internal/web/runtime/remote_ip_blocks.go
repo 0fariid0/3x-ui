@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/web/entity"
 )
@@ -67,4 +68,26 @@ func (r *Remote) SaveIPBlockSettings(ctx context.Context, v entity.IPBlockSettin
 		return nil, err
 	}
 	return &result, nil
+}
+
+func (r *Remote) ScopedIPBlocks(ctx context.Context) (*entity.IPBlockStatus, error) {
+	env, e := r.do(ctx, http.MethodGet, "panel/api/server/ipBlocks?scope=client", nil)
+	if e != nil {
+		return nil, e
+	}
+	var result entity.IPBlockStatus
+	e = json.Unmarshal(env.Obj, &result)
+	return &result, e
+}
+
+func (r *Remote) IPLimitOverview(ctx context.Context, search string, hours ...int) (json.RawMessage, error) {
+	window := 24
+	if len(hours) > 0 {
+		window = hours[0]
+	}
+	env, e := r.do(ctx, http.MethodGet, "panel/api/server/ipBlocks/overview?hours="+strconv.Itoa(window)+"&search="+url.QueryEscape(search), nil)
+	if e != nil {
+		return nil, e
+	}
+	return env.Obj, nil
 }

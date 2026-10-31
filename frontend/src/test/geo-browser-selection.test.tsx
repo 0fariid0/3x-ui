@@ -192,9 +192,14 @@ describe('GeoBrowserModal selection', () => {
 describe('GeoTokenInput validation feedback', () => {
   it('says the check failed instead of dropping the warnings silently', async () => {
     vi.spyOn(HttpUtil, 'get').mockResolvedValue(new Msg(true, '', []));
-    vi.spyOn(HttpUtil, 'post')
-      .mockResolvedValueOnce(new Msg(true, '', [{ token: 'geosite:nope', reason: 'categoryMissing' }]))
-      .mockResolvedValue(new Msg(false, 'too many tokens'));
+    let validations = 0;
+    vi.spyOn(HttpUtil, 'post').mockImplementation(async (url) => {
+      if (!url.includes('/geodata/validate')) return new Msg(true, '', {});
+      validations += 1;
+      return validations === 1
+        ? new Msg(true, '', [{ token: 'geosite:nope', reason: 'categoryMissing' }])
+        : new Msg(false, 'too many tokens');
+    });
 
     const view = render(<GeoTokenInput kind="domain" value="geosite:nope" />, { wrapper });
     await screen.findByText(/Not in the database/, {}, { timeout: 3000 });
