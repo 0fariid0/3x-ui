@@ -245,3 +245,33 @@ func TestIPActivityCannotCrowdRenewalOutOfReport(t *testing.T) {
 		t.Fatal("IP activity hid renewal")
 	}
 }
+
+func TestLegacyQuotaSnapshotsAndInboundHistoryRemainVisible(t *testing.T) {
+	setupBulkDB(t)
+	db := database.GetDB()
+	email := "legacy-history@x"
+	now := time.Now().UnixMilli()
+	if err := db.Create(&model.ClientRecord{Email: email, Enable: true}).Error; err != nil {
+		t.Fatal(err)
+	}
+	rows := []model.ClientEvent{
+		{Email: email, Kind: "updated", Summary: "legacy quota", Details: `{"totalGB":0,"expiryTime":0}`, CreatedAt: now},
+		{Email: email, Kind: "updated", Summary: "generic notice", Details: `{"enable":true}`, CreatedAt: now},
+		{Email: email, Kind: "detached", Summary: "detached", Details: `{"inboundIds":[1]}`, CreatedAt: now},
+	}
+	if err := db.Create(&rows).Error; err != nil {
+		t.Fatal(err)
+	}
+	report, err := (&ClientInsightService{}).GetReportForRange(email, 7, 12)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Events) != 2 {
+		t.Fatalf("expected legacy snapshot and inbound event, got %#v", report.Events)
+	}
+	for _, event := range report.Events {
+		if event.Summary == "generic notice" {
+			t.Fatal("generic notice returned")
+		}
+	}
+}

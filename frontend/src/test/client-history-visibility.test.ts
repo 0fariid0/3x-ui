@@ -28,3 +28,8 @@ it('separates IP and unchanged settings from quota, expiry and inbound changes',
  expect(isServiceChange({kind:'updated',details:JSON.stringify({previousTotalBytes:0,totalBytes:0,previousExpiryTime:0,expiryTime:0})})).toBe(true);
  expect(isServiceChange({kind:'updated',details:JSON.stringify({previousTotalBytes:10,totalBytes:20})})).toBe(true);
 });
+
+it('retains legacy zero/unlimited quota and expiry details and detached inbounds',()=>{
+ const events=[{kind:'updated',details:'{"totalGB":0,"expiryTime":0}'},{kind:'updated',details:'{"totalBytes":1024}'},{kind:'updated',details:'{"inboundIds":[1]}'},{kind:'detached',details:'{"inboundIds":[1]}'},{kind:'updated',details:'{"enable":true}'},{kind:'updated',details:'invalid'}];
+ expect(visibleClientEvents(events)).toEqual(events.slice(0,4));
+});

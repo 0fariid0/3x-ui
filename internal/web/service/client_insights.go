@@ -917,6 +917,20 @@ func (s *ClientInsightService) GetReportForRange(email string, days, hours int) 
 	if err := db.Where("email = ? AND substr(kind, 1, 3) = ?", email, "ip_").Order("created_at DESC, id DESC").Limit(200).Find(&activity).Error; err != nil {
 		return nil, err
 	}
+	// Legacy quota/expiry snapshots used the generic updated kind. Retrieve
+	// these independently so generic notices cannot displace specific changes.
+	var legacy []model.ClientEvent
+	fields := []string{"totalGB", "totalBytes", "previousTotalBytes", "expiryTime", "previousExpiryTime", "addedBytes", "addedMilliseconds", "addBytes", "addDays", "inboundIds"}
+	conditions := make([]string, 0, len(fields))
+	args := make([]any, 0, len(fields))
+	for _, field := range fields {
+		conditions = append(conditions, "details LIKE ?")
+		args = append(args, "%\""+field+"\"%")
+	}
+	if err := db.Where("email = ? AND kind = ?", email, "updated").Where("("+strings.Join(conditions, " OR ")+")", args...).Order("created_at DESC, id DESC").Limit(200).Find(&legacy).Error; err != nil {
+		return nil, err
+	}
+	events = append(events, legacy...)
 	events = append(events, activity...)
 	sort.SliceStable(events, func(i, j int) bool {
 		if events[i].CreatedAt == events[j].CreatedAt {

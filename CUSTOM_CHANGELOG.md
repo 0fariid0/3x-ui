@@ -1,3 +1,8 @@
+## v3.9.15 — restore legacy quota and expiry snapshots
+
+- Hide only generic updated notices without structured service details. Restore legacy quota/expiry snapshots, including zero/unlimited values, and retain inbound events in change history.
+- Retrieve legacy snapshots with an independent budget; preserve stored records.
+
 ## v3.9.14 — hide generic settings-change notices
 
 - Hide all generic updated events, including historical records, from both report tabs. Exclude them from service-history retrieval budgets. Preserve specific quota, expiry, inbound and IP events and stored audit data.

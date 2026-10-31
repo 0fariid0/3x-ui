@@ -275,6 +275,7 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
     return value === key ? kind : value;
   };
   const eventName = (event: ReportEvent) => {
+    if (event.kind === 'updated') return t('pages.clients.eventKinds.limits_changed');
  if(event.kind === 'ip_limit_decision') return t(`pages.settings.ipBlocking.${event.summary}`, {defaultValue:event.summary});
     const key = `pages.clients.eventKinds.${event.kind}`;
     const value = t(key);
