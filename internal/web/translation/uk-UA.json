@@ -892,7 +892,7 @@
       "recentIps": "Recent IP addresses",
       "appsAndOs": "Applications and operating systems",
       "anomalyHistory": "Abnormal usage history",
-      "otherActivity": "IP and other activity",
+      "otherActivity": "IP activity",
     "changeHistory": "Renewal and change history",
       "ipManager": {
         "clientScopeDescription": "This method affects only the specified account and IP. Existing host firewall bans are independent; select Host firewall to inspect them.",

@@ -1,3 +1,8 @@
+## v3.9.13 — keep the IP tab exclusive to IP events
+
+- Move all non-IP changes, including legacy user-settings events, back to change history. Only ip_ events enter the IP tab.
+- Apply the same split to independent backend history budgets. Preserve all stored records and prior features.
+
 ## v3.9.12 — separate service history and show both IP block engines
 
 - Keep quota/expiry and inbound attachment changes in service history; move IP and other activity into a separate tab without deleting stored events.

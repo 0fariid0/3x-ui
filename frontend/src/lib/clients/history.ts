@@ -9,12 +9,10 @@ export function remainingDaysAtChange(expiry: number, recordedAt: number): numbe
   return Math.max(0, Math.ceil((expiry - recordedAt) / 86400000));
 }
 
+export function isIPActivity(event: {kind: string}): boolean {
+  return event.kind.startsWith('ip_');
+}
+
 export function isServiceChange(event: {kind: string; details?: string}): boolean {
-  if (['limits_changed','activated','renewed','attached','detached'].includes(event.kind)) return true;
-  if (!['updated','bulk_adjusted'].includes(event.kind)) return false;
-  try {
-    const d = JSON.parse(event.details || '{}');
-    return (typeof d.previousTotalBytes === 'number' && typeof d.totalBytes === 'number' && d.previousTotalBytes !== d.totalBytes)
-      || (typeof d.previousExpiryTime === 'number' && typeof d.expiryTime === 'number' && d.previousExpiryTime !== d.expiryTime);
-  } catch { return false; }
+  return !isIPActivity(event);
 }

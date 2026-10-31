@@ -892,7 +892,7 @@
       "recentIps": "IPهای اخیر",
       "appsAndOs": "برنامه و سیستم",
       "anomalyHistory": "مصرف غیرعادی",
-      "otherActivity": "IP و فعالیت‌ها",
+      "otherActivity": "رویدادهای IP",
     "changeHistory": "تمدید و تغییرات",
       "ipManager": {
         "clientScopeDescription": "این حالت فقط کانفیگ و IP مشخص را محدود می‌کند. بلاک‌های فایروال مستقل‌اند و ممکن است هنوز فعال باشند؛ برای بررسی آن‌ها روش فایروال کل سرور را انتخاب کنید.",
