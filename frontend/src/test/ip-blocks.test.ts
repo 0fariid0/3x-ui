@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canonicalBlockIP, IPBlockMutationSchema } from '@/schemas/api/ip-blocks';
+import { isTunnelLocalIP, canonicalBlockIP, IPBlockMutationSchema } from '@/schemas/api/ip-blocks';
 import { normalizeClientIps } from '@/lib/clients/ip-log';
 
 describe('IP block targeting', () => {
@@ -20,5 +20,14 @@ describe('IP block targeting', () => {
   it('never infers server identity from an ambiguous display name', () => {
     const rows = normalizeClientIps([{ ip: '192.0.2.1', node: 'same', nodeId: 7 }, { ip: '192.0.2.2', node: 'same' }, { ip: '192.0.2.3', node: '', nodeId: 0 }]);
     expect(rows.map((row) => row.nodeId)).toEqual([7, undefined, 0]);
+  });
+});
+
+describe('GRE-TUN local ranges', () => {
+  it.each(['10.10.1.1', '10.20.255.2', '10.30.3.1', '10.40.0.2', '::ffff:10.30.3.1', '::ffff:a1e:301'])('recognizes %s', (ip) => {
+    expect(isTunnelLocalIP(ip)).toBe(true);
+  });
+  it.each(['5.210.158.87', '10.0.0.1', '10.31.3.1', '192.168.1.1', '100.64.1.1', '2001:db8::1', '10.30.3.999', '10.30.3.1/24', ''])('does not exempt %s', (ip) => {
+    expect(isTunnelLocalIP(ip)).toBe(false);
   });
 });

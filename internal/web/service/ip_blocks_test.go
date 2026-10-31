@@ -234,3 +234,21 @@ func TestIPBlockUnavailableAndInvalidRequests(t *testing.T) {
 		t.Fatal("blocked while disabled")
 	}
 }
+
+func TestTunnelManualBanRejectedButRecoveryUnbanAllowed(t *testing.T) {
+	state := setupIPBlockClient(t, []string{"10.30.3.1"})
+	svc := &IPBlockService{}
+	for _, ip := range []string{"10.30.3.1", "::ffff:10.40.3.1"} {
+		_, err := svc.Change(context.Background(), entity.IPBlockChange{IP: ip, Action: "ban"})
+		if err == nil || !strings.Contains(err.Error(), "tunnel") && !strings.Contains(err.Error(), "GRE-TUN") {
+			t.Fatalf("tunnel ban accepted: %v", err)
+		}
+	}
+	if _, err := os.Stat(state + ".calls"); !os.IsNotExist(err) {
+		t.Fatal("tunnel ban executed command")
+	}
+	result, err := svc.Change(context.Background(), entity.IPBlockChange{IP: "10.30.3.1", Action: "unban"})
+	if err != nil || len(result.Blocks) != 0 {
+		t.Fatalf("cannot recover pre-existing tunnel ban: %+v %v", result, err)
+	}
+}

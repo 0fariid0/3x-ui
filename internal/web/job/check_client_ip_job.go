@@ -15,6 +15,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/logger"
+	"github.com/mhsanaei/3x-ui/v3/internal/util/clientip"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/service"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 
@@ -424,11 +425,23 @@ func mergeClientIps(old, new []IPWithTimestamp, staleCutoff int64, newAlwaysLive
 // selectIpsToBan splits the live IPs (sorted oldest-first by partitionLiveIps)
 // into the newest `limit` entries to keep and the older remainder to ban.
 func selectIpsToBan(live []IPWithTimestamp, limit int) (kept, banned []IPWithTimestamp) {
-	if limit <= 0 || len(live) <= limit {
+	if limit <= 0 {
 		return live, nil
 	}
-	cutoff := len(live) - limit
-	return live[cutoff:], live[:cutoff]
+	counted := make([]IPWithTimestamp, 0, len(live))
+	exempt := make([]IPWithTimestamp, 0)
+	for _, entry := range live {
+		if clientip.IsTunnelLocal(entry.IP) {
+			exempt = append(exempt, entry)
+		} else {
+			counted = append(counted, entry)
+		}
+	}
+	if len(counted) <= limit {
+		return live, nil
+	}
+	cutoff := len(counted) - limit
+	return append(exempt, counted[cutoff:]...), counted[:cutoff]
 }
 
 func partitionLiveIps(ipMap map[string]int64, observedThisScan map[string]bool) (live, historical []IPWithTimestamp) {

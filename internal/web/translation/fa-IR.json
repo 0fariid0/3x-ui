@@ -945,7 +945,11 @@
         "sharedCount": "تعداد کاربران یافت‌شده: {count}",
         "sharedEmpty": "در گزارش اخیر این سرور کاربری برای این IP پیدا نشد.",
         "sharedFailed": "بررسی کاربران مشترک ناموفق بود؛ نبودن کاربر دیگر تأیید نشده است.",
-        "currentClient": "کاربر فعلی"
+        "currentClient": "کاربر فعلی",
+        "localTunnel": "IP لوکال تونل",
+        "localConnected": "IPهای لوکال تونل مشاهده‌شده",
+        "localExcluded": "بدون شمارش در محدودیت IP و بدون بلاک",
+        "scopeCompact": "بلاک روی کل سرور انتخاب‌شده اثر دارد؛ IPهای لوکال تونل مستثنا هستند."
       },
       "historyDetails": {
         "previousQuota": "حجم قبلی",

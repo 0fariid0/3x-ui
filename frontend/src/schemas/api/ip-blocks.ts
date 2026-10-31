@@ -27,3 +27,10 @@ export const IPBlockMutationSchema = IPBlockChangeSchema.extend({
 });
 
 export type IPBlockMutation = z.infer<typeof IPBlockMutationSchema>;
+
+export function isTunnelLocalIP(value: string): boolean {
+  const ip = canonicalBlockIP(value);
+  if (!ip || ip.includes(':')) return false;
+  const octets = ip.split('.').map(Number);
+  return octets[0] === 10 && [10, 20, 30, 40].includes(octets[1]);
+}

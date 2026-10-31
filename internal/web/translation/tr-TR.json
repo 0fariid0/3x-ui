@@ -945,7 +945,11 @@
         "sharedCount": "Users found: {count}",
         "sharedEmpty": "No recent users were found in this server’s IP report.",
         "sharedFailed": "Could not check users sharing this IP. Their absence is not confirmed.",
-        "currentClient": "Current client"
+        "currentClient": "Current client",
+        "localTunnel": "Local tunnel IP",
+        "localConnected": "Observed local tunnel IPs",
+        "localExcluded": "Excluded from IP limits and blocking",
+        "scopeCompact": "Blocks apply to the entire selected server. Local tunnel IPs are excluded."
       },
       "historyDetails": {
         "previousQuota": "Previous quota",

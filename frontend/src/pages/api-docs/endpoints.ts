@@ -291,7 +291,7 @@ export const sections: readonly Section[] = [
       {
         method: 'POST',
         path: '/panel/api/server/ipBlocks/change',
-        summary: 'Accepts JSON or form-encoded bodies. Ban or unban one literal IPv4/IPv6 address in the selected host 3x-ipl jail, using that jail configured ban duration. The rule applies to the entire host, not one client. Duplicate requests are idempotent. Verifies live state after the command and records a client audit event; auditWarning=true means the firewall operation succeeded but audit persistence failed. Does not change automatic IP limits or Fail2ban configuration. Unbanned IPs can be banned again if the automatic limit is still exceeded.',
+        summary: 'Accepts JSON or form-encoded bodies. Ban or unban one literal IPv4/IPv6 address in the selected host 3x-ipl jail, using that jail configured ban duration. The rule applies to the entire host, not one client. Duplicate requests are idempotent. Verifies live state after the command and records a client audit event; auditWarning=true means the firewall operation succeeded but audit persistence failed. New bans of GRE-TUN local ranges (10.10/16, 10.20/16, 10.30/16, 10.40/16) are rejected; unban remains allowed for recovery. Does not change automatic IP limits or Fail2ban configuration. Unbanned IPs can be banned again if the automatic limit is still exceeded.',
         params: [
           { name: 'nodeId', in: 'body', type: 'integer', optional: true, defaultValue: 0, desc: 'Configured node ID, or 0 for this panel.' },
           { name: 'ip', in: 'body', type: 'string', desc: 'One literal IPv4 or IPv6 address; no CIDRs, hostnames or shell syntax.' },

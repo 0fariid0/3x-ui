@@ -19,6 +19,7 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
+	"github.com/mhsanaei/3x-ui/v3/internal/util/clientip"
 	"github.com/mhsanaei/3x-ui/v3/internal/web/entity"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
@@ -215,6 +216,9 @@ func (s *IPBlockService) Change(ctx context.Context, req entity.IPBlockChange) (
 	}
 	if req.NodeID != 0 || len(req.Email) > 255 || strings.ContainsAny(req.Email, "\r\n\x00") {
 		return nil, fmt.Errorf("invalid IP block request")
+	}
+	if req.Action == "ban" && clientip.IsTunnelLocal(ip) {
+		return nil, fmt.Errorf("GRE-TUN local addresses are excluded from IP limits and cannot be blocked")
 	}
 	ipBlockMutationMu.Lock()
 	defer ipBlockMutationMu.Unlock()

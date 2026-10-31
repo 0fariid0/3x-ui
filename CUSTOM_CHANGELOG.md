@@ -1,3 +1,10 @@
+## v3.9.8 — Preserve tunnel observations without counting them toward IP limits
+
+- Exclude GRE-TUN internal ranges 10.10.0.0/16, 10.20.0.0/16, 10.30.0.0/16 and 10.40.0.0/16 from IP-limit counting and automatic ban selection, including IPv4-mapped IPv6 forms. Preserve observations and per-node attribution.
+- Reject new manual bans of those tunnel addresses at the API. Existing bans are not silently changed; the unban API remains available for recovery.
+- Move observed local tunnel addresses into a compact strip above client IPs, with server/time on hover and no action buttons. Count only non-tunnel observations in the client tab; compact tables and controls.
+- Keep public/other private IP enforcement, original subscription behavior and release targets unchanged. Requires all enforcing nodes to update. This does not recover real client IPs when a tunnel only supplies its local source address.
+
 ## v3.9.7 — Fix IP block requests and show shared-IP users
 
 - Send explicit JSON for block/unblock; accept JSON and form bodies for cached older frontends. Display errors inside confirmation.

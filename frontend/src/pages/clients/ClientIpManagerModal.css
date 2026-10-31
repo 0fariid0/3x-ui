@@ -1,10 +1,17 @@
-.ip-manager { display: grid; gap: 14px; }
-.ip-manager-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.ip-manager-toolbar > .ant-select { min-width: 210px; }
+.ip-manager { display: grid; gap: 8px; }
+.ip-manager-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ip-manager-toolbar > .ant-select { min-width: 170px; }
 .ip-manager-toolbar > .ant-input-affix-wrapper,
 .ip-manager-toolbar > .ant-input-search,
 .ip-manager-toolbar > input { flex: 1; min-width: 200px; }
 .ip-manager-address { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
 .ip-manager-confirm { display: grid; gap: 5px; max-width: 320px; }
 
-.ip-manager-shared { display: grid; gap: 10px; margin: 14px 0; min-width: 0; }
+.ip-manager-shared { display: grid; gap: 6px; margin: 14px 0; min-width: 0; }
+
+.ip-manager-local { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 5px 8px; border: 1px solid color-mix(in srgb, currentColor 15%, transparent); border-radius: 6px; }
+.ip-manager-local .ant-tag { margin-inline-end: 0; font-size: 11px; line-height: 20px; }
+.ip-manager-scope { font-size: 12px; }
+.ip-manager-modal .ant-table-cell { padding: 5px 8px !important; font-size: 12px; }
+.ip-manager-modal .ant-tabs-nav { margin-bottom: 6px; }
+.ip-manager-modal .ant-btn-sm { font-size: 12px; }

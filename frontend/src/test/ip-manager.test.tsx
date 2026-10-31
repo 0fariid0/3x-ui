@@ -62,4 +62,16 @@ describe('IP manager', () => {
     expect(screen.queryByText('No recent users were found in this server’s IP report.')).toBeNull();
   });
 
+  it('keeps tunnel IPs in a compact strip without actions or client slots', () => {
+    renderWithProviders(<ClientIpManagerModal open email="client" ips={[{ ip: '10.30.3.1', node: '', nodeId: 0, time: '' }, { ip: '5.210.158.87', node: '', nodeId: 0, time: '' }]} loading={false} clearing={false} onRefresh={vi.fn()} onClear={vi.fn()} onClose={vi.fn()} />);
+    const address = screen.getByText('10.30.3.1');
+    const strip = address.closest('.ip-manager-local')!;
+    expect(strip).not.toBeNull();
+    expect(strip.querySelector('button')).toBeNull();
+    expect(address.closest('tr')).toBeNull();
+    expect(screen.getByText('Client IPs (1)')).toBeTruthy();
+    const row = screen.getByText('5.210.158.87').closest('tr')!;
+    expect(within(row).getByText('Block')).toBeTruthy();
+  });
+
 });
