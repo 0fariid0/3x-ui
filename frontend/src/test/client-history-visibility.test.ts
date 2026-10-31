@@ -20,3 +20,11 @@ describe('focused client renewal history', () => {
     expect(remainingDaysAtChange(at, 0)).toBeNull();
   });
 });
+
+import { isServiceChange } from '@/lib/clients/history';
+it('separates IP and unchanged settings from quota, expiry and inbound changes',()=>{
+ for(const kind of ['ip_ban','ip_unban','ip_limit_decision','updated']) expect(isServiceChange({kind})).toBe(false);
+ for(const kind of ['renewed','limits_changed','attached','detached']) expect(isServiceChange({kind})).toBe(true);
+ expect(isServiceChange({kind:'updated',details:JSON.stringify({previousTotalBytes:0,totalBytes:0,previousExpiryTime:0,expiryTime:0})})).toBe(false);
+ expect(isServiceChange({kind:'updated',details:JSON.stringify({previousTotalBytes:10,totalBytes:20})})).toBe(true);
+});

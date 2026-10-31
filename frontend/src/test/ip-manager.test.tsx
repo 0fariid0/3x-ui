@@ -4,10 +4,10 @@ import { HttpUtil } from '@/utils';
 import ClientIpManagerModal from '@/pages/clients/ClientIpManagerModal';
 import { renderWithProviders } from './test-utils';
 
-const mock = vi.hoisted(() => ({ mutateAsync: vi.fn(), error: false, data: { available: true, banSeconds: 1800, blocks: [{ ip: '192.0.2.99', source: 'automatic', email: 'other', bannedAt: 1, expiresAt: 2, permanent: false }] } }));
+const mock = vi.hoisted(() => ({ mutateAsync: vi.fn(), error: false, hostBlocks: [] as {ip:string;email:string;source:string;bannedAt:number;expiresAt:number;permanent:boolean}[], data: { available: true, banSeconds: 1800, blocks: [{ ip: '192.0.2.99', source: 'automatic', email: 'other', bannedAt: 1, expiresAt: 2, permanent: false }] } }));
 vi.mock('@/hooks/usePanelDateTime', () => ({ usePanelDateTime: () => ({ formatDateTime: () => '1405/08/08 12:00' }) }));
-vi.mock('@/api/queries/useIPBlocks', () => ({ useIPBlocks: () => ({
-  query: { data: mock.data, isError: mock.error, error: new Error('offline'), isFetching: false, refetch: vi.fn() },
+vi.mock('@/api/queries/useIPBlocks', () => ({ useIPBlocks: (_open:boolean,_node:number,scope:string) => ({
+  query: { data: scope === 'host' ? {...mock.data,blocks:mock.hostBlocks} : mock.data, isError: mock.error, error: new Error('offline'), isFetching: false, refetch: vi.fn() },
   mutation: { mutateAsync: mock.mutateAsync, isPending: false, isError: false, reset: vi.fn() },
 }) }));
 
@@ -15,7 +15,7 @@ function show() {
   renderWithProviders(<ClientIpManagerModal open email="client" ips={[{ ip: '192.0.2.1', node: '', nodeId: 0, time: '' }, { ip: '192.0.2.2', node: 'remote', nodeId: 9, time: '' }]} loading={false} clearing={false} onRefresh={vi.fn()} onClear={vi.fn()} onClose={vi.fn()} />);
 }
 
-beforeEach(() => { vi.spyOn(HttpUtil, 'get').mockImplementation(async <T,>(url: string) => ({ success: true, msg: '', obj: (url.includes('/ipBlocks/clients?') ? { ip: new URL(url, 'http://localhost').searchParams.get('ip'), clients: [{ email: 'client', lastSeen: 1 }, { email: url.includes('nodeId=9') ? 'remote-peer' : 'shared-peer', lastSeen: 2 }], windowSeconds: 1800, checkedAt: 3 } : []) as T })); mock.error = false; mock.mutateAsync.mockReset().mockResolvedValue({ auditWarning: false }); });
+beforeEach(() => { vi.spyOn(HttpUtil, 'get').mockImplementation(async <T,>(url: string) => ({ success: true, msg: '', obj: (url.includes('/ipBlocks/clients?') ? { ip: new URL(url, 'http://localhost').searchParams.get('ip'), clients: [{ email: 'client', lastSeen: 1 }, { email: url.includes('nodeId=9') ? 'remote-peer' : 'shared-peer', lastSeen: 2 }], windowSeconds: 1800, checkedAt: 3 } : []) as T })); mock.hostBlocks = []; mock.error = false; mock.mutateAsync.mockReset().mockResolvedValue({ auditWarning: false }); });
 
 describe('IP manager', () => {
   it('lists automatic blocks that are absent from the client report and confirms unblock', async () => {
@@ -82,3 +82,11 @@ describe('IP manager', () => {
     expect(within(row).getByText('Not blocked')).toBeTruthy();
     expect((within(row).getByText('Block').closest('button') as HTMLButtonElement).disabled).toBe(false);
   });
+
+it('shows a host ban in the client view even when account scope is selected',()=>{
+ mock.hostBlocks=[{ip:'192.0.2.1',email:'other',source:'automatic',bannedAt:1,expiresAt:0,permanent:true}];
+ show();
+ const row=screen.getByText('192.0.2.1').closest('tr')!;
+ expect(within(row).getByText('Blocked')).toBeTruthy();
+ expect((within(row).getByText('Unblock').closest('button') as HTMLButtonElement).disabled).toBe(false);
+});

@@ -909,10 +909,21 @@ func (s *ClientInsightService) GetReportForRange(email string, days, hours int) 
 		}
 		return connectedInbounds[i].ID < connectedInbounds[j].ID
 	})
-	var events []model.ClientEvent
-	if err := db.Where("email = ?", email).Order("created_at DESC, id DESC").Limit(200).Find(&events).Error; err != nil {
+	var events, activity []model.ClientEvent
+	serviceKinds := []string{"limits_changed", "activated", "renewed", "attached", "detached"}
+	if err := db.Where("email = ? AND kind IN ?", email, serviceKinds).Order("created_at DESC, id DESC").Limit(200).Find(&events).Error; err != nil {
 		return nil, err
 	}
+	if err := db.Where("email = ? AND kind NOT IN ?", email, serviceKinds).Order("created_at DESC, id DESC").Limit(200).Find(&activity).Error; err != nil {
+		return nil, err
+	}
+	events = append(events, activity...)
+	sort.SliceStable(events, func(i, j int) bool {
+		if events[i].CreatedAt == events[j].CreatedAt {
+			return events[i].Id > events[j].Id
+		}
+		return events[i].CreatedAt > events[j].CreatedAt
+	})
 	var anomalies []model.ClientAnomaly
 	_ = db.Where("email = ? AND created_at >= ?", email, rangeStart).Order("created_at DESC, id DESC").Limit(50).Find(&anomalies).Error
 	destinations, destinationSummaries, destinationErr := s.destinationReport(email, rangeStart, rangeEnd)

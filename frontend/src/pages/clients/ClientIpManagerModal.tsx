@@ -57,6 +57,9 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
   const [sharedTarget, setSharedTarget] = useState<{ ip: string; nodeId: number; serverName: string } | null>(null);
   const [confirmation, setConfirmation] = useState<(IPBlockMutation & { serverName: string }) | null>(null);
   const { query, mutation } = useIPBlocks(open, nodeId, scope);
+  const otherScope = scope === 'client' ? 'host' : 'client';
+  const other = useIPBlocks(open, nodeId, otherScope);
+  const allBlocks = [...(query.data?.blocks ?? []).map(row => ({...row, scope})), ...(other.query.data?.blocks ?? []).map(row => ({...row, scope: otherScope}))];
   const nodesQuery = useQuery({
     queryKey: keys.nodes.list(),
     enabled: open,
@@ -73,11 +76,12 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
   const busy = mutation.isPending || query.isFetching;
   const active = useMemo(() => new Map((query.data?.blocks ?? []).map((row) => [scope === 'client' ? `${row.email}\u0000${row.ip}` : row.ip, row])), [query.data?.blocks,scope]);
  const blockedFor = (ip: string,owner: string) => active.has(scope === 'client' ? `${owner}\u0000${ip}` : ip);
+  const knownBlock = (ip:string, owner:string) => allBlocks.find(row => row.ip === ip && row.scope === 'host') || allBlocks.find(row => row.ip === ip && row.scope === 'client' && row.email === owner);
   const searchText = search.trim().toLowerCase();
   const clientIPs = ips.filter((row) => !isTunnelLocalIP(row.ip));
   const localIPs = ips.filter((row) => isTunnelLocalIP(row.ip));
   const visibleIPs = clientIPs.filter((row) => `${row.ip} ${row.node}`.toLowerCase().includes(searchText));
-  const visibleBlocks = (query.data?.blocks ?? []).filter((row) => `${row.ip} ${row.email} ${row.source}`.toLowerCase().includes(searchText));
+  const visibleBlocks = allBlocks.filter((row) => `${row.ip} ${row.email} ${row.source}`.toLowerCase().includes(searchText));
   const text = (key: string) => t(`pages.clients.ipManager.${key}`);
 
   async function changeIP(request: IPBlockMutation) {
@@ -92,11 +96,12 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
     }
   }
 
-  function actionButton(ip: string, blocked: boolean, owner: string, wrongServer = false) {
+  function actionButton(ip: string, blocked: boolean, owner: string, wrongServer = false, operationScope: 'host' | 'client' = scope) {
+    const operationReady = operationScope === scope ? ready : other.query.data?.available === true && !other.query.isError;
     if (isTunnelLocalIP(ip)) return <Tag>{text('localTunnel')}</Tag>;
     return (
       <Tooltip title={wrongServer ? text('selectObservedServer') : undefined}>
-          <Button size="small" danger={!blocked} disabled={!ready || busy || !ip || wrongServer || (scope === 'client' && !owner)} loading={mutation.isPending && mutation.variables?.ip === ip} icon={blocked ? <UnlockOutlined /> : <LockOutlined />} onClick={() => setConfirmation({ nodeId, scope, ip, action: blocked ? 'unban' : 'ban', email: owner, serverName })}>
+          <Button size="small" danger={!blocked} disabled={!operationReady || busy || !ip || wrongServer || (operationScope === 'client' && !owner)} loading={mutation.isPending && mutation.variables?.ip === ip} icon={blocked ? <UnlockOutlined /> : <LockOutlined />} onClick={() => setConfirmation({ nodeId, scope: operationScope, ip, action: blocked ? 'unban' : 'ban', email: owner, serverName })}>
             {text(blocked ? 'unban' : 'ban')}
           </Button>
       </Tooltip>
@@ -113,6 +118,7 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
   }
 
   const blockColumns = [
+    {title: text('blockScope'), key:'scope', render: (_v:unknown,row:IPBlockEntry) => text(row.scope === 'host' ? 'scopeHost' : 'scopeClient')},
  {title:text('remainingBan'),key:'remaining',render:(_v:unknown,row:IPBlockEntry)=>row.permanent?text('permanent'):row.expiresAt>0?<bdi dir="ltr">{Math.max(0,Math.ceil((row.expiresAt-clock)/1000))} s</bdi>:text('unknown')},
     { title: text('ip'), dataIndex: 'ip', key: 'ip', render: ipText },
     { title: text('sharedTitle'), key: 'shared', render: (_value: unknown, row: IPBlockEntry) => <Button size="small" onClick={() => setSharedTarget({ ip: row.ip, nodeId, serverName })}>{text('viewClients')}</Button> },
@@ -120,7 +126,7 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
     { title: text('client'), dataIndex: 'email', key: 'email', render: (value: string) => <bdi dir="auto">{value || '—'}</bdi> },
     { title: text('bannedAt'), dataIndex: 'bannedAt', key: 'bannedAt', render: (value: number) => <bdi dir="ltr">{value > 0 ? dateTime.formatDateTime(value) : '—'}</bdi> },
     { title: text('expiresAt'), key: 'expiresAt', render: (_value: unknown, row: IPBlockEntry) => <bdi dir="ltr">{row.permanent ? text('permanent') : row.expiresAt > 0 ? dateTime.formatDateTime(row.expiresAt) : text('unknownTime')}</bdi> },
-    { title: text('action'), key: 'action', render: (_value: unknown, row: IPBlockEntry) => actionButton(row.ip, true, row.email) },
+    { title: text('action'), key: 'action', render: (_value: unknown, row: IPBlockEntry) => actionButton(row.ip, true, row.email, false, row.scope === 'host' ? 'host' : 'client') },
   ];
 
   const observedColumns = [
@@ -132,12 +138,13 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
     { title: text('status'), key: 'status', render: (_value: unknown, row: ClientIpInfo) => {
       const sameServer = row.nodeId === nodeId;
       const ip = canonicalBlockIP(row.ip);
-      return <Tag color={ready && sameServer && ip ? blockedFor(ip,email||'') ? 'red' : 'green' : 'default'}>{!ready || !sameServer || !ip ? text('unknown') : blockedFor(ip,email||'') ? text('blocked') : text('notBlocked')}</Tag>;
+      return <Tag color={ready && sameServer && ip ? knownBlock(ip,email||'') ? 'red' : 'green' : 'default'}>{!sameServer || !ip ? text('unknown') : knownBlock(ip,email||'') ? text('blocked') : !ready || other.query.isError || other.query.data?.available !== true ? text('unknown') : text('notBlocked')}</Tag>;
     } },
     { title: text('action'), key: 'action', render: (_value: unknown, row: ClientIpInfo) => {
       const ip = canonicalBlockIP(row.ip) || '';
       const sameServer = row.nodeId === nodeId;
-      return actionButton(ip, blockedFor(ip,email||''), email || '', !sameServer);
+      const block = knownBlock(ip,email||'');
+      return actionButton(ip, !!block, email || '', !sameServer, block?.scope === 'host' ? 'host' : block ? 'client' : scope);
     } },
   ];
 
@@ -145,14 +152,14 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
 
   return (
     <Modal open={open} title={<span>{text('title')}{email ? <> — <bdi dir="auto">{email}</bdi></> : null}</span>} width={1050} className="ip-manager-modal" zIndex={zIndex} onCancel={() => { setConfirmation(null); onClose(); }} footer={<Space wrap>
-      <Button icon={<ReloadOutlined />} loading={loading || query.isFetching} disabled={mutation.isPending} onClick={() => { void onRefresh(); void query.refetch(); }}>{t('refresh')}</Button>
+      <Button icon={<ReloadOutlined />} loading={loading || query.isFetching} disabled={mutation.isPending} onClick={() => { void onRefresh(); void query.refetch(); void other.query.refetch(); }}>{t('refresh')}</Button>
       <Popconfirm title={text('confirmClear')} description={text('clearOnlyLog')} onConfirm={onClear} zIndex={zIndex ? zIndex + 20 : undefined} okText={t('confirm')} cancelText={t('cancel')}><Button danger loading={clearing} disabled={ips.length === 0 || mutation.isPending}>{t('pages.clients.clearAll')}</Button></Popconfirm>
       <Button type="primary" onClick={() => { setConfirmation(null); onClose(); }}>{t('close')}</Button>
     </Space>}>
       {contextHolder}
       <Modal width={640} open={open && confirmation !== null} title={text(confirmation?.action === 'unban' ? 'confirmUnban' : 'confirmBan')} zIndex={(zIndex ?? 1000) + 30} onCancel={() => setConfirmation(null)} onOk={() => confirmation && changeIP(confirmation)} confirmLoading={mutation.isPending} cancelButtonProps={{ disabled: mutation.isPending }} closable={!mutation.isPending} keyboard={!mutation.isPending} mask={{ closable: !mutation.isPending }} okButtonProps={{ danger: confirmation?.action === 'ban' }} okText={text(confirmation?.action === 'unban' ? 'unban' : 'ban')} cancelText={t('cancel')}>
         {mutation.isError ? <Alert type="error" showIcon title={text('operationFailed')} description={<bdi dir="auto">{mutation.error.message}</bdi>} /> : null}
-        <div className="ip-manager-confirm"><bdi dir="ltr">{confirmation?.ip}</bdi><span dir="auto">{confirmation?.serverName}</span><span>{scope==='client'?`${text('scopeClient')} — ${confirmation?.email}`:text('serverScope')}</span></div>
+        <div className="ip-manager-confirm"><bdi dir="ltr">{confirmation?.ip}</bdi><span dir="auto">{confirmation?.serverName}</span><span>{confirmation?.scope==='client'?`${text('scopeClient')} — ${confirmation?.email}`:text('serverScope')}</span></div>
         {open && confirmation ? <IPSharedClientsPanel key={`${confirmation.nodeId}:${confirmation.ip}`} ip={confirmation.ip} nodeId={confirmation.nodeId} serverName={confirmation.serverName} email={email} /> : null}
       </Modal>
       <div className="ip-manager">
@@ -165,6 +172,7 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
           <Input.Search aria-label={text('search')} placeholder={text('search')} size="small" allowClear value={search} onChange={(event) => setSearch(event.target.value)} />
         </div>
         {query.isError ? <Alert type="error" showIcon title={text('loadFailed')} description={<span dir="auto">{query.error.message}</span>} /> : null}
+        {other.query.isError ? <Alert type="warning" showIcon title={text('loadFailed')} description={other.query.error.message} /> : null}
         {mutation.isError ? <Alert type="error" showIcon title={text('operationFailed')} description={<span dir="auto">{mutation.error.message}</span>} /> : null}
         {query.data && !query.data.available ? <Alert type="warning" showIcon title={text('unavailable')} description={text(`reason_${query.data.reason}`)} /> : null}
         <div className="ip-manager-toolbar">
@@ -177,7 +185,7 @@ export default function ClientIpManagerModal({ open, initialNodeId = 0, email, i
         {open && sharedTarget ? <div><IPSharedClientsPanel key={`${sharedTarget.nodeId}:${sharedTarget.ip}`} {...sharedTarget} email={email} /><Button size="small" onClick={() => setSharedTarget(null)}>{t('close')}</Button></div> : null}
         <Tabs defaultActiveKey={email ? "observed" : "blocked"} items={[
           { key: 'observed', label: `${text('observed')} (${clientIPs.length})`, children: <Table size="small" loading={loading} columns={observedColumns} dataSource={visibleIPs} rowKey={(row) => `${row.node}:${row.ip}`} pagination={{ pageSize: 10, showSizeChanger: false }} scroll={{ x: 900 }} /> },
-          { key: 'blocked', label: `${text('allBlocked')} (${ready ? active.size : '—'})`, children: <Table size="small" loading={query.isFetching} columns={blockColumns} dataSource={ready ? visibleBlocks : []} rowKey={(row) => `${row.email}:${row.ip}`} pagination={{ pageSize: 10, showSizeChanger: false }} scroll={{ x: 900 }} /> },
+          { key: 'blocked', label: `${text('allBlocked')} (${allBlocks.length})`, children: <Table size="small" loading={query.isFetching} columns={blockColumns} dataSource={visibleBlocks} rowKey={(row) => `${row.scope}:${row.email}:${row.ip}`} pagination={{ pageSize: 10, showSizeChanger: false }} scroll={{ x: 900 }} /> },
         ]} />
       </div>
     </Modal>

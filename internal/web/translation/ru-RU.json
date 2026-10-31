@@ -892,7 +892,8 @@
       "recentIps": "Recent IP addresses",
       "appsAndOs": "Applications and operating systems",
       "anomalyHistory": "Abnormal usage history",
-      "changeHistory": "Renewal and change history",
+      "otherActivity": "IP and other activity",
+    "changeHistory": "Renewal and change history",
       "ipManager": {
         "clientScopeDescription": "This method affects only the specified account and IP. Existing host firewall bans are independent; select Host firewall to inspect them.",
         "blockScope": "Block scope",
@@ -949,7 +950,7 @@
         "defaultDuration": "Configured block duration",
         "durationSeconds": "{seconds} seconds",
         "observed": "Client IPs",
-        "allBlocked": "Active blocks (selected method)",
+        "allBlocked": "Active blocks (all methods)",
         "sharedTitle": "Users sharing this IP",
         "viewClients": "Show users",
         "sharedScope": "Recent observations on this server (last 30 minutes), not necessarily simultaneous connections. Blocking affects everyone using this IP, including users absent from these logs.",

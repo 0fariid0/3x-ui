@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const ClientEventDetailsSchema = z.object({
   version: z.literal(1).optional(),
+  inboundIds: z.array(z.number().int()).optional(),
   source: z.string().optional(),
   previousTotalBytes: z.number().optional(),
   totalBytes: z.number().optional(),

@@ -29,6 +29,7 @@ export default function ClientHistoryDetails({ details, summary, formatDateTime,
   };
 
   if (data) {
+    if (data.inboundIds?.length) lines.push({label:t('inbounds'),value:data.inboundIds.map(number).join(', ')});
     if (data.previousTotalBytes !== undefined) add('previousQuota', size(data.previousTotalBytes));
     const total = data.totalBytes ?? data.totalGB;
     if (total !== undefined) add('quota', size(total));

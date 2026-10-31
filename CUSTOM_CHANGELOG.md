@@ -1,3 +1,10 @@
+## v3.9.12 — separate service history and show both IP block engines
+
+- Keep quota/expiry and inbound attachment changes in service history; move IP and other activity into a separate tab without deleting stored events.
+- Fetch independent 200-event budgets for service and other activity so IP chatter cannot crowd renewals out of the report.
+- Show host and account blocks together, label their actual scope and route unban to the correct engine; show a confirmed host ban in account observations too. Keep failed engine reads visible.
+- Preserve every v3.9.11 source file and existing settings. Core enforcement logic unchanged; bundled core build labels advanced to 3.9.12.
+
 ## v3.9.11 — account/source isolation, IP-limit evidence and reporting
 
 - Add the pinned Fara Xray core build: a reviewed dispatcher/transport hook closes only authenticated account/source streams, including the raw splice path. Preserve the outer traffic stats writer so user quota accounting remains intact. No extra listener/port. The original core APIs and protocols remain present.

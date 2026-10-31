@@ -270,3 +270,14 @@
 @media (prefers-reduced-motion: reduce) {
   .client-destination-live-dot { animation: none; }
 }
+
+/* Keep every report tab visible, including on narrow screens. */
+.client-usage-tabs > .ant-tabs-nav .ant-tabs-nav-wrap { overflow: visible; }
+.client-usage-tabs > .ant-tabs-nav .ant-tabs-nav-list {
+  width: 100%; flex-wrap: wrap; gap: 2px 14px; transform: none !important;
+}
+.client-usage-tabs > .ant-tabs-nav .ant-tabs-tab {
+  margin: 0 !important; padding: 7px 0; font-size: 12px; line-height: 1.5;
+}
+.client-usage-tabs > .ant-tabs-nav .ant-tabs-tab .anticon { font-size: 12px; }
+.client-usage-tabs > .ant-tabs-nav .ant-tabs-nav-operations { display: none; }

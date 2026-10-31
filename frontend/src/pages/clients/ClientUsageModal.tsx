@@ -19,7 +19,7 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import { TRAFFIC_POLL_INTERVAL_S } from '@/lib/traffic/poll-interval';
 import './ClientUsageModal.css';
 import ClientHistoryDetails from './ClientHistoryDetails';
-import { visibleClientEvents } from '@/lib/clients/history';
+import { visibleClientEvents, isServiceChange } from '@/lib/clients/history';
 
 interface ApiMsg<T> { success?: boolean; msg?: string; obj?: T; }
 interface DailyUsage { day: string; up: number; down: number; total: number; }
@@ -247,7 +247,9 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
 
   const dateLabel = (ts?: number) => (!ts || ts <= 0 ? '—' : panelDateTime.formatDateTime(ts));
   const daily = useMemo(() => report?.dailyUsage ?? [], [report?.dailyUsage]);
-  const historyEvents = useMemo(() => visibleClientEvents(report?.events ?? []), [report?.events]);
+  const allEvents = useMemo(() => visibleClientEvents(report?.events ?? []), [report?.events]);
+  const historyEvents = allEvents.filter(isServiceChange);
+  const activityEvents = allEvents.filter(event => !isServiceChange(event));
   const hourly = useMemo(() => report?.hourlyUsage ?? [], [report?.hourlyUsage]);
   const timeline = useMemo(() => report?.timelineUsage ?? [], [report?.timelineUsage]);
   const useRollingHours = (report?.hours ?? 0) > 0;
@@ -512,7 +514,20 @@ export default function ClientUsageModal({ open, email, initialDays = 1, onClose
           <small dir="auto">{t('pages.clients.historyDetails.hint')}</small>
           {historyEvents.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} /> : historyEvents.map((event) => (
             <div className="client-usage-list-row" key={event.id}>
-              <div><strong dir="auto">{eventName(event)}</strong>{event.kind !== 'ip_limit_decision' && <ClientHistoryDetails details={event.details} summary={event.summary} formatDateTime={panelDateTime.formatDateTime} recordedAt={event.createdAt} />}</div>
+              <div><strong dir="auto">{eventName(event)}</strong>{event.kind !== 'ip_limit_decision' && <ClientHistoryDetails details={event.details} summary={['attached','detached'].includes(event.kind) ? eventName(event) : event.summary} formatDateTime={panelDateTime.formatDateTime} recordedAt={event.createdAt} />}</div>
+              <div><Tag>{eventName(event)}</Tag><small><bdi dir="ltr">{dateLabel(event.createdAt)}</bdi></small></div>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      key: 'activity', label: <span><HistoryOutlined /> {t('pages.clients.otherActivity', { defaultValue: 'IP and other activity' })}</span>, children: (
+        <div className="client-usage-list">
+          <small dir="auto">{t('pages.clients.historyDetails.hint')}</small>
+          {activityEvents.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} /> : activityEvents.map((event) => (
+            <div className="client-usage-list-row" key={event.id}>
+              <div><strong dir="auto">{eventName(event)}</strong>{event.kind !== 'ip_limit_decision' && <ClientHistoryDetails details={event.details} summary={['attached','detached'].includes(event.kind) ? eventName(event) : event.summary} formatDateTime={panelDateTime.formatDateTime} recordedAt={event.createdAt} />}</div>
               <div><Tag>{eventName(event)}</Tag><small><bdi dir="ltr">{dateLabel(event.createdAt)}</bdi></small></div>
             </div>
           ))}

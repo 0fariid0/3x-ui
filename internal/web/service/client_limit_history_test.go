@@ -212,3 +212,36 @@ func TestTrafficHistoryCapturesBeforeResetAndAdjustment(t *testing.T) {
 		t.Fatalf("wrong traffic before/after: %#v", detail)
 	}
 }
+
+func TestIPActivityCannotCrowdRenewalOutOfReport(t *testing.T) {
+	setupBulkDB(t)
+	db := database.GetDB()
+	email := "history-budgets@x"
+	if err := db.Create(&model.ClientRecord{Email: email, Enable: true}).Error; err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UnixMilli()
+	events := []model.ClientEvent{{Email: email, Kind: "renewed", Summary: "preserved renewal", CreatedAt: now - 86400000}}
+	for i := 0; i < 250; i++ {
+		events = append(events, model.ClientEvent{Email: email, Kind: "ip_ban", Summary: "test IP", CreatedAt: now - int64(i)})
+	}
+	if err := db.Create(&events).Error; err != nil {
+		t.Fatal(err)
+	}
+	report, err := (&ClientInsightService{}).GetReportForRange(email, 7, 12)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Events) != 201 {
+		t.Fatalf("independent budgets: got %d events", len(report.Events))
+	}
+	found := false
+	for _, e := range report.Events {
+		if e.Kind == "renewed" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("IP activity hid renewal")
+	}
+}
