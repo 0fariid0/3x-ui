@@ -1,3 +1,7 @@
+## v3.9.16 — Proton VPN Free outbound
+
+- Add Proton VPN WireGuard .conf import from Outbounds and Routing. Select the resulting tag in routing rules. Preserve existing rules, the default outbound and the NordVPN integration.
+
 ## v3.9.15 — restore legacy quota and expiry snapshots
 
 - Hide only generic updated notices without structured service details. Restore legacy quota/expiry snapshots, including zero/unlimited values, and retain inbound events in change history.

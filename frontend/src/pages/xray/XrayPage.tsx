@@ -33,6 +33,7 @@ import { BalancersTab } from './balancers';
 import { cleanupOrphanedBalancerLoopbacks, ensureMissingBalancerLoopbacks, detectBalancerCycles } from './balancers/balancer-loopback';
 import { DnsTab } from './dns';
 import { WarpModal, NordModal } from './overrides';
+import ProtonModal from './overrides/ProtonModal';
 import './XrayPage.css';
 
 const SECTION_SLUGS = ['basic', 'routing', 'outbound', 'balancer', 'dns', 'advanced'];
@@ -98,6 +99,7 @@ export default function XrayPage() {
 
   const [warpOpen, setWarpOpen] = useState(false);
   const [nordOpen, setNordOpen] = useState(false);
+  const [protonOpen, setProtonOpen] = useState(false);
   const [advSettings, setAdvSettings] = useState<AdvKey>('xraySetting');
   const location = useLocation();
   const navigate = useNavigate();
@@ -239,6 +241,7 @@ export default function XrayPage() {
       case 'routing':
         return (
           <RoutingTab
+            onShowProton={() => setProtonOpen(true)}
             templateSettings={templateSettings}
             setTemplateSettings={setTemplateSettings}
             inboundTags={inboundTags}
@@ -266,6 +269,7 @@ export default function XrayPage() {
             onTestAll={testAllOutbounds}
             onShowWarp={() => setWarpOpen(true)}
             onShowNord={() => setNordOpen(true)}
+            onShowProton={() => setProtonOpen(true)}
             onRefreshXrayData={fetchAll}
           />
         );
@@ -404,6 +408,17 @@ export default function XrayPage() {
           onAddOutbound={onAddOutbound}
           onResetOutbound={onResetOutbound}
           onRemoveOutbound={onRemoveOutboundByTag}
+        />
+        <ProtonModal
+          open={protonOpen}
+          tags={[...(templateSettings?.outbounds ?? []).map(outbound => outbound.tag ?? ''), ...subscriptionOutboundTags, ...clientReverseTags, 'NordVPN', 'api']}
+          hasDefault={Boolean(templateSettings?.outbounds?.length)}
+          onClose={() => setProtonOpen(false)}
+          onAdd={(outbound) => mutate((tt) => {
+            if (tt.outbounds?.length && !tt.outbounds.some(item => item.tag === outbound.tag)) {
+              tt.outbounds.push(outbound as never);
+            }
+          })}
         />
         <NordModal
           open={nordOpen}

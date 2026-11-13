@@ -34,6 +34,7 @@ interface RoutingTabProps {
   clientReverseTags: string[];
   subscriptionOutboundTags?: string[];
   isMobile: boolean;
+  onShowProton?: () => void;
 }
 
 export default function RoutingTab({
@@ -43,6 +44,7 @@ export default function RoutingTab({
   clientReverseTags,
   subscriptionOutboundTags,
   isMobile,
+  onShowProton,
 }: RoutingTabProps) {
   const { t } = useTranslation();
   const [modal, modalContextHolder] = Modal.useModal();
@@ -333,6 +335,7 @@ export default function RoutingTab({
       {modalContextHolder}
       <Tabs
         defaultActiveKey="basic"
+        tabBarExtraContent={onShowProton && <Button onClick={onShowProton}>Proton VPN</Button>}
         items={[
           {
             key: 'basic',

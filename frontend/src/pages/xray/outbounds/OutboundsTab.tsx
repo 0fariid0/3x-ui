@@ -90,6 +90,7 @@ interface OutboundsTabProps {
   onTestAll: (mode: string) => void;
   onShowWarp: () => void;
   onShowNord: () => void;
+  onShowProton?: () => void;
   onRefreshXrayData?: () => void;
 }
 
@@ -110,6 +111,7 @@ export default function OutboundsTab({
   onTestAll,
   onShowWarp,
   onShowNord,
+  onShowProton,
   onRefreshXrayData,
 }: OutboundsTabProps) {
   const { t } = useTranslation();
@@ -494,6 +496,7 @@ export default function OutboundsTab({
                   items: [
                     { key: 'warp', icon: <CloudOutlined />, label: 'WARP', onClick: onShowWarp },
                     { key: 'nord', icon: <ApiOutlined />, label: 'NordVPN', onClick: onShowNord },
+                    { key: 'proton', icon: <ApiOutlined />, label: "Proton VPN", disabled: !onShowProton, onClick: onShowProton },
                     { type: 'divider' },
                     { key: 'import', icon: <ImportOutlined />, label: t('pages.xray.importOutbounds'), onClick: () => setImportOpen(true) },
                     { key: 'export', icon: <ExportOutlined />, label: t('pages.xray.exportOutbounds'), disabled: outbounds.length === 0, onClick: exportOutbounds },
