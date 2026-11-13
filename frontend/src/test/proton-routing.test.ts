@@ -16,6 +16,11 @@ describe('Proton basic routing', () => {
       { type: 'field', outboundTag: 'proton-free', ruleTag: 'xui-proton-domain:proton-free', domain: ['geosite:google'] },
       { type: 'field', outboundTag: 'proton-free', ruleTag: 'xui-proton-ip:proton-free', ip: ['geoip:ir'] },
     ]);
+    const savedIPRule = structuredClone(template.routing!.rules![2]);
+    setProtonRules(template, 'proton-free', ['domain:example.net']);
+    expect(template.routing!.rules![2]).toEqual(savedIPRule);
+    setProtonRules(template, 'proton-free', []);
+    expect(template.routing?.rules).toEqual([...original.routing!.rules!, savedIPRule]);
     setProtonRules(template, 'proton-free', [], []);
     expect(template).toEqual(original);
   });

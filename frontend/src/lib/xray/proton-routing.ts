@@ -3,11 +3,12 @@ import type { RuleObject } from '@/schemas/routing';
 
 export const protonRuleTag = (tag: string, kind: 'domain' | 'ip') => `xui-proton-${kind}:${tag}`;
 
-export function setProtonRules(template: XraySettingsValue, tag: string, domains: string[], ips: string[]) {
+export function setProtonRules(template: XraySettingsValue, tag: string, domains: string[], ips?: string[]) {
   if (!template.outbounds?.some(outbound => outbound.tag === tag && outbound.protocol === 'wireguard')) return;
   template.routing ??= { rules: [] };
   const rules = [...(template.routing.rules ?? [])];
   for (const [kind, values] of [['domain', domains], ['ip', ips]] as const) {
+    if (values === undefined) continue;
     const marker = protonRuleTag(tag, kind);
     const index = rules.findIndex(rule => rule.ruleTag?.startsWith(`xui-proton-${kind}:`) && rule.outboundTag === tag);
     const tokens = [...new Set(values)];

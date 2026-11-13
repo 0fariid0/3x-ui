@@ -25,16 +25,11 @@
 .xray-page .content-area,
 .xray-page .ant-tabs-content-holder,
 .xray-page .setting-list-item .ant-col,
-.proton-routing-fields {
+.proton-routing-control {
   min-width: 0;
 }
 
-.proton-routing-fields {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
-  overflow-wrap: anywhere;
-}
+.proton-outbound-picker { padding: 8px; }
 
 @media (max-width: 767px) {
   .xray-page .setting-list-item .ant-select,

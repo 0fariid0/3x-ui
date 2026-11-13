@@ -1,3 +1,7 @@
+## v3.9.18 — compact Proton routing
+
+- Match the existing service dropdowns in Basic Routing; keep Geosite database search next to Proton and preserve existing IP rules.
+
 ## v3.9.17 — Proton basic routing and database search
 
 - Add editable Proton domain and IP rules to Basic Routing. Search categories and entries in installed Geosite and GeoIP files.
