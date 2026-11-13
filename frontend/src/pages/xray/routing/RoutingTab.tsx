@@ -335,13 +335,13 @@ export default function RoutingTab({
       {modalContextHolder}
       <Tabs
         defaultActiveKey="basic"
-        tabBarExtraContent={onShowProton && <Button onClick={onShowProton}>Proton VPN</Button>}
         items={[
           {
             key: 'basic',
             label: catTabLabel(<ControlOutlined />, t('pages.xray.basicRouting'), isMobile),
             children: (
               <RoutingBasic
+                onShowProton={onShowProton}
                 templateSettings={templateSettings}
                 setTemplateSettings={setTemplateSettings}
               />

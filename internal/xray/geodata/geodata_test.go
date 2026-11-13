@@ -556,3 +556,18 @@ func TestSymlinkOutOfTheAssetFolderIsRefused(t *testing.T) {
 		}
 	}
 }
+
+func TestSearchEntriesAcrossCategories(t *testing.T) {
+	dir := t.TempDir()
+	sampleSiteDB(t, dir)
+	store := NewStore(dir)
+	page, err := store.SearchEntries("geosite.dat", ".COM", 1, 2)
+	if err != nil || page.Total != 4 || len(page.Items) != 2 || page.Items[0].Value != "qq.com" || page.Items[1].Value != "google.com" {
+		t.Fatalf("unexpected cross-category page: %+v %v", page, err)
+	}
+	writeIPDB(t, dir, "geoip.dat", geoip("one", "10.0.0.0/8"), geoip("two", "10.1.0.0/16"))
+	page, err = store.SearchEntries("geoip.dat", "10.", 0, 1)
+	if err != nil || page.Total != 2 || len(page.Items) != 1 || page.Items[0].Kind != "cidr" {
+		t.Fatalf("unexpected IP page: %+v %v", page, err)
+	}
+}

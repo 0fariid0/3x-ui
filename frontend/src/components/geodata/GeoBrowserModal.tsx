@@ -18,6 +18,7 @@ const ENTRY_FILTER_DELAY = 500;
 export interface GeoBrowserModalProps {
   open: boolean;
   kind: GeoKind;
+  searchDatabase?: boolean;
   value: string;
   onApply: (value: string) => void;
   onClose: () => void;
@@ -39,8 +40,11 @@ function preferredFile(files: GeoFile[], kind: GeoKind): string | undefined {
   return usable.find((file) => file.name === preferredName)?.name ?? usable[0]?.name;
 }
 
-export default function GeoBrowserModal({ open, kind, value, onApply, onClose }: GeoBrowserModalProps) {
-  const { t } = useTranslation();
+export default function GeoBrowserModal({ open, kind, value, onApply, onClose, searchDatabase }: GeoBrowserModalProps) {
+  const { t, i18n } = useTranslation();
+  const fa = i18n.language?.startsWith('fa');
+  const [databaseQuery, setDatabaseQuery] = useState('');
+  const databaseSearch = searchDatabase && databaseQuery.length >= 2;
   const panelDateTime = usePanelDateTime();
   const [file, setFile] = useState<string | undefined>(undefined);
   const [categoryQuery, setCategoryQuery] = useState('');
@@ -73,11 +77,12 @@ export default function GeoBrowserModal({ open, kind, value, onApply, onClose }:
   // scan per character while the box itself stays instant.
   const entriesQuery = useGeodataEntries(
     file,
-    activeCode,
-    entryFilter,
+    databaseSearch ? undefined : activeCode,
+    databaseSearch ? databaseQuery : entryFilter,
     (entryPage - 1) * ENTRY_PAGE_SIZE,
     ENTRY_PAGE_SIZE,
-    open && !!file && !!activeCode,
+    open && !!file && (!!activeCode || !!databaseSearch),
+    !!databaseSearch,
   );
 
   // Resets clear both halves at once so a switch of database or category never
@@ -103,6 +108,7 @@ export default function GeoBrowserModal({ open, kind, value, onApply, onClose }:
     knownRef.current = new Set();
     seededFilesRef.current = new Set();
     setCategoryQuery('');
+    setDatabaseQuery('');
     setEntryQuery('');
     setEntryFilter('');
     setActiveCode(undefined);
@@ -195,8 +201,7 @@ export default function GeoBrowserModal({ open, kind, value, onApply, onClose }:
     [t],
   );
 
-  const entryColumns: ColumnsType<GeoEntry> = useMemo(
-    () => [
+  const entryColumns: ColumnsType<GeoEntry> = [
       {
         dataIndex: 'kind',
         width: 88,
@@ -208,11 +213,14 @@ export default function GeoBrowserModal({ open, kind, value, onApply, onClose }:
       },
       {
         dataIndex: 'value',
-        render: (entryValue: string) => <span className="geo-entry-value">{entryValue}</span>,
+        render: (entryValue: string, entry) => {
+          const token = entry.kind === 'cidr' ? entryValue : `${entry.kind}:${entryValue}`;
+          return searchDatabase
+            ? <Button type="link" className="geo-entry-value" title={entryValue} disabled={entryValue.includes(',')} onClick={() => setSelected(prev => prev.includes(token) ? prev : [...prev, token])}>{entryValue}</Button>
+            : <span className="geo-entry-value">{entryValue}</span>;
+        },
       },
-    ],
-    [],
-  );
+    ];
 
   const fileOptions = files.map((candidate) => ({
     value: candidate.name,
@@ -267,6 +275,7 @@ export default function GeoBrowserModal({ open, kind, value, onApply, onClose }:
               options={fileOptions}
               onChange={(next) => {
                 setFile(next);
+                setDatabaseQuery('');
                 setActiveCode(undefined);
                 setCategoryQuery('');
                 clearEntryFilter();
@@ -288,6 +297,13 @@ export default function GeoBrowserModal({ open, kind, value, onApply, onClose }:
             </Button>
             <span className="geo-meta">{meta}</span>
           </div>
+
+          {searchDatabase && <Input.Search
+            className="geo-global-search"
+            allowClear
+            placeholder={fa ? 'جستجوی دامنه یا IP در کل فایل انتخاب‌شده (حداقل ۲ حرف)' : 'Search all entries in selected database (2+ characters)'}
+            onSearch={value => { setDatabaseQuery(value.trim()); setEntryPage(1); }}
+          />}
 
           <div className="geo-columns">
             <div className="geo-panel geo-categories">
@@ -311,6 +327,7 @@ export default function GeoBrowserModal({ open, kind, value, onApply, onClose }:
                 onRow={(category) => ({
                   onClick: (event) => {
                     if ((event.target as HTMLElement).closest('.ant-table-selection-column')) return;
+                    setDatabaseQuery('');
                     setActiveCode(category.code);
                     clearEntryFilter();
                   },
@@ -320,20 +337,20 @@ export default function GeoBrowserModal({ open, kind, value, onApply, onClose }:
             </div>
 
             <div className="geo-panel geo-preview">
-              {activeCode ? (
+              {activeCode || databaseSearch ? (
                 <>
                   <div className="geo-preview-head">
-                    <Tooltip title={file ? tokenFor(file, activeCode, fileKind) : activeCode}>
-                      <span className="geo-preview-title">{activeCode}</span>
+                    <Tooltip title={activeCode && file ? tokenFor(file, activeCode, fileKind) : databaseQuery}>
+                      <span className="geo-preview-title">{databaseSearch ? databaseQuery : activeCode}</span>
                     </Tooltip>
                     <Typography.Text type="secondary">{countLabel}</Typography.Text>
-                    <Input
+                    {!databaseSearch && <Input
                       value={entryQuery}
                       onChange={(event) => setEntryQuery(event.target.value)}
                       placeholder={t('pages.xray.geoBrowser.searchEntries')}
                       allowClear
                       className="geo-entry-filter"
-                    />
+                    />}
                   </div>
                   <div className="geo-preview-body">
                     <Table
@@ -341,7 +358,7 @@ export default function GeoBrowserModal({ open, kind, value, onApply, onClose }:
                       showHeader={false}
                       rowKey={(entry, index) => `${entry.value}-${index}`}
                       columns={entryColumns}
-                      dataSource={entriesQuery.data?.items ?? []}
+                      dataSource={entriesQuery.isPlaceholderData ? [] : entriesQuery.data?.items ?? []}
                       loading={entriesQuery.isLoading}
                       locale={{
                         emptyText: entriesQuery.isError

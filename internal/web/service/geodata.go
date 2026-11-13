@@ -70,6 +70,10 @@ func (s *GeodataService) Categories(file, query string, offset, limit int) (geod
 }
 
 // Entries returns one page of the rules inside a category.
+func (s *GeodataService) SearchEntries(file, query string, offset, limit int) (geodata.GeoEntryPage, error) {
+	return assetStore().SearchEntries(file, query, offset, limit)
+}
+
 func (s *GeodataService) Entries(file, code, query string, offset, limit int) (geodata.GeoEntryPage, error) {
 	return assetStore().Entries(file, code, query, offset, limit)
 }

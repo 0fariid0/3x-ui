@@ -1,3 +1,8 @@
+## v3.9.17 — Proton basic routing and database search
+
+- Add editable Proton domain and IP rules to Basic Routing. Search categories and entries in installed Geosite and GeoIP files.
+- Keep configuration inputs and routing controls within mobile viewport; explain masked keys.
+
 ## v3.9.16 — Proton VPN Free outbound
 
 - Add Proton VPN WireGuard .conf import from Outbounds and Routing. Select the resulting tag in routing rules. Preserve existing rules, the default outbound and the NordVPN integration.

@@ -1597,7 +1597,8 @@ export const sections: readonly Section[] = [
         summary: 'One page of the rules inside a category — domain rules typed as domain/full/keyword/regexp for geosite databases, CIDRs for geoip ones.',
         params: [
           { name: 'file', in: 'query', type: 'string', desc: 'Database file name inside the asset folder (required).' },
-          { name: 'code', in: 'query', type: 'string', desc: 'Category code, case-insensitive, e.g. google (required).' },
+          { name: 'scope', in: 'query', type: 'string', optional: true, desc: 'Use database to search all categories of the selected file. Requires a query of at least two characters.' },
+          { name: 'code', in: 'query', type: 'string', optional: true, desc: 'Category code, e.g. google. Required unless scope=database.' },
           { name: 'q', in: 'query', type: 'string', optional: true, desc: 'Case-insensitive substring filter on the rule value.' },
           { name: 'offset', in: 'query', type: 'integer', optional: true, desc: 'Rows to skip. Defaults to 0.' },
           { name: 'limit', in: 'query', type: 'integer', optional: true, desc: 'Rows to return, capped at 500. Defaults to the cap.' },

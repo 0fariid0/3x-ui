@@ -126,3 +126,38 @@ func (s *Store) recordsLocked(name, code string, spans []byteSpan) ([][]byte, er
 	s.hot = hotRecord{key: key, code: code, records: records}
 	return records, nil
 }
+
+// SearchEntries searches across categories in one installed database. Only one
+// category's records are read at a time; only the requested page is retained.
+func (s *Store) SearchEntries(name, query string, offset, limit int) (GeoEntryPage, error) {
+	query = strings.ToLower(strings.TrimSpace(query))
+	page := GeoEntryPage{Items: []GeoEntry{}}
+	if len(query) < 2 {
+		return page, nil
+	}
+	idx, err := s.index(name)
+	if err != nil {
+		return page, err
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if limit <= 0 || limit > MaxPageSize {
+		limit = MaxPageSize
+	}
+	s.scan.Lock()
+	defer s.scan.Unlock()
+	for _, category := range idx.categories {
+		records, err := readSpans(s.dir, name, idx.spans[category.Code])
+		if err != nil {
+			return page, err
+		}
+		matches, err := scanEntries(records, idx.kind, category.Code, query, max(0, offset-page.Total), limit-len(page.Items))
+		if err != nil {
+			return page, err
+		}
+		page.Total += matches.Total
+		page.Items = append(page.Items, matches.Items...)
+	}
+	return page, nil
+}

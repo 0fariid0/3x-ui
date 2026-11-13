@@ -28,12 +28,13 @@ export interface GeoTokenInputProps {
   onChange?: (value: string) => void;
   onBlur?: () => void;
   kind: GeoTokenKind;
+  searchDatabase?: boolean;
   placeholder?: string;
   id?: string;
   ref?: Ref<InputRef>;
 }
 
-export default function GeoTokenInput({ value = '', onChange, onBlur, kind, placeholder, id, ref }: GeoTokenInputProps) {
+export default function GeoTokenInput({ value = '', onChange, onBlur, kind, placeholder, id, ref, searchDatabase }: GeoTokenInputProps) {
   const { t } = useTranslation();
   const [browsing, setBrowsing] = useState(false);
   const [issues, setIssues] = useState<GeodataTokenIssue[]>([]);
@@ -103,6 +104,7 @@ export default function GeoTokenInput({ value = '', onChange, onBlur, kind, plac
       )}
       <GeoBrowserModal
         open={browsing}
+        searchDatabase={searchDatabase}
         kind={(kind === 'ip' ? 'ip' : 'site') as GeoKind}
         value={value}
         onApply={(next) => {

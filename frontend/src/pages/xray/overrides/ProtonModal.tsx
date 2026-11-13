@@ -28,6 +28,10 @@ export default function ProtonModal({ open, tags, hasDefault, onClose, onAdd }: 
       return;
     }
     try {
+      if (/^\s*PrivateKey\s*=\s*\*+\s*$/im.test(values.config)) {
+        setError(label('Replace the masked PrivateKey with the real key from your Proton file.', 'به‌جای ستاره‌ها، PrivateKey اصلی فایل Proton را وارد کن.'));
+        return;
+      }
       onAdd(buildWireguardConf(tag, values.config));
       onClose();
     } catch {
@@ -37,7 +41,7 @@ export default function ProtonModal({ open, tags, hasDefault, onClose, onAdd }: 
 
   return (
     <Modal open={open} title="Proton VPN Free · WireGuard" footer={null} onCancel={onClose}
-      destroyOnHidden afterClose={() => setError('')}>
+      className="proton-config-modal" destroyOnHidden afterClose={() => setError('')}>
       <Form form={form} layout="vertical" initialValues={{ tag: 'proton-free' }} clearOnDestroy onFinish={submit}>
         <Alert type="info" showIcon title={label('Paste your Proton VPN WireGuard .conf file', 'متن فایل WireGuard حساب Proton VPN را وارد کن')}
           description={<a href="https://protonvpn.com/support/wireguard-configurations" target="_blank" rel="noopener noreferrer">{label('Official Proton VPN guide', 'راهنمای رسمی دریافت فایل از Proton VPN')}</a>} />

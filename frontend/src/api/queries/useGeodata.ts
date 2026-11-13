@@ -40,10 +40,11 @@ async function fetchGeodataEntries(
   query: string,
   offset: number,
   limit: number,
+  database: boolean,
 ): Promise<GeoEntryPage> {
   const msg = await HttpUtil.get(
     '/panel/api/xray/geodata/entries',
-    { file, code, q: query, offset, limit },
+    { file, code, q: query, offset, limit, ...(database ? { scope: 'database' } : {}) },
     { silent: true },
   );
   if (!msg?.success) throw new Error(msg?.msg || 'Failed to fetch geodata entries');
@@ -77,11 +78,12 @@ export function useGeodataEntries(
   offset: number,
   limit: number,
   enabled: boolean,
+  database = false,
 ) {
   return useQuery({
-    queryKey: keys.xray.geodata.entries(file ?? '', code ?? '', query, offset, limit),
-    queryFn: () => fetchGeodataEntries(file ?? '', code ?? '', query, offset, limit),
-    enabled: enabled && !!file && !!code,
+    queryKey: [...keys.xray.geodata.entries(file ?? '', code ?? '', query, offset, limit), database],
+    queryFn: () => fetchGeodataEntries(file ?? '', code ?? '', query, offset, limit, database),
+    enabled: enabled && !!file && (database || !!code),
     placeholderData: keepPreviousData,
   });
 }

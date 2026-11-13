@@ -19,3 +19,42 @@
   margin: 0;
   opacity: 0.7;
 }
+
+.xray-page,
+.xray-page .content-shell,
+.xray-page .content-area,
+.xray-page .ant-tabs-content-holder,
+.xray-page .setting-list-item .ant-col,
+.proton-routing-fields {
+  min-width: 0;
+}
+
+.proton-routing-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 767px) {
+  .xray-page .setting-list-item .ant-select,
+  .xray-page .setting-list-item .ant-input,
+  .proton-config-modal input.ant-input,
+  .proton-config-modal textarea.ant-input,
+  .geo-browser-modal input.ant-input {
+    font-size: 16px;
+  }
+
+  .proton-config-modal textarea.ant-input {
+    max-width: 100%;
+    resize: vertical;
+  }
+
+  .xray-page .setting-list-item .ant-select-selection-item,
+  .xray-page .setting-list-item .ant-select-selection-item-content {
+    max-width: 100%;
+    min-width: 0;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+}

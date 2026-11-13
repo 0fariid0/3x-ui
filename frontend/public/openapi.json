@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.9.16",
+    "version": "3.9.17",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -14034,10 +14034,19 @@
             }
           },
           {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "description": "Use database to search all categories of the selected file. Requires a query of at least two characters.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "code",
             "in": "query",
-            "required": true,
-            "description": "Category code, case-insensitive, e.g. google (required).",
+            "required": false,
+            "description": "Category code, e.g. google. Required unless scope=database.",
             "schema": {
               "type": "string"
             }

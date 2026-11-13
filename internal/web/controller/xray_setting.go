@@ -606,6 +606,16 @@ func (a *XraySettingController) geodataCategories(c *gin.Context) {
 
 // geodataEntries returns one page of the domains or CIDRs inside a category.
 func (a *XraySettingController) geodataEntries(c *gin.Context) {
+	if c.Query("scope") == "database" {
+		offset, limit := geodataPaging(c)
+		page, err := a.GeodataService.SearchEntries(c.Query("file"), c.Query("q"), offset, limit)
+		if err != nil {
+			jsonMsg(c, I18nWeb(c, "somethingWentWrong"), err)
+			return
+		}
+		jsonObj(c, page, nil)
+		return
+	}
 	code := c.Query("code")
 	if code == "" {
 		jsonMsg(c, I18nWeb(c, "somethingWentWrong"), common.NewError("code is required"))

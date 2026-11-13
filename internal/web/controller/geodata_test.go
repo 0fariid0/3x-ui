@@ -276,3 +276,12 @@ func TestGeodataFollowsXrayAssetLocation(t *testing.T) {
 		t.Errorf("categories = %d, want 2 — the shared asset folder should be read", files[0].Categories)
 	}
 }
+
+func TestGeodataSearchWholeDatabase(t *testing.T) {
+	engine := newGeodataEngine(t)
+	env := doGeodataGet(t, engine, "/panel/api/xray/geodata/entries?file=geosite.dat&scope=database&q=ads.google&limit=1")
+	var result geodata.GeoEntryPage
+	if err := json.Unmarshal(env.Obj, &result); err != nil || result.Total != 1 || len(result.Items) != 1 || result.Items[0].Value != "ads.google.com" {
+		t.Fatalf("whole database search: %+v %v", result, err)
+	}
+}

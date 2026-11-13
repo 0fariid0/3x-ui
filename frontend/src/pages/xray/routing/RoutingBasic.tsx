@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Select, Switch } from 'antd';
 
+import ProtonRouting from './ProtonRouting';
 import { SettingListItem } from '@/components/ui';
 import type { XraySettingsValue, SetTemplate } from '@/hooks/useXraySetting';
 import {
@@ -25,9 +26,10 @@ import {
 interface RoutingBasicProps {
   templateSettings: XraySettingsValue | null;
   setTemplateSettings: SetTemplate;
+  onShowProton?: () => void;
 }
 
-export default function RoutingBasic({ templateSettings, setTemplateSettings }: RoutingBasicProps) {
+export default function RoutingBasic({ templateSettings, setTemplateSettings, onShowProton }: RoutingBasicProps) {
   const { t } = useTranslation();
 
   const mutate = useCallback(
@@ -227,6 +229,7 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings }: 
           />
         }
       />
+      <ProtonRouting {...{ templateSettings, setTemplateSettings, onShowProton }} />
     </>
   );
 }
