@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { GeoBrowserModal } from '@/components/geodata';
 import { formatTokens, parseTokens } from '@/lib/xray/geoTokens';
 import type { XraySettingsValue, SetTemplate } from '@/hooks/useXraySetting';
-import { setProtonRules } from '@/lib/xray/proton-routing';
+import { getProtonOutboundTag, setProtonRules } from '@/lib/xray/proton-routing';
 import { SettingListItem } from '@/components/ui';
 import { SERVICES_OPTIONS } from '../basics/constants';
 
@@ -17,14 +17,8 @@ export default function ProtonRouting({ templateSettings, setTemplateSettings, o
   const { i18n, t } = useTranslation();
   const fa = i18n.language?.startsWith('fa');
   const [browsingTag, setBrowsingTag] = useState<string>();
-  const [selection, setSelection] = useState<string>();
   const rules = templateSettings?.routing?.rules ?? [];
-  const tags = (templateSettings?.outbounds ?? []).flatMap(outbound =>
-    outbound.protocol === 'wireguard' && outbound.tag && !/^(nord|warp)/i.test(outbound.tag) ? [outbound.tag] : [],
-  );
-  const tag = selection && tags.includes(selection) ? selection
-    : tags.find(value => value.startsWith('proton'))
-      ?? tags.find(value => rules.some(rule => rule.outboundTag === value && rule.ruleTag?.startsWith('xui-proton-')));
+  const tag = getProtonOutboundTag(templateSettings);
   const domains = rules.find(rule => rule.outboundTag === tag && rule.ruleTag?.startsWith('xui-proton-domain:'))?.domain ?? [];
 
   function setDomains(outboundTag: string, nextDomains: string[]) {
@@ -46,22 +40,10 @@ export default function ProtonRouting({ templateSettings, setTemplateSettings, o
           value={domains}
           options={SERVICES_OPTIONS}
           style={{ width: '100%', minWidth: 0 }}
-          disabled={!tags.length}
-          placeholder={fa ? 'ابتدا خروجی Proton VPN را بساز یا انتخاب کن' : 'Create or select a Proton VPN outbound'}
+          disabled={!tag}
+          placeholder={fa ? 'ابتدا خروجی Proton VPN را بساز' : 'Create the Proton VPN outbound first'}
           onChange={next => { if (tag) setDomains(tag, next); }}
-          popupRender={menu => <>
-            {tag && menu}
-            {(!tag || tags.length > 1) && <div className="proton-outbound-picker">
-              <Select
-                aria-label={fa ? 'خروجی Proton' : 'Proton outbound'}
-                value={tag}
-                onChange={setSelection}
-                options={tags.map(value => ({ value, label: value }))}
-                placeholder={fa ? 'انتخاب خروجی WireGuard' : 'Select WireGuard outbound'}
-                style={{ width: '100%' }}
-              />
-            </div>}
-          </>}
+
         />
         <Tooltip title={tag ? t('pages.xray.geoBrowser.openTooltip') : fa ? 'ساخت خروجی Proton' : 'Create Proton outbound'}>
           <Button aria-label={tag ? t('pages.xray.geoBrowser.openTooltip') : fa ? 'ساخت خروجی Proton' : 'Create Proton outbound'}

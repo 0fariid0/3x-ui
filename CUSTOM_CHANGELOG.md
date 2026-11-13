@@ -1,3 +1,8 @@
+## v3.9.19 — stable Proton outbound
+
+- Import Proton into the fixed proton-free outbound, updating it in place. Basic Routing detects the outbound automatically.
+- Recognize older Proton tags and migrate existing route references on import; require an explicit choice if multiple legacy outbounds exist.
+
 ## v3.9.18 — compact Proton routing
 
 - Match the existing service dropdowns in Basic Routing; keep Geosite database search next to Proton and preserve existing IP rules.

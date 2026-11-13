@@ -29,8 +29,6 @@
   min-width: 0;
 }
 
-.proton-outbound-picker { padding: 8px; }
-
 @media (max-width: 767px) {
   .xray-page .setting-list-item .ant-select,
   .xray-page .setting-list-item .ant-input,
