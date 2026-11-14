@@ -12,7 +12,8 @@
   font-size: 12px;
 }
 .site-probe-bar strong,
-.site-probe-bar > button { flex: none; }
+.site-probe-actions { flex: none; }
+.site-probe-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 .site-probe-bar strong .anticon { color: var(--ant-color-primary); margin-inline-end: 3px; }
 .site-probe-favorites {
   flex: 1;
@@ -77,7 +78,8 @@
 .site-probe-editor { display: grid; gap: 6px; }
 .site-probe-error { color: var(--ant-color-error-text); }
 @media (max-width: 600px) {
-  .site-probe-bar { display: grid; grid-template-columns: 1fr auto; gap: 5px; }
+  .site-probe-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+  .site-probe-bar strong { min-width: 0; }
   .site-probe-favorites { grid-row: 2; grid-column: 1 / -1; }
   .site-probe-row { grid-template-columns: minmax(0, 1fr) auto; }
   .site-probe-results { grid-row: 2; grid-column: 1 / -1; }

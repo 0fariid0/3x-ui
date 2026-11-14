@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Button, Input, Modal, Space, Tooltip } from 'antd';
 import {
   ApiOutlined, ArrowDownOutlined, ArrowUpOutlined, DeleteOutlined, EditOutlined,
-  LoadingOutlined, PlusOutlined, RetweetOutlined, StarFilled, StarOutlined,
+  PlusOutlined, RetweetOutlined, SettingOutlined, StarFilled, StarOutlined,
 } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -67,11 +67,13 @@ export default function SiteProbeCard() {
   const starred = targets.filter(row => row.starred);
   const running = !!view.data?.running;
   const pending = action.isPending;
+  const testing = running || (pending && action.variables?.method === 'run');
   const save = (next: Target[]) => action.mutateAsync({ method: 'save', data: { targets: next } });
   const update = (next: Target[]) => void save(next).catch(() => {});
   const run = (url = '') => action.mutate({ method: 'run', data: { url } });
   const title = l('تست اتصال سایت‌ها', 'Site connectivity');
-  const runLabel = l('پینگ گرفتن', 'Run checks');
+  const runLabel = l('تست همه', 'Test all');
+  const settingsLabel = l('تنظیمات تست سایت‌ها', 'Site check settings');
   const nameLabel = l('نام سایت', 'Site name');
   const addressLabel = l('آدرس سایت', 'Site address');
 
@@ -95,7 +97,7 @@ export default function SiteProbeCard() {
   }
 
   return (
-    <section className="site-probe-card" aria-label={title} aria-busy={running}>
+    <section className="site-probe-card" aria-label={title} aria-busy={testing}>
       <div className="site-probe-bar">
         <strong><ApiOutlined /> {title}</strong>
         <div className="site-probe-favorites">
@@ -108,12 +110,21 @@ export default function SiteProbeCard() {
           })}
           {!starred.length && <small>{l('برای نمایش، کنار سایت ستاره بزن.', 'Star sites to show them here.')}</small>}
         </div>
-        <Button size="small" aria-label={runLabel} icon={running ? <LoadingOutlined /> : <RetweetOutlined />} onClick={() => setOpen(true)}>
-          {runLabel}
-        </Button>
+        <div className="site-probe-actions">
+          <Button size="small" color="blue" variant="solid" aria-label={runLabel}
+            icon={<RetweetOutlined />} loading={testing} disabled={pending || testing || !targets.length}
+            onClick={() => run()}>
+            {runLabel}
+          </Button>
+          <Button size="small" color="purple" variant="filled" aria-label={settingsLabel}
+            icon={<SettingOutlined />} onClick={() => setOpen(true)}>
+            {l('تنظیمات', 'Settings')}
+          </Button>
+        </div>
       </div>
+      {!open && error && <div role="alert" className="site-probe-error">{error}</div>}
 
-      <Modal title={title} open={open} footer={null} width={780}
+      <Modal title={settingsLabel} open={open} footer={null} width={780}
         onCancel={() => { setOpen(false); setEditor(undefined); setError(''); }}>
         <div className="site-probe-modal">
           <p title={l('تست از ورودی مخصوص پنل اجرا می‌شود؛ قوانین مختص یک ورودی یا کاربر دیگر در این تست اعمال نمی‌شوند.', 'Rules restricted to other inbounds or users are outside this test.')}>{l(
@@ -121,9 +132,6 @@ export default function SiteProbeCard() {
             'Every 10 minutes, the check uses the matching Xray route, or connects directly if no rule matches. Each site shows one HTTP response time.',
           )}</p>
           <Space wrap>
-            <Button type="primary" icon={<RetweetOutlined />} loading={running} disabled={pending || !targets.length} onClick={() => run()}>
-              {l('تست همه', 'Test all')}
-            </Button>
             <Button icon={<PlusOutlined />} disabled={pending || targets.length >= 12} onClick={() => { setError(''); setEditor({ url: '', name: '' }); }}>
               {l('افزودن سایت', 'Add site')}
             </Button>

@@ -1,3 +1,7 @@
+## v3.9.31 — dashboard site check shortcuts
+
+- Start all saved site checks directly from the dashboard, or open settings via a separate button.
+
 ## v3.9.30 — single result per site check
 
 - Check through the matching live Xray route. If no rule matches, only the probe uses a direct connection, independently of the live default outbound.
