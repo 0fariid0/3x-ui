@@ -1,5 +1,5 @@
 import type { XraySettingsValue } from '@/hooks/useXraySetting';
-import { renameCustomRouteMarker } from '@/lib/xray/custom-outbound-routing';
+import { isQuickRoutingVisible, renameCustomRouteMarker, setQuickRoutingVisible } from '@/lib/xray/custom-outbound-routing';
 import { blockedSettings, directSettings } from './constants';
 
 export const NORDVPN_OUTBOUND_TAG = 'NordVPN';
@@ -100,6 +100,11 @@ export function propagateOutboundTagRename(
   newTag: string,
 ): void {
   if (!oldTag || !newTag || oldTag === newTag) return;
+
+  if (isQuickRoutingVisible(t, oldTag)) {
+    setQuickRoutingVisible(t, oldTag, false);
+    setQuickRoutingVisible(t, newTag, true);
+  }
 
   const rules = t.routing?.rules;
   if (Array.isArray(rules)) {

@@ -43,7 +43,7 @@ func (j *MtprotoJob) Run() {
 
 	mgr := mtproto.GetManager()
 	mgr.Reconcile(desired)
-	if j.relay {
+	if j.relay && len(desired) == 0 {
 		return
 	}
 
@@ -65,6 +65,14 @@ func (j *MtprotoJob) Run() {
 			inboundUp[d.Tag] += d.Up
 			inboundDown[d.Tag] += d.Down
 		}
+	}
+
+	if j.relay {
+		if err := j.inboundService.RecordRelayClientTraffic(clientTraffics); err != nil {
+			logger.Warning("mtproto relay accounting:", err)
+		}
+		j.inboundService.RefreshLocalOnlineClients(onlineEmails, activeTags)
+		return
 	}
 
 	traffics := make([]*xray.Traffic, 0, len(inboundUp))

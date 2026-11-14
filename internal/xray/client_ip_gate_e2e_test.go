@@ -64,10 +64,6 @@ func runFaraGateE2E(t *testing.T, network string, relay bool) {
 		"inbounds":  []any{map[string]any{"listen": "127.0.0.1", "port": apiPort, "protocol": "tunnel", "tag": "api", "settings": map[string]any{"rewriteAddress": "127.0.0.1"}}, map[string]any{"listen": "127.0.0.1", "port": inPort, "protocol": "vless", "tag": "relay-test", "sniffing": map[string]any{"enabled": true, "destOverride": []string{"http", "tls"}, "routeOnly": true}, "streamSettings": stream, "settings": map[string]any{"decryption": "none", "clients": []any{map[string]any{"id": ids[0], "email": "account-a"}, map[string]any{"id": ids[1], "email": "account-b"}}}}},
 		"outbounds": []any{map[string]any{"protocol": "freedom", "tag": "direct", "settings": map[string]any{"finalRules": []any{map[string]any{"action": "allow", "ip": []string{"127.0.0.0/8"}}}}}}, "routing": map[string]any{"rules": []any{map[string]any{"type": "field", "inboundTag": []string{"api"}, "outboundTag": "api"}}},
 	}
-	if relay {
-		delete(serverConfig, "stats")
-		delete(serverConfig, "policy")
-	}
 	startGateCore(t, bin, serverConfig, apiPort)
 	api := new(XrayAPI)
 	if e := api.Init(apiPort); e != nil {
@@ -137,6 +133,37 @@ func runFaraGateE2E(t *testing.T, network string, relay bool) {
 		}
 	}
 	if relay {
+		deadline := time.Now().Add(3 * time.Second)
+		for {
+			traffic, err := api.GetRelayClientTraffic()
+			if err != nil {
+				t.Fatal(err)
+			}
+			users, err := api.GetOnlineUsers()
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, user := range users {
+				for _, ip := range user.IPs {
+					if ip.IP != "relay" {
+						t.Fatalf("relay exposed an actual IP: %s", ip.IP)
+					}
+				}
+			}
+			if len(traffic) > 0 && len(users) == 2 {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("relay usage or live accounts missing: traffic=%v users=%v", traffic, users)
+			}
+			time.Sleep(25 * time.Millisecond)
+		}
+		if reply, err := api.ClientIPControl(context.Background(), "ban", "account-a", "127.0.0.2", 60); err != nil || reply["closed"] != float64(0) {
+			t.Fatalf("relay should not have any IP gates: %v %v", reply, err)
+		}
+		if err := exchange(streams[2]); err != nil {
+			t.Fatalf("relay was affected by IP enforcement: %v", err)
+		}
 		if err := api.RemoveUser("relay-test", "account-a"); err != nil {
 			t.Fatal(err)
 		}

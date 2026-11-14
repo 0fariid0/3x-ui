@@ -295,14 +295,17 @@ func (a *XraySettingController) updateSetting(c *gin.Context) {
 }
 
 func jsonEquivalent(left, right string) bool {
-	var leftValue any
-	var rightValue any
+	var leftValue map[string]any
+	var rightValue map[string]any
 	if err := json.Unmarshal([]byte(left), &leftValue); err != nil {
 		return strings.TrimSpace(left) == strings.TrimSpace(right)
 	}
 	if err := json.Unmarshal([]byte(right), &rightValue); err != nil {
 		return strings.TrimSpace(left) == strings.TrimSpace(right)
 	}
+	// This is a panel display preference, not a core configuration change.
+	delete(leftValue, "xuiQuickRoutingOutbounds")
+	delete(rightValue, "xuiQuickRoutingOutbounds")
 	return reflect.DeepEqual(leftValue, rightValue)
 }
 

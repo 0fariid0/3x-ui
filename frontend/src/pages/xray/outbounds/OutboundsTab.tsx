@@ -44,7 +44,8 @@ import PromptModal from '@/components/feedback/PromptModal';
 import TextModal from '@/components/feedback/TextModal';
 
 import OutboundFormModal from './OutboundFormModal';
-import { propagateOutboundTagRename } from '../basics/helpers';
+import { isQuickRoutingVisible, setQuickRoutingVisible } from '@/lib/xray/custom-outbound-routing';
+import { getNordOutboundTag, propagateOutboundTagRename } from '../basics/helpers';
 import { planOutboundDeletion, applyOutboundDeletion } from '../reference-cleanup';
 import DeletionImpactList from '../DeletionImpactList';
 import { isBalancerLoopbackTag } from '../balancers/balancer-loopback';
@@ -90,7 +91,6 @@ interface OutboundsTabProps {
   onTestAll: (mode: string) => void;
   onShowWarp: () => void;
   onShowNord: () => void;
-  onShowCustomOutbound: () => void;
   onRefreshXrayData?: () => void;
 }
 
@@ -111,11 +111,9 @@ export default function OutboundsTab({
   onTestAll,
   onShowWarp,
   onShowNord,
-  onShowCustomOutbound,
   onRefreshXrayData,
 }: OutboundsTabProps) {
-  const { t, i18n } = useTranslation();
-  const customLabel = i18n.language?.startsWith('fa') ? 'خروجی سفارشی' : 'Custom outbound';
+  const { t } = useTranslation();
   const panelDateTime = usePanelDateTime();
   const [modal, modalContextHolder] = Modal.useModal();
   const [messageApi, messageContextHolder] = message.useMessage();
@@ -209,7 +207,7 @@ export default function OutboundsTab({
     );
     setModalOpen(true);
   }
-  function onConfirm(outbound: Record<string, unknown>) {
+  function onConfirm(outbound: Record<string, unknown>, quickRouting: boolean) {
     mutate((tt) => {
       if (!Array.isArray(tt.outbounds)) tt.outbounds = [];
       const newTag = typeof outbound.tag === 'string' ? outbound.tag : '';
@@ -223,6 +221,7 @@ export default function OutboundsTab({
           propagateOutboundTagRename(tt, oldTag, newTag);
         }
       }
+      setQuickRoutingVisible(tt, newTag, quickRouting);
     });
     setModalOpen(false);
   }
@@ -488,9 +487,6 @@ export default function OutboundsTab({
               <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>
                 {!isMobile && t('pages.xray.Outbounds')}
               </Button>
-              <Button icon={<PlusOutlined />} onClick={onShowCustomOutbound}>
-                {customLabel}
-              </Button>
               <Button icon={<CloudOutlined />} onClick={openSubManager}>
                 {t('pages.xray.outboundSub.manage')}
               </Button>
@@ -568,6 +564,8 @@ export default function OutboundsTab({
         <OutboundFormModal
           open={modalOpen}
           outbound={editingOutbound}
+          quickRouting={isQuickRoutingVisible(templateSettings, editingOutbound?.tag)}
+          quickRoutingReservedTags={['direct', 'blocked', 'IPv4', 'warp', 'NordVPN', getNordOutboundTag(templateSettings) ?? '']}
           existingTags={existingTags}
           dialerProxyTags={dialerProxyTags}
           onClose={() => setModalOpen(false)}

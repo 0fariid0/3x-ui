@@ -8,6 +8,7 @@ import {
 } from './routing';
 
 export const XraySettingsValueSchema = z.object({
+  xuiQuickRoutingOutbounds: z.array(z.string()).optional(),
   inbounds: z.array(z.unknown()).optional(),
   outbounds: z
     .array(

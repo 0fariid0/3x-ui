@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// A forwarding-only core does not allocate online-IP or account gate state.
+// The lightweight core skips IP tracking and account gates.
 var relayMode = os.Getenv("FARA_CORE_RELAY_MODE") == "1"
 
 type gateReader struct {
@@ -57,6 +57,11 @@ func (w *gateWriter) Interrupt()   { common.Interrupt(w.Writer); w.done() }
 // shared listener, a different account, or the same account's other source IP.
 func trackClientIP(ctx context.Context, sm stats.Manager, email, ip string, link *transport.Link, trackOnline bool) {
 	if relayMode {
+		if trackOnline {
+			// Count live streams under one constant per account. No client
+			// addresses, gate entries, or wrapped links are needed.
+			trackOnlineIP(ctx, sm, email, "relay")
+		}
 		return
 	}
 	var om stats.OnlineMap

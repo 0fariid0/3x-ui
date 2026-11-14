@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Checkbox,
   Form,
   Input,
   InputNumber,
@@ -81,17 +82,19 @@ interface OutboundFormModalProps {
   open: boolean;
   outbound: Record<string, unknown> | null;
   existingTags: string[];
-  custom?: boolean;
+  quickRouting?: boolean;
+  quickRoutingReservedTags?: string[];
   dialerProxyTags?: string[];
   onClose: () => void;
-  onConfirm: (outbound: Record<string, unknown>) => void;
+  onConfirm: (outbound: Record<string, unknown>, quickRouting: boolean) => void;
 }
 
 export default function OutboundFormModal({
   open,
   outbound: outboundProp,
   existingTags,
-  custom = false,
+  quickRouting = false,
+  quickRoutingReservedTags = [],
   dialerProxyTags,
   onClose,
   onConfirm,
@@ -104,14 +107,12 @@ export default function OutboundFormModal({
   const [jsonDirty, setJsonDirty] = useState(false);
   const [formSnapshot, setFormSnapshot] = useState('');
   const [linkInput, setLinkInput] = useState('');
+  const [showInBasicRouting, setShowInBasicRouting] = useState(quickRouting);
 
   const isEdit = outboundProp != null;
   const jsonOnly = isEdit && !PROTOCOL_OPTIONS.some(option => option.value === outboundProp?.protocol);
-  const title = custom
-    ? (i18n.language?.startsWith('fa') ? 'افزودن خروجی سفارشی' : 'Add custom outbound')
-    : isEdit
-    ? `${t('edit')} ${t('pages.xray.Outbounds')}`
-    : `+ ${t('pages.xray.Outbounds')}`;
+  const fa = i18n.language?.startsWith('fa');
+  const title = isEdit ? `${t('edit')} ${t('pages.xray.Outbounds')}` : `+ ${t('pages.xray.Outbounds')}`;
   const okText = isEdit ? t('pages.clients.submitEdit') : t('create');
 
   const tag = (useWatch({ control: methods.control, name: 'tag' }) ?? '') as string;
@@ -163,7 +164,8 @@ export default function OutboundFormModal({
     setJsonText(JSON.stringify(outboundProp ?? formValuesToWirePayload(initial), null, 2));
     setLinkInput('');
     setJsonDirty(false);
-  }, [open, outboundProp, jsonOnly, methods]);
+    setShowInBasicRouting(quickRouting);
+  }, [open, outboundProp, jsonOnly, methods, quickRouting]);
 
   useEffect(() => {
     if (!streamAllowed) return;
@@ -348,6 +350,9 @@ export default function OutboundFormModal({
     } else {
       if (!(await methods.trigger())) return;
       payload = formValuesToWirePayload(methods.getValues());
+      if (outboundProp && JSON.stringify(payload) === JSON.stringify(formValuesToWirePayload(rawOutboundToFormValues(outboundProp)))) {
+        payload = outboundProp;
+      }
     }
     const tagValue = typeof payload.tag === 'string' ? payload.tag.trim() : '';
     if (!tagValue) {
@@ -364,7 +369,7 @@ export default function OutboundFormModal({
       messageApi.error('Tag already used by another outbound');
       return;
     }
-    onConfirm({ ...payload, tag: tagValue });
+    onConfirm({ ...payload, tag: tagValue }, showInBasicRouting && !quickRoutingReservedTags.includes(tagValue));
   }
 
   return (
@@ -372,7 +377,7 @@ export default function OutboundFormModal({
       {messageContextHolder}
       <Modal
         open={open}
-        className={custom ? 'custom-outbound-modal' : undefined}
+        className="outbound-config-modal"
         title={title}
         okText={okText}
         cancelText={t('close')}
@@ -382,6 +387,11 @@ export default function OutboundFormModal({
         onCancel={onClose}
         destroyOnHidden
       >
+        {(!quickRoutingReservedTags.includes(tag.trim()) || activeKey === '2') && (
+          <Checkbox checked={showInBasicRouting} onChange={e => setShowInBasicRouting(e.target.checked)}>
+            {fa ? 'نمایش در مسیریابی ساده' : 'Show in Basic Routing'}
+          </Checkbox>
+        )}
         <FormProvider {...methods}>
           <Form
             colon={false}

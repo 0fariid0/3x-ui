@@ -734,6 +734,17 @@ func (x *XrayAPI) RemoveUser(inboundTag, email string) error {
 // and a counter that moved backwards because the core restarted both count
 // from zero, so no client's traffic is dropped for a whole polling interval.
 func (x *XrayAPI) GetTraffic() ([]*Traffic, []*ClientTraffic, error) {
+	return x.getTraffic("", true)
+}
+
+// GetRelayClientTraffic reads only per-user counters and counts bytes from
+// core start. In relay mode there is one panel reader and no system counters.
+func (x *XrayAPI) GetRelayClientTraffic() ([]*ClientTraffic, error) {
+	_, clients, err := x.getTraffic("user>>>", false)
+	return clients, err
+}
+
+func (x *XrayAPI) getTraffic(pattern string, baselineFirst bool) ([]*Traffic, []*ClientTraffic, error) {
 	if x.grpcClient == nil {
 		return nil, nil, common.NewError("xray api is not initialized")
 	}
@@ -745,7 +756,7 @@ func (x *XrayAPI) GetTraffic() ([]*Traffic, []*ClientTraffic, error) {
 		return nil, nil, common.NewError("xray StatusServiceClient is not initialized")
 	}
 
-	resp, err := (*x.StatsServiceClient).QueryStats(ctx, &statsService.QueryStatsRequest{Reset_: false})
+	resp, err := (*x.StatsServiceClient).QueryStats(ctx, &statsService.QueryStatsRequest{Pattern: pattern})
 	if err != nil {
 		logger.Debug("Failed to query Xray stats:", err)
 		return nil, nil, err
@@ -754,7 +765,7 @@ func (x *XrayAPI) GetTraffic() ([]*Traffic, []*ClientTraffic, error) {
 	tagTrafficMap := make(map[string]*Traffic)
 	emailTrafficMap := make(map[string]*ClientTraffic)
 
-	baselinePass := len(x.StatsLastValues) == 0
+	baselinePass := baselineFirst && len(x.StatsLastValues) == 0
 
 	for _, stat := range resp.GetStat() {
 		lastValue, ok := x.StatsLastValues[stat.Name]
@@ -766,6 +777,9 @@ func (x *XrayAPI) GetTraffic() ([]*Traffic, []*ClientTraffic, error) {
 			lastValue = 0
 		}
 		value := stat.Value - lastValue
+		if !baselineFirst && value == 0 {
+			continue
+		}
 		if matches := trafficRegex.FindStringSubmatch(stat.Name); len(matches) == 4 {
 			processTraffic(matches, value, tagTrafficMap)
 		} else if matches := clientTrafficRegex.FindStringSubmatch(stat.Name); len(matches) == 3 {

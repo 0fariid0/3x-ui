@@ -34,9 +34,6 @@ interface RoutingTabProps {
   clientReverseTags: string[];
   subscriptionOutboundTags?: string[];
   isMobile: boolean;
-  onShowCustomOutbound: () => void;
-  customOutboundTag?: string;
-  onSelectCustomOutbound: (tag: string) => void;
 }
 
 export default function RoutingTab({
@@ -46,9 +43,6 @@ export default function RoutingTab({
   clientReverseTags,
   subscriptionOutboundTags,
   isMobile,
-  onShowCustomOutbound,
-  customOutboundTag,
-  onSelectCustomOutbound,
 }: RoutingTabProps) {
   const { t } = useTranslation();
   const [modal, modalContextHolder] = Modal.useModal();
@@ -345,9 +339,6 @@ export default function RoutingTab({
             label: catTabLabel(<ControlOutlined />, t('pages.xray.basicRouting'), isMobile),
             children: (
               <RoutingBasic
-                onShowCustomOutbound={onShowCustomOutbound}
-                customOutboundTag={customOutboundTag}
-                onSelectCustomOutbound={onSelectCustomOutbound}
                 templateSettings={templateSettings}
                 setTemplateSettings={setTemplateSettings}
               />

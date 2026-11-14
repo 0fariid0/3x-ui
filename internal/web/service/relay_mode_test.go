@@ -6,6 +6,7 @@ import (
 
 	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
+	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 )
 
 func TestRelayConfigKeepsUserManagementAndRestoresMonitoring(t *testing.T) {
@@ -29,9 +30,10 @@ func TestRelayConfigKeepsUserManagementAndRestoresMonitoring(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !cfg.RelayLightMode || len(cfg.Stats) > 0 || len(cfg.Metrics) > 0 ||
-		bytes.Contains(cfg.Policy, []byte("statsUserOnline")) || !bytes.Contains(cfg.API, []byte("HandlerService")) {
-		t.Fatal("relay runtime did not suspend monitoring while retaining client management")
+	if !cfg.RelayLightMode || len(cfg.Stats) == 0 || len(cfg.Metrics) > 0 ||
+		!bytes.Contains(cfg.Policy, []byte(`"statsUserOnline":true`)) ||
+		!bytes.Contains(cfg.Policy, []byte(`"statsUserUplink":true`)) || !bytes.Contains(cfg.API, []byte("HandlerService")) {
+		t.Fatal("relay runtime must keep user statistics and management while suspending metrics")
 	}
 	disabled, err := trafficDisabledEmails(database.GetDB(), []string{"relay-on"})
 	if err != nil || len(disabled) != 0 {
@@ -50,5 +52,24 @@ func TestRelayConfigKeepsUserManagementAndRestoresMonitoring(t *testing.T) {
 	}
 	if cfg.RelayLightMode || !bytes.Contains(cfg.Policy, []byte("statsUserOnline")) {
 		t.Fatal("normal monitoring was not restored")
+	}
+}
+
+func TestRelayTrafficCountsWithoutRunningQuotaOrActivation(t *testing.T) {
+	setupSettingTestDB(t)
+	row := xray.ClientTraffic{Email: "relay@example", Enable: true, Total: 1, ExpiryTime: -3600000}
+	if err := database.GetDB().Create(&row).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := (&InboundService{}).RecordRelayClientTraffic([]*xray.ClientTraffic{
+		{Email: row.Email, Up: 25, Down: 100},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.GetDB().First(&row, row.Id).Error; err != nil {
+		t.Fatal(err)
+	}
+	if row.Up != 25 || row.Down != 100 || row.LastOnline == 0 || !row.Enable || row.ExpiryTime != -3600000 {
+		t.Fatalf("expected usage and last seen only: %+v", row)
 	}
 }

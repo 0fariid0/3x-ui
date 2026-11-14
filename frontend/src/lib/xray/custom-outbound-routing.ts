@@ -37,3 +37,18 @@ export function renameCustomRouteMarker(rule: RuleObject, outboundTag: string) {
     if (rule.ruleTag?.startsWith(marker(kind))) rule.ruleTag = marker(kind) + outboundTag;
   }
 }
+
+// Store this in the panel template, outside Xray's runtime fields. The Go
+// runtime reads only the core fields and never passes this UI preference on.
+export function isQuickRoutingVisible(template: XraySettingsValue | null, tag: unknown): boolean {
+  const selected = template?.xuiQuickRoutingOutbounds;
+  return typeof tag === 'string' && Array.isArray(selected) && selected.includes(tag);
+}
+
+export function setQuickRoutingVisible(template: XraySettingsValue, tag: string, visible: boolean) {
+  if (!tag || visible === isQuickRoutingVisible(template, tag)) return;
+  const selected = Array.isArray(template.xuiQuickRoutingOutbounds) ? template.xuiQuickRoutingOutbounds : [];
+  const next = visible ? [...selected, tag] : selected.filter(value => value !== tag);
+  if (next.length) template.xuiQuickRoutingOutbounds = next;
+  else delete template.xuiQuickRoutingOutbounds;
+}

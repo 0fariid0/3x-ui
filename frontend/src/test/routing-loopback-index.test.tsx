@@ -33,8 +33,6 @@ describe('RoutingTab hidden-loopback index mapping', () => {
           inboundTags={[]}
           clientReverseTags={[]}
           isMobile={false}
-          onShowCustomOutbound={vi.fn()}
-          onSelectCustomOutbound={vi.fn()}
         />
       </QueryClientProvider>,
     );

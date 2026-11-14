@@ -39,7 +39,7 @@
 @media (max-width: 767px) {
   .xray-page .setting-list-item .ant-select,
   .xray-page .setting-list-item .ant-input,
-  .custom-outbound-modal input.ant-input,
+  .outbound-config-modal input.ant-input,
   .geo-browser-modal input.ant-input {
     font-size: 16px;
   }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { act, fireEvent } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 
 import OutboundFormModal from '@/pages/xray/outbounds/OutboundFormModal';
 import {
@@ -64,7 +64,19 @@ describe('OutboundFormModal', () => {
     );
     const ok = document.querySelector('.ant-modal-footer .ant-btn-primary') as HTMLElement;
     await act(async () => { fireEvent.click(ok); });
-    expect(onConfirm).toHaveBeenCalledWith(outbound);
+    expect(onConfirm).toHaveBeenCalledWith(outbound, false);
+  });
+
+  it('saves the checkbox independently of the outbound configuration', async () => {
+    const onConfirm = vi.fn();
+    const outbound = { tag: 'my-edge', protocol: 'freedom', settings: {}, futureOption: true };
+    renderWithProviders(
+      <OutboundFormModal open outbound={outbound} existingTags={[]} onClose={vi.fn()} onConfirm={onConfirm} />,
+    );
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Show in Basic Routing' }));
+    const ok = document.querySelector('.ant-modal-footer .ant-btn-primary') as HTMLElement;
+    await act(async () => { fireEvent.click(ok); });
+    expect(onConfirm).toHaveBeenCalledWith(outbound, true);
   });
 
   it('saves a vless reverse outbound while reverse sniffing stays disabled', async () => {

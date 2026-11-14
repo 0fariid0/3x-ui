@@ -19,13 +19,14 @@ vi.mock('@/components/geodata', () => ({
 it('opens the right database for each routing field and adds entries to its own rule', () => {
   function Harness() {
     const [settings, setSettings] = useState<XraySettingsValue | null>({
-      outbounds: ['direct', 'blocked', 'warp', 'NordVPN', 'custom-vless'].map(tag => ({
+      outbounds: ['direct', 'blocked', 'warp', 'NordVPN', 'custom-vless', 'custom-ss', 'unticked'].map(tag => ({
         tag, protocol: tag === 'blocked' ? 'blackhole' : tag === 'custom-vless' ? 'vless' : 'freedom',
       })),
+      xuiQuickRoutingOutbounds: ['custom-vless', 'custom-ss'],
       routing: { rules: [{ type: 'field', outboundTag: 'direct', domain: ['full:www.google.com'] }] },
     });
     return <>
-      <RoutingBasic templateSettings={settings} setTemplateSettings={setSettings} onShowCustomOutbound={vi.fn()} onSelectCustomOutbound={vi.fn()} />
+      <RoutingBasic templateSettings={settings} setTemplateSettings={setSettings} />
       <pre data-testid="rules">{JSON.stringify(settings?.routing?.rules)}</pre>
     </>;
   }
@@ -33,9 +34,11 @@ it('opens the right database for each routing field and adds entries to its own 
   renderWithProviders(<Harness />);
   const buttons = screen.getAllByRole('button', { name: / — / });
   expect(buttons).toHaveLength(9);
+  expect(screen.queryByRole('combobox', { name: 'Custom outbound' })).toBeNull();
+  expect(screen.queryByRole('combobox', { name: 'unticked' })).toBeNull();
   const cases = [
     ['blocked', 'ip'], ['blocked', 'site'], ['direct', 'ip'], ['direct', 'site'],
-    ['IPv4', 'site'], ['warp', 'site'], ['NordVPN', 'site'], ['custom-vless', 'site'], ['custom-vless', 'ip'],
+    ['IPv4', 'site'], ['warp', 'site'], ['NordVPN', 'site'], ['custom-vless', 'site'], ['custom-ss', 'site'],
   ] as const;
   for (const [index, [outboundTag, kind]] of cases.entries()) {
     fireEvent.click(buttons[index]);

@@ -1,3 +1,8 @@
+## v3.9.28 — per-outbound routing shortcuts and lightweight client stats
+
+- Show one Warp-style Basic Routing row for each outbound opted in through its form. Turning off the shortcut leaves any saved routing rules in place.
+- Restore per-client traffic and online status in lightweight relay mode. Keep access logs, IP limits, quota enforcement and background analytics paused.
+
 ## v3.9.27 — custom outbound quick controls
 
 - Replace the dedicated Proton controls with a generic outbound editor and per-outbound domain and IP routing with Geosite and GeoIP search.

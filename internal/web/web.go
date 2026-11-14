@@ -385,8 +385,9 @@ func (s *Server) startTask(restartXray bool, loc *time.Location) {
 	// Prevent existing access/error logs from growing indefinitely.
 	_, _ = s.cron.AddJob(cadenceXrayLogPrune, job.NewPruneXrayLogsJob())
 	if s.relayLightMode {
+		_, _ = s.cron.AddJob("@every 15s", &job.RelayClientTrafficJob{})
 		// MTProto inbounds require their existing data-plane sidecar.
-		_, _ = s.cron.AddJob(cadenceMtproto, job.NewRelayMtprotoJob())
+		_, _ = s.cron.AddJob("@every 15s", job.NewRelayMtprotoJob())
 		return
 	}
 	go s.completeScheduledPanelRestart()

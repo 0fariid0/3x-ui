@@ -1,4 +1,5 @@
 import type { XraySettingsValue } from '@/hooks/useXraySetting';
+import { setQuickRoutingVisible } from '@/lib/xray/custom-outbound-routing';
 import type { BalancerObject, RuleObject } from '@/schemas/routing';
 import { syncObservatories } from './balancers/balancer-helpers';
 
@@ -233,4 +234,5 @@ export function applyOutboundDeletion(tt: XraySettingsValue, index: number): voi
   const removedOutbounds = new Set([tag]);
   const removedBalancers = new Set(balancersEmptiedBy(tt, removedOutbounds));
   applyCleanup(tt, removedOutbounds, removedBalancers);
+  setQuickRoutingVisible(tt, tag, false);
 }

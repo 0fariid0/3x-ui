@@ -34,6 +34,32 @@ func (s *InboundService) AddTraffic(inboundTraffics []*xray.Traffic, clientTraff
 	return
 }
 
+// RecordRelayClientTraffic updates only usage and last seen. Relay mode keeps
+// quota enforcement, activation timers, and renewal jobs suspended.
+func (s *InboundService) RecordRelayClientTraffic(traffics []*xray.ClientTraffic) error {
+	if len(traffics) == 0 {
+		return nil
+	}
+	now := time.Now().UnixMilli()
+	return submitTrafficWrite(func() error {
+		return database.GetDB().Transaction(func(tx *gorm.DB) error {
+			query := fmt.Sprintf(
+				`UPDATE client_traffics SET up = %s, down = %s, last_online = %s WHERE email = ?`,
+				database.ClampedAddExpr("up"), database.ClampedAddExpr("down"), database.GreatestExpr("last_online", "?"),
+			)
+			for _, traffic := range traffics {
+				if traffic == nil || (traffic.Up == 0 && traffic.Down == 0) {
+					continue
+				}
+				if err := tx.Exec(query, traffic.Up, traffic.Down, now, traffic.Email).Error; err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	})
+}
+
 func (s *InboundService) addTrafficLocked(inboundTraffics []*xray.Traffic, clientTraffics []*xray.ClientTraffic) (bool, bool, []int, error) {
 	db := database.GetDB()
 	// Commit durable traffic before best-effort lifecycle maintenance so helper

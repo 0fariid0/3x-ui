@@ -27,14 +27,9 @@ import {
 interface RoutingBasicProps {
   templateSettings: XraySettingsValue | null;
   setTemplateSettings: SetTemplate;
-  onShowCustomOutbound: () => void;
-  customOutboundTag?: string;
-  onSelectCustomOutbound: (tag: string) => void;
 }
 
-export default function RoutingBasic({
-  templateSettings, setTemplateSettings, onShowCustomOutbound, customOutboundTag, onSelectCustomOutbound,
-}: RoutingBasicProps) {
+export default function RoutingBasic({ templateSettings, setTemplateSettings }: RoutingBasicProps) {
   const { t } = useTranslation();
 
   const mutate = useCallback(
@@ -234,9 +229,7 @@ export default function RoutingBasic({
           />
         }
       />
-      <CustomOutboundRouting
-        {...{ templateSettings, setTemplateSettings, onShowCustomOutbound, customOutboundTag, onSelectCustomOutbound }}
-      />
+      <CustomOutboundRouting templateSettings={templateSettings} setTemplateSettings={setTemplateSettings} />
     </>
   );
 }
