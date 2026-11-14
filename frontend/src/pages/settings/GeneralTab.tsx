@@ -24,6 +24,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { catTabLabel } from './catTabLabel';
 import { sanitizePath } from './uriPath';
 import SecretInput from './SecretInput';
+import RelayLightModeSetting from './RelayLightModeSetting';
 
 interface ApiMsg<T = unknown> {
   success?: boolean;
@@ -162,6 +163,7 @@ export default function GeneralTab({ allSetting, updateSetting }: GeneralTabProp
         label: catTabLabel(<SettingOutlined />, t('pages.settings.panelSettings'), isMobile),
         children: (
           <>
+            <RelayLightModeSetting />
             <SettingListItem paddings="small" title={t('pages.settings.panelListeningIP')} description={t('pages.settings.panelListeningIPDesc')}>
               <Input value={allSetting.webListen} onChange={(e) => updateSetting({ webListen: e.target.value })} />
             </SettingListItem>

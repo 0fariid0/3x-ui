@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/logger"
@@ -43,13 +44,20 @@ type validateRegexForm struct {
 	Regex string `json:"regex" form:"regex"`
 }
 
+type relayLightModeForm struct {
+	Enabled   *bool `json:"enabled" binding:"required"`
+	Confirmed bool  `json:"confirmed" binding:"required"`
+}
+
 // SettingController handles settings and user management operations.
 type SettingController struct {
-	settingService  service.SettingService
-	userService     panel.UserService
-	panelService    panel.PanelService
-	apiTokenService panel.ApiTokenService
-	xrayService     service.XrayService
+	settingService          service.SettingService
+	relayLightModeMu        sync.Mutex
+	scheduleRelayModeReload func(time.Duration) error
+	userService             panel.UserService
+	panelService            panel.PanelService
+	apiTokenService         panel.ApiTokenService
+	xrayService             service.XrayService
 }
 
 // NewSettingController creates a new SettingController and initializes its routes.
@@ -64,6 +72,8 @@ func (a *SettingController) initRouter(g *gin.RouterGroup) {
 	g = g.Group("/setting")
 
 	g.POST("/all", a.getAllSetting)
+	g.GET("/relayLightMode", a.getRelayLightMode)
+	g.POST("/relayLightMode", a.setRelayLightMode)
 	g.POST("/defaultSettings", a.getDefaultSettings)
 	g.POST("/factoryDefaults", a.getFactoryDefaults)
 	g.POST("/update", a.updateSetting)
@@ -77,6 +87,38 @@ func (a *SettingController) initRouter(g *gin.RouterGroup) {
 	g.POST("/apiTokens/setEnabled/:id", a.setApiTokenEnabled)
 	g.POST("/testSmtp", a.testSmtp)
 	g.POST("/testTgBot", a.testTgBot)
+}
+
+func (a *SettingController) getRelayLightMode(c *gin.Context) {
+	enabled, err := a.settingService.GetRelayLightMode()
+	jsonObj(c, gin.H{"enabled": enabled}, err)
+}
+
+func (a *SettingController) setRelayLightMode(c *gin.Context) {
+	var form relayLightModeForm
+	if err := c.ShouldBindJSON(&form); err != nil {
+		pureJsonMsg(c, http.StatusBadRequest, false, err.Error())
+		return
+	}
+
+	a.relayLightModeMu.Lock()
+	defer a.relayLightModeMu.Unlock()
+	enabled, err := a.settingService.GetRelayLightMode()
+	changed := err == nil && enabled != *form.Enabled
+	if changed {
+		err = a.settingService.SetRelayLightMode(*form.Enabled)
+		if err == nil {
+			reload := a.scheduleRelayModeReload
+			if reload == nil {
+				reload = a.panelService.RestartPanel
+			}
+			err = reload(3 * time.Second)
+			if err != nil {
+				err = errors.Join(err, a.settingService.SetRelayLightMode(enabled))
+			}
+		}
+	}
+	jsonObj(c, gin.H{"enabled": *form.Enabled, "restarting": changed}, err)
 }
 
 func (a *SettingController) validateRegex(c *gin.Context) {

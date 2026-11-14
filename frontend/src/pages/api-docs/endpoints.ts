@@ -1342,6 +1342,19 @@ export const sections: readonly Section[] = [
         response: '{\n  "success": true,\n  "obj": {\n    "webPort": 2053,\n    "webCertFile": "",\n    "webKeyFile": "",\n    "webBasePath": "/",\n    "subPort": 10882,\n    "subPath": "/sub/",\n    "subClashAutoDetect": false,\n    "subClashUserAgentRegex": "",\n    "subJsonEnable": false,\n    "subJsonAutoDetect": false,\n    "subJsonAlwaysArray": false,\n    "subJsonUserAgentRegex": "",\n    "subJsonPath": "/json/",\n    "subJsonURI": "https://sub.example.com/json/",\n    "subClashEnable": true,\n    "subClashPath": "/clash/",\n    "subClashURI": "https://sub.example.com/clash/",\n    "tgBotEnable": false,\n    "tgBotToken": "",\n    ...\n  }\n}',
       },
       {
+        method: 'GET',
+        path: '/panel/api/setting/relayLightMode',
+        summary: 'Return the saved lightweight relay mode preference.',
+        response: '{"success":true,"obj":{"enabled":false}}',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/setting/relayLightMode',
+        summary: 'Save the relay mode preference with explicit confirmation. A changed value reloads the panel and subscription server without restarting Xray.',
+        body: '{"enabled":true,"confirmed":true}',
+        response: '{"success":true,"obj":{"enabled":true,"restarting":true}}',
+      },
+      {
         method: 'POST',
         path: '/panel/api/setting/defaultSettings',
         summary: 'Return the computed default settings based on the request host. Useful to preview what a fresh install would use.',

@@ -86,10 +86,10 @@ export default function OverviewActionBar({
       { key: 'config', icon: <ControlOutlined />, text: t('pages.index.config'), onClick: onOpenConfig },
       { key: 'backup', icon: <CloudServerOutlined />, text: t('pages.index.backupTitle'), onClick: onOpenBackup },
     ],
-    [
+    ...(status.relayLightMode ? [] : [[
       { key: 'history', icon: <AreaChartOutlined />, text: t('pages.index.systemHistoryTitle'), onClick: onOpenSystemHistory },
       { key: 'metrics', icon: <ArrowUpOutlined />, text: t('pages.index.xrayMetricsTitle'), onClick: onOpenXrayMetrics },
-    ],
+    ]]),
   ];
 
   const statePill = (

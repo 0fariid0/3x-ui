@@ -121,6 +121,7 @@ type Server struct {
 	xrayService    service.XrayService
 	settingService service.SettingService
 	tgbotService   tgbot.Tgbot
+	relayLightMode bool
 
 	wsHub *websocket.Hub
 
@@ -193,7 +194,11 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	if err != nil {
 		return nil, err
 	}
-	engine.Use(gzip.Gzip(gzip.DefaultCompression))
+	compression := gzip.DefaultCompression
+	if s.relayLightMode {
+		compression = gzip.BestSpeed
+	}
+	engine.Use(gzip.Gzip(compression))
 	assetsBasePath := basePath + "assets/"
 
 	store := cookie.NewStore(secret)
@@ -460,7 +465,7 @@ func (s *Server) startTask(restartXray bool, loc *time.Location) {
 
 	go func() {
 		time.Sleep(time.Second * 5)
-		_, _ = s.cron.AddJob(cadenceXrayTraffic, job.NewXrayTrafficJob())
+		_, _ = s.cron.AddJob(cadenceXrayTraffic, job.NewXrayTrafficJob(s.relayLightMode))
 	}()
 
 	// Reconcile mtproto (mtg) sidecars and scrape their traffic
@@ -470,7 +475,11 @@ func (s *Server) startTask(restartXray bool, loc *time.Location) {
 
 	// check client ips from log file every 10 sec
 	_, _ = s.cron.AddJob(cadenceClientIPScan, job.NewCheckClientIpJob())
-	_, _ = s.cron.AddJob(cadenceXrayTraffic, job.NewClientDestinationJob())
+	destinationCadence := cadenceXrayTraffic
+	if s.relayLightMode {
+		destinationCadence = "@every 15s"
+	}
+	_, _ = s.cron.AddJob(destinationCadence, job.NewClientDestinationJob(s.relayLightMode))
 
 	_, _ = s.cron.AddJob(cadenceNodeHeartbeat, job.NewNodeHeartbeatJob())
 
@@ -490,7 +499,9 @@ func (s *Server) startTask(restartXray bool, loc *time.Location) {
 	// check client ips from log file every day
 	_, _ = s.cron.AddJob("@daily", job.NewClearLogsJob())
 	_, _ = s.cron.AddJob(cadenceXrayLogPrune, job.NewPruneXrayLogsJob())
-	_, _ = s.cron.AddJob("@hourly", job.NewWarpIpJob())
+	if !s.relayLightMode {
+		_, _ = s.cron.AddJob("@hourly", job.NewWarpIpJob())
+	}
 
 	// Inbound traffic reset jobs
 	// Run every hour
@@ -515,7 +526,7 @@ func (s *Server) startTask(restartXray bool, loc *time.Location) {
 
 	// Telegram-bot–dependent jobs: periodic stats report + callback-hash cleanup.
 	isTgbotenabled, err := s.settingService.GetTgbotEnabled()
-	if (err == nil) && (isTgbotenabled) {
+	if !s.relayLightMode && err == nil && isTgbotenabled {
 		runtime, err := s.settingService.GetTgbotRuntime()
 		if err != nil {
 			logger.Warningf("Add NewStatsNotifyJob: failed to load runtime: %v; using default @daily", err)
@@ -535,11 +546,11 @@ func (s *Server) startTask(restartXray bool, loc *time.Location) {
 
 	// CPU monitor publishes cpu.high events; register it whenever any notifier
 	// (Telegram or Email) wants them, independent of the Telegram bot being on.
-	if s.cpuAlarmWanted() {
+	if !s.relayLightMode && s.cpuAlarmWanted() {
 		_, _ = s.cron.AddJob(cadenceCPUAlarm, job.NewCheckCpuJob())
 	}
 	// Memory monitor publishes memory.high events; register it whenever any notifier wants them.
-	if s.memoryAlarmWanted() {
+	if !s.relayLightMode && s.memoryAlarmWanted() {
 		_, _ = s.cron.AddJob(cadenceMemoryAlarm, job.NewCheckMemJob())
 	}
 
@@ -634,6 +645,11 @@ func (s *Server) start(restartXray bool, startTgBot bool) (err error) {
 	if err != nil {
 		return err
 	}
+	s.relayLightMode, err = s.settingService.GetRelayLightMode()
+	if err != nil {
+		logger.Warning("read relay light mode failed:", err)
+	}
+	err = nil
 	service.StartTrafficWriter()
 
 	// SkipIfStillRunning stops a slow job (e.g. the 5s traffic poll on a large
@@ -762,7 +778,9 @@ func (s *Server) start(restartXray bool, startTgBot bool) (err error) {
 	// Register email subscriber (always — it checks smtpEnable at runtime)
 	emailService := email.NewEmailService(s.settingService)
 	emailSub := email.NewSubscriber(s.settingService, emailService)
-	s.bus.Subscribe("email-notifier", emailSub.HandleEvent)
+	if !s.relayLightMode {
+		s.bus.Subscribe("email-notifier", emailSub.HandleEvent)
+	}
 
 	// Wire email service to controller for test endpoint
 	controller.SetEmailService(emailService)
@@ -781,7 +799,7 @@ func (s *Server) start(restartXray bool, startTgBot bool) (err error) {
 
 	controller.SetReloadTgbotFunc(func() {
 		enabled, err := s.settingService.GetTgbotEnabled()
-		if err != nil || !enabled {
+		if s.relayLightMode || err != nil || !enabled {
 			if s.tgbotService.IsRunning() {
 				s.tgbotService.Stop()
 			}
@@ -805,7 +823,7 @@ func (s *Server) start(restartXray bool, startTgBot bool) (err error) {
 
 	if startTgBot {
 		isTgbotenabled, err := s.settingService.GetTgbotEnabled()
-		if (err == nil) && (isTgbotenabled) {
+		if !s.relayLightMode && err == nil && isTgbotenabled {
 			tgBot := s.tgbotService.NewTgbot()
 			_ = tgBot.Start(i18nFS)
 			// Subscribe Telegram notifications for event bus
@@ -837,8 +855,10 @@ func (s *Server) stop(stopXray bool, stopTgBot bool) error {
 	if s.bus != nil {
 		s.bus.Stop()
 	}
-	if err := service.PersistSystemMetrics(); err != nil {
-		logger.Warning("persist system metrics on shutdown failed:", err)
+	if !s.relayLightMode {
+		if err := service.PersistSystemMetrics(); err != nil {
+			logger.Warning("persist system metrics on shutdown failed:", err)
+		}
 	}
 	if stopXray {
 		service.StopTrafficWriter()

@@ -34,6 +34,7 @@ export const XrayInfoSchema = z.object({
 }).partial();
 
 export const StatusSchema = z.object({
+  relayLightMode: z.boolean().optional(),
   cpu: z.number().optional(),
   cpuCores: z.number().optional(),
   logicalPro: z.number().optional(),

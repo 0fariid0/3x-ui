@@ -44,6 +44,7 @@ const (
 )
 
 var defaultValueMap = map[string]string{
+	"relayLightMode":     "false",
 	"xrayTemplateConfig": xrayTemplateConfig,
 	"webListen":          "",
 	"webDomain":          "",

@@ -34,9 +34,15 @@ type ServerController struct {
 // NewServerController creates a new ServerController, initializes routes, and starts background tasks.
 func NewServerController(g *gin.RouterGroup) *ServerController {
 	a := &ServerController{}
-	service.RestoreSystemMetrics()
+	relay, err := a.settingService.GetRelayLightMode()
+	if err != nil {
+		logger.Warning("read relay mode for status collection failed:", err)
+	}
+	if !relay {
+		service.RestoreSystemMetrics()
+	}
 	a.initRouter(g)
-	a.startTask()
+	a.startTask(relay)
 	return a
 }
 
@@ -90,20 +96,29 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/clientIps", a.setClientIps)
 }
 
-// startTask registers the @2s ticker that refreshes server status, samples
-// xray metrics, and pushes the new snapshot to all websocket subscribers.
-// State + sampling live in ServerService; the controller only orchestrates
-// the cross-service side effects (xrayMetrics sample + websocket broadcast).
-func (a *ServerController) startTask() {
+// startTask schedules a live status snapshot. In relay mode the snapshot is
+// less frequent and avoids the history and detailed Xray metric samplers.
+func (a *ServerController) startTask(relay bool) {
 	c := global.GetWebServer().GetCron()
-	_, _ = c.AddFunc("@every 2s", func() {
-		status := a.serverService.RefreshStatus()
+	interval := "@every 2s"
+	if relay {
+		interval = "@every 15s"
+		// Populate the initial snapshot without waiting for the slower tick.
+		a.serverService.RefreshStatus(true)
+	}
+	_, _ = c.AddFunc(interval, func() {
+		status := a.serverService.RefreshStatus(relay)
 		if status == nil {
 			return
 		}
-		a.xrayMetricsService.Sample(time.Now())
+		if !relay {
+			a.xrayMetricsService.Sample(time.Now())
+		}
 		websocket.BroadcastStatus(status)
 	})
+	if relay {
+		return
+	}
 	_, _ = c.AddFunc("@every 1m", func() {
 		if err := service.PersistSystemMetrics(); err != nil {
 			logger.Warning("persist system metrics failed:", err)

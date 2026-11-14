@@ -62,6 +62,7 @@ export interface XrayInfo {
 }
 
 interface StatusInput {
+  relayLightMode?: boolean;
   cpu?: number;
   cpuCores?: number;
   logicalPro?: number;
@@ -82,6 +83,7 @@ interface StatusInput {
 }
 
 export class Status {
+  relayLightMode = false;
   cpu: CurTotal = new CurTotal(0, 0);
   cpuCores = 0;
   logicalPro = 0;
@@ -103,6 +105,7 @@ export class Status {
   constructor(data?: StatusInput | null) {
     if (data == null) return;
 
+    this.relayLightMode = data.relayLightMode ?? false;
     this.cpu = new CurTotal(data.cpu ?? 0, 100);
     this.cpuCores = data.cpuCores ?? 0;
     this.logicalPro = data.logicalPro ?? 0;

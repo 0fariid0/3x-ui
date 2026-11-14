@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.9.22",
+    "version": "3.9.23",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -12816,6 +12816,91 @@
                       "type": "string"
                     },
                     "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/setting/relayLightMode": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Return the saved lightweight relay mode preference.",
+        "operationId": "get_panel_api_setting_relayLightMode",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "enabled": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Save the relay mode preference with explicit confirmation. A changed value reloads the panel and subscription server without restarting Xray.",
+        "operationId": "post_panel_api_setting_relayLightMode",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "enabled": true,
+                "confirmed": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "obj": {
+                    "enabled": true,
+                    "restarting": true
                   }
                 }
               }

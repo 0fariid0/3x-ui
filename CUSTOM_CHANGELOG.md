@@ -1,3 +1,7 @@
+## v3.9.23 — light relay mode
+
+- Add reversible, opt-in light mode for relay servers. Pause detailed history, automatic notifications and anomaly detection, while retaining client management and quota, expiry and IP enforcement.
+
 ## v3.9.22 — fix Xray crash when XUDP closes
 
 - Preserve XUDP session detach and reuse with the per-account IP gate reader.

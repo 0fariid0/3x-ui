@@ -21,6 +21,7 @@ type XrayTrafficJob struct {
 	outboundService    outbound.OutboundService
 	insightService     service.ClientInsightService
 	lastInsightCleanup time.Time
+	relayLightMode     bool
 }
 
 // clientStatsSnapshotMaxClients caps how many client_traffics rows the job
@@ -66,8 +67,8 @@ var externalInformClient = &fasthttp.Client{
 }
 
 // NewXrayTrafficJob creates a new traffic collection job instance.
-func NewXrayTrafficJob() *XrayTrafficJob {
-	return new(XrayTrafficJob)
+func NewXrayTrafficJob(relayLightMode bool) *XrayTrafficJob {
+	return &XrayTrafficJob{relayLightMode: relayLightMode}
 }
 
 // Run collects traffic statistics from Xray, updates the database, and pushes
@@ -82,23 +83,27 @@ func (j *XrayTrafficJob) Run() {
 		return
 	}
 	now := time.Now()
-	if err := j.insightService.RecordTraffic(clientTraffics, now); err != nil {
-		logger.Warning("record client traffic insights failed:", err)
+	if !j.relayLightMode {
+		if err := j.insightService.RecordTraffic(clientTraffics, now); err != nil {
+			logger.Warning("record client traffic insights failed:", err)
+		}
 	}
 	if err := j.insightService.RestoreExpiredActions(&j.inboundService, &j.xrayService); err != nil {
 		logger.Warning("restore expired anomaly actions failed:", err)
 	}
-	if insightSettings, settingErr := j.settingService.GetAllSetting(); settingErr != nil {
-		logger.Warning("get anomaly settings failed:", settingErr)
-	} else {
-		if err := j.insightService.EvaluateAnomalies(clientTraffics, insightSettings, &j.inboundService, &j.xrayService); err != nil {
-			logger.Warning("evaluate client anomalies failed:", err)
-		}
-		if j.lastInsightCleanup.IsZero() || now.Sub(j.lastInsightCleanup) >= time.Hour {
-			if err := j.insightService.Cleanup(insightSettings.AnomalyHistoryDays); err != nil {
-				logger.Warning("cleanup client insight history failed:", err)
-			} else {
-				j.lastInsightCleanup = now
+	if !j.relayLightMode {
+		if insightSettings, settingErr := j.settingService.GetAllSetting(); settingErr != nil {
+			logger.Warning("get anomaly settings failed:", settingErr)
+		} else {
+			if err := j.insightService.EvaluateAnomalies(clientTraffics, insightSettings, &j.inboundService, &j.xrayService); err != nil {
+				logger.Warning("evaluate client anomalies failed:", err)
+			}
+			if j.lastInsightCleanup.IsZero() || now.Sub(j.lastInsightCleanup) >= time.Hour {
+				if err := j.insightService.Cleanup(insightSettings.AnomalyHistoryDays); err != nil {
+					logger.Warning("cleanup client insight history failed:", err)
+				} else {
+					j.lastInsightCleanup = now
+				}
 			}
 		}
 	}
@@ -123,10 +128,12 @@ func (j *XrayTrafficJob) Run() {
 		}
 		websocket.BroadcastInvalidate(websocket.MessageTypeInbounds)
 	}
-	if ExternalTrafficInformEnable, err := j.settingService.GetExternalTrafficInformEnable(); ExternalTrafficInformEnable {
-		j.informTrafficToExternalAPI(traffics, clientTraffics)
-	} else if err != nil {
-		logger.Warning("get ExternalTrafficInformEnable failed:", err)
+	if !j.relayLightMode {
+		if ExternalTrafficInformEnable, err := j.settingService.GetExternalTrafficInformEnable(); ExternalTrafficInformEnable {
+			j.informTrafficToExternalAPI(traffics, clientTraffics)
+		} else if err != nil {
+			logger.Warning("get ExternalTrafficInformEnable failed:", err)
+		}
 	}
 	if needRestart0 || needRestart1 {
 		j.xrayService.SetToNeedRestart()

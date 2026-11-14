@@ -20,7 +20,7 @@ export function useStatusQuery() {
   const query = useQuery({
     queryKey: keys.server.status(),
     queryFn: fetchStatus,
-    refetchInterval: POLL_INTERVAL_MS,
+    refetchInterval: (q) => q.state.data?.relayLightMode ? 15_000 : POLL_INTERVAL_MS,
     refetchIntervalInBackground: false,
     staleTime: 0,
   });

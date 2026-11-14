@@ -65,10 +65,11 @@ export function peak(values: number[]): number {
 
 /* the seed bucket must be in the backend's allowedHistoryBuckets whitelist;
    2s is the smallest and matches the status poll cadence */
-export function useOverviewHistory(status: Status, hasData: boolean): OverviewHistory {
+export function useOverviewHistory(status: Status, hasData: boolean, enabled = true): OverviewHistory {
   const [trend, setTrend] = useState<HistoryWindow>(emptyWindow);
 
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
 
     const seed = async () => {
@@ -114,10 +115,10 @@ export function useOverviewHistory(status: Status, hasData: boolean): OverviewHi
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
-    if (!hasData) return;
+    if (!enabled || !hasData) return;
     setTrend((prev) => {
       const point = sampleOf(status);
       const next = emptyWindow();
@@ -127,7 +128,7 @@ export function useOverviewHistory(status: Status, hasData: boolean): OverviewHi
       }
       return next;
     });
-  }, [status, hasData]);
+  }, [status, hasData, enabled]);
 
   const labels = useMemo(() => trend.times.map(TimeFormatter.formatClock), [trend.times]);
 

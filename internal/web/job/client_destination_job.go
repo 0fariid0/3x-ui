@@ -10,16 +10,19 @@ import (
 // destination aggregates only for clients that individually opted in. The
 // generated runtime access log is truncated after complete ingestion.
 type ClientDestinationJob struct {
-	insights service.ClientInsightService
+	insights       service.ClientInsightService
+	relayLightMode bool
 }
 
-func NewClientDestinationJob() *ClientDestinationJob { return &ClientDestinationJob{} }
+func NewClientDestinationJob(relayLightMode bool) *ClientDestinationJob {
+	return &ClientDestinationJob{relayLightMode: relayLightMode}
+}
 
 func (j *ClientDestinationJob) Run() {
-	if service.AnyDestinationTrackingEnabled() {
+	if !j.relayLightMode && service.AnyDestinationTrackingEnabled() {
 		service.RefreshDestinationNetworkRulesIfNeeded()
 	}
-	if err := j.insights.IngestDestinationAccessLog(); err != nil {
+	if err := j.insights.IngestDestinationAccessLogWithHistory(!j.relayLightMode); err != nil {
 		logger.Debug("[ClientDestinations] ingest failed:", err)
 	}
 }

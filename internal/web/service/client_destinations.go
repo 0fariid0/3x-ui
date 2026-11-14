@@ -306,13 +306,21 @@ func AnyDestinationTrackingEnabled() bool {
 // connection refreshes transient exact email -> inbound attribution in memory;
 // minute destination aggregates are persisted only for clients that opted in.
 func (s *ClientInsightService) IngestDestinationAccessLog() error {
+	return s.IngestDestinationAccessLogWithHistory(true)
+}
+
+func (s *ClientInsightService) IngestDestinationAccessLogWithHistory(history bool) error {
 	destinationIngestMu.Lock()
 	defer destinationIngestMu.Unlock()
 
 	db := database.GetDB()
-	tracked, err := trackedDestinationEmails(db)
-	if err != nil {
-		return err
+	var tracked map[string]struct{}
+	if history {
+		var err error
+		tracked, err = trackedDestinationEmails(db)
+		if err != nil {
+			return err
+		}
 	}
 	path, err := xray.GetAccessLogPath()
 	if err != nil || path == "" || strings.EqualFold(path, "none") {
@@ -344,7 +352,10 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 		return err
 	}
 
-	loc := insightPanelLocation()
+	var loc *time.Location
+	if len(tracked) > 0 {
+		loc = insightPanelLocation()
+	}
 	reader := bufio.NewReaderSize(file, 64*1024)
 	offset := cursor.Offset
 	aggregated := make(map[string]destinationEvent)
@@ -371,17 +382,19 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 					liveInboundSets[email] = set
 				}
 				set[inboundTag] = struct{}{}
-				seenAt := entry.DateTime.UnixMilli()
-				if seenAt <= 0 {
-					seenAt = time.Now().UnixMilli()
-				}
-				byTag := inboundLastSeen[email]
-				if byTag == nil {
-					byTag = make(map[string]int64)
-					inboundLastSeen[email] = byTag
-				}
-				if seenAt > byTag[inboundTag] {
-					byTag[inboundTag] = seenAt
+				if history {
+					seenAt := entry.DateTime.UnixMilli()
+					if seenAt <= 0 {
+						seenAt = time.Now().UnixMilli()
+					}
+					byTag := inboundLastSeen[email]
+					if byTag == nil {
+						byTag = make(map[string]int64)
+						inboundLastSeen[email] = byTag
+					}
+					if seenAt > byTag[inboundTag] {
+						byTag[inboundTag] = seenAt
+					}
 				}
 			}
 			if len(tracked) > 0 {
@@ -417,7 +430,7 @@ func (s *ClientInsightService) IngestDestinationAccessLog() error {
 		}
 	}
 	(&InboundService{}).RefreshLocalOnlineInbounds(liveInbounds)
-	if len(inboundLastSeen) > 0 {
+	if history && len(inboundLastSeen) > 0 {
 		if err := s.RecordInboundActivity(inboundLastSeen); err != nil {
 			logger.Debug("[ClientDestinations] record inbound activity failed:", err)
 		}

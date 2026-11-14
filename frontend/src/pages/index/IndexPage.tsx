@@ -1,7 +1,7 @@
 import { lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { Button, ConfigProvider, Layout, Modal, Result, Spin, message } from 'antd';
+import { Alert, Button, ConfigProvider, Layout, Modal, Result, Spin, message } from 'antd';
 import {
   CopyOutlined,
   CloudDownloadOutlined,
@@ -76,7 +76,7 @@ export default function IndexPage() {
     navigate(`/clients?edit=${encodeURIComponent(email)}`);
   }, [navigate]);
 
-  const history = useOverviewHistory(status, fetched && !fetchError);
+  const history = useOverviewHistory(status, fetched && !fetchError, fetched && !status.relayLightMode);
 
   useEffect(() => {
     HttpUtil.post<{ accessLogEnable?: boolean; devChannelEnable?: boolean }>(
@@ -216,6 +216,11 @@ export default function IndexPage() {
 
                   <ClientOverviewCard />
 
+                  {status.relayLightMode ? (
+                    <Alert showIcon type="info" title={t('pages.settings.relayLightMode')}
+                      description={t('pages.settings.relayLightModeActive')}
+                      action={<Button size="small" onClick={() => navigate('/settings')}>{t('menu.settings')}</Button>} />
+                  ) : <>
                   <div className="ov-vitals">
                     <VitalTile
                       icon={<DashboardOutlined />}
@@ -290,6 +295,7 @@ export default function IndexPage() {
                       compact
                     />
                   </div>
+                  </>}
                 </div>
               )}
             </Spin>
