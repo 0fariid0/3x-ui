@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Select, Switch } from 'antd';
 
 import ProtonRouting from './ProtonRouting';
+import RoutingGeoSelect from './RoutingGeoSelect';
 import { SettingListItem } from '@/components/ui';
 import type { XraySettingsValue, SetTemplate } from '@/hooks/useXraySetting';
 import {
@@ -107,10 +108,10 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings, on
         title={t('pages.xray.blockips')}
         paddings="small"
         control={
-          <Select
-            mode="tags"
+          <RoutingGeoSelect
+            label={t('pages.xray.blockips')}
+            kind="ip"
             value={blockedIPs}
-            style={{ width: '100%' }}
             options={IPS_OPTIONS}
             onChange={(v) => mutate((tt) => ruleSetter(tt, 'blocked', 'ip', v))}
           />
@@ -121,10 +122,10 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings, on
         title={t('pages.xray.blockdomains')}
         paddings="small"
         control={
-          <Select
-            mode="tags"
+          <RoutingGeoSelect
+            label={t('pages.xray.blockdomains')}
+            kind="site"
             value={blockedDomains}
-            style={{ width: '100%' }}
             options={BLOCK_DOMAINS_OPTIONS}
             onChange={(v) => mutate((tt) => ruleSetter(tt, 'blocked', 'domain', v))}
           />
@@ -142,10 +143,10 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings, on
         title={t('pages.xray.directips')}
         paddings="small"
         control={
-          <Select
-            mode="tags"
+          <RoutingGeoSelect
+            label={t('pages.xray.directips')}
+            kind="ip"
             value={directIPs}
-            style={{ width: '100%' }}
             options={IPS_OPTIONS}
             onChange={(v) => mutate((tt) => {
               ruleSetter(tt, 'direct', 'ip', v);
@@ -159,10 +160,10 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings, on
         title={t('pages.xray.directdomains')}
         paddings="small"
         control={
-          <Select
-            mode="tags"
+          <RoutingGeoSelect
+            label={t('pages.xray.directdomains')}
+            kind="site"
             value={directDomains}
-            style={{ width: '100%' }}
             options={DOMAINS_OPTIONS}
             onChange={(v) => mutate((tt) => {
               ruleSetter(tt, 'direct', 'domain', v);
@@ -177,10 +178,10 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings, on
         description={t('pages.xray.ipv4RoutingDesc')}
         paddings="small"
         control={
-          <Select
-            mode="tags"
+          <RoutingGeoSelect
+            label={t('pages.xray.ipv4Routing')}
+            kind="site"
             value={ipv4Domains}
-            style={{ width: '100%' }}
             options={SERVICES_OPTIONS}
             onChange={(v) => mutate((tt) => {
               ruleSetter(tt, 'IPv4', 'domain', v);
@@ -195,10 +196,10 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings, on
         description={t('pages.xray.warpRoutingDesc', 'Route selected services through warp.')}
         paddings="small"
         control={
-          <Select
-            mode="tags"
+          <RoutingGeoSelect
+            label={"warp"}
+            kind="site"
             value={warpDomains}
-            style={{ width: '100%' }}
             options={SERVICES_OPTIONS}
             onChange={(v) => mutate((tt) => ruleSetter(tt, 'warp', 'domain', v))}
           />
@@ -215,12 +216,12 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings, on
         )}
         paddings="small"
         control={
-          <Select
-            mode="tags"
+          <RoutingGeoSelect
+            label={"NordVPN"}
+            kind="site"
             value={nordDomains}
             disabled={!nordOutboundTag}
             placeholder={t('pages.xray.nordRoutingUnavailable', 'Create NordVPN outbound first')}
-            style={{ width: '100%' }}
             options={SERVICES_OPTIONS}
             onChange={(v) => {
               if (!nordOutboundTag) return;

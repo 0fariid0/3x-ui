@@ -25,9 +25,16 @@
 .xray-page .content-area,
 .xray-page .ant-tabs-content-holder,
 .xray-page .setting-list-item .ant-col,
-.proton-routing-control {
+.routing-geo-select {
   min-width: 0;
 }
+
+.routing-geo-select > .ant-select {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.routing-geo-select > .ant-btn { flex: 0 0 auto; }
 
 @media (max-width: 767px) {
   .xray-page .setting-list-item .ant-select,

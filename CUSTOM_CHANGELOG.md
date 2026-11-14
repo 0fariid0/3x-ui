@@ -1,3 +1,7 @@
+## v3.9.21 — geodata browser for basic routing
+
+- Add database search to blocked and direct IPs and domains, IPv4, WARP and NordVPN, using the same control as Proton VPN.
+
 ## v3.9.20 — compact dashboard and client counters
 
 - Show global client totals, online, active, expiring, depleted and disabled counts on the overview, with a link to Clients.
