@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -118,6 +119,20 @@ func TestStopKillsProcessThatIgnoresSIGTERM(t *testing.T) {
 	}
 }
 
+func TestCheckStartupReturnsCoreDiagnostic(t *testing.T) {
+	initProcessTestLogger(t)
+	p := newProcess(nil)
+	cmd := exec.Command(os.Args[0], "-test.run=^TestXrayProcessHelper$", "--", "startup-error")
+	cmd.Env = append(os.Environ(), "XRAY_PROCESS_HELPER=1")
+	cmd.Stdout, cmd.Stderr = p.logWriter, p.logWriter
+	if err := p.startCommand(cmd); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.CheckStartup(2 * time.Second); err == nil || !strings.Contains(err.Error(), "bind: address already in use") {
+		t.Fatalf("expected original core error, got %v", err)
+	}
+}
+
 func initProcessTestLogger(t *testing.T) {
 	t.Helper()
 	t.Setenv("XUI_LOG_FOLDER", t.TempDir())
@@ -178,6 +193,10 @@ func TestXrayProcessHelper(t *testing.T) {
 	}
 
 	switch mode {
+	case "startup-error":
+		_, _ = os.Stderr.WriteString("Failed to start: bind: address already in use\n")
+		_, _ = os.Stderr.WriteString("trailing output\n")
+		os.Exit(23)
 	case "delayed-term":
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGTERM)

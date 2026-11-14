@@ -24,6 +24,7 @@ interface OverviewActionBarProps {
   panelVersion: string;
   latestVersion: string;
   updateAvailable: boolean;
+  xrayAction?: 'restart' | 'stop' | null;
   onStopXray: () => void;
   onRestartXray: () => void;
   onOpenLogs: () => void;
@@ -57,6 +58,7 @@ export default function OverviewActionBar({
   panelVersion,
   latestVersion,
   updateAvailable,
+  xrayAction,
   onStopXray,
   onRestartXray,
   onOpenLogs,
@@ -154,6 +156,8 @@ export default function OverviewActionBar({
                 color={action.primary ? 'primary' : undefined}
                 variant={action.primary ? 'outlined' : undefined}
                 size={size}
+                loading={action.key === xrayAction}
+                disabled={!!xrayAction && (action.key === 'restart' || action.key === 'stop')}
                 icon={action.icon}
                 aria-label={action.text}
                 onClick={action.onClick}

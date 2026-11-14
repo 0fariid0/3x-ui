@@ -29,6 +29,7 @@ type ServerController struct {
 	settingService     service.SettingService
 	panelService       panel.PanelService
 	xrayMetricsService service.XrayMetricsService
+	relayLightMode     bool
 }
 
 // NewServerController creates a new ServerController, initializes routes, and starts background tasks.
@@ -41,6 +42,7 @@ func NewServerController(g *gin.RouterGroup) *ServerController {
 	if !relay {
 		service.RestoreSystemMetrics()
 	}
+	a.relayLightMode = relay
 	a.initRouter(g)
 	a.startTask(relay)
 	return a
@@ -127,7 +129,9 @@ func (a *ServerController) startTask(relay bool) {
 }
 
 // status returns the current server status information.
-func (a *ServerController) status(c *gin.Context) { jsonObj(c, a.serverService.LastStatus(), nil) }
+func (a *ServerController) status(c *gin.Context) {
+	jsonObj(c, a.serverService.StatusWithLiveXray(a.relayLightMode), nil)
+}
 
 func (a *ServerController) getFail2banStatus(c *gin.Context) {
 	jsonObj(c, a.serverService.GetFail2banStatus(), nil)
@@ -326,7 +330,8 @@ func (a *ServerController) restartXrayService(c *gin.Context) {
 	err := a.serverService.RestartXrayService()
 	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.xray.restartError"), err)
-		websocket.BroadcastXrayState("error", err.Error())
+		state := a.serverService.StatusWithLiveXray(a.relayLightMode)
+		websocket.BroadcastXrayState(string(state.Xray.State), err.Error())
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.xray.restartSuccess"), err)

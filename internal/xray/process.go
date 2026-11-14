@@ -274,6 +274,9 @@ func (p *process) GetResult() string {
 	p.mu.RLock()
 	exitErr := p.exitErr
 	p.mu.RUnlock()
+	if diagnostic := p.logWriter.FailureLine(); diagnostic != "" {
+		return diagnostic
+	}
 	lastLine := p.logWriter.LastLine()
 	if len(lastLine) == 0 && exitErr != nil {
 		return exitErr.Error()
@@ -679,6 +682,27 @@ func (p *process) Start() (err error) {
 	p.refreshAPIPort()
 
 	return nil
+}
+
+// CheckStartup gives an immediately failing core time to emit its diagnostic
+// before the panel reports that a restart succeeded.
+func (p *process) CheckStartup(grace time.Duration) error {
+	p.mu.RLock()
+	done := p.done
+	p.mu.RUnlock()
+	timer := time.NewTimer(grace)
+	defer timer.Stop()
+	select {
+	case <-done:
+	case <-timer.C:
+	}
+	if p.IsRunning() {
+		return nil
+	}
+	if detail := p.GetResult(); detail != "" {
+		return fmt.Errorf("Xray exited during startup: %s", detail)
+	}
+	return errors.New("Xray exited during startup without a diagnostic")
 }
 
 // writeFileAtomic writes data to path via a same-directory temp file that is

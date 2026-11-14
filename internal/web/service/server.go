@@ -651,22 +651,7 @@ func (s *ServerService) getStatus(lastStatus *Status, relay bool) *Status {
 
 	}
 
-	// Xray status
-	if s.xrayService.IsXrayRunning() {
-		status.Xray.State = Running
-		// A core that runs but was refused the new config is a fault the
-		// operator only ever sees here and in the node list.
-		status.Xray.ErrorMsg = s.xrayService.GetHeldBackConfig()
-	} else {
-		err := s.xrayService.GetXrayErr()
-		if err != nil {
-			status.Xray.State = Error
-		} else {
-			status.Xray.State = Stop
-		}
-		status.Xray.ErrorMsg = s.xrayService.GetXrayResult()
-	}
-	status.Xray.Version = s.xrayService.GetXrayVersion()
+	s.fillXrayStatus(status)
 	status.PanelVersion = config.GetPanelVersion()
 	if guid, err := s.settingService.GetPanelGuid(); err == nil {
 		status.PanelGuid = guid
@@ -688,6 +673,41 @@ func (s *ServerService) getStatus(lastStatus *Status, relay bool) *Status {
 	}
 
 	return status
+}
+
+// StatusWithLiveXray overlays the current core state without resampling the
+// host CPU, disk, network or other metrics between scheduled snapshots.
+func (s *ServerService) StatusWithLiveXray(relay bool) *Status {
+	status := Status{RelayLightMode: relay}
+	if cached := s.LastStatus(); cached != nil {
+		status = *cached
+	}
+	s.fillXrayStatus(&status)
+	return &status
+}
+
+func (s *ServerService) fillXrayStatus(status *Status) {
+	// Xray status
+	if s.xrayService.IsXrayRunning() {
+		status.Xray.State = Running
+		// A core that runs but was refused the new config is a fault the
+		// operator only ever sees here and in the node list.
+		status.Xray.ErrorMsg = s.xrayService.GetHeldBackConfig()
+	} else {
+		err := s.xrayService.GetXrayErr()
+		if err != nil {
+			status.Xray.State = Error
+		} else {
+			status.Xray.State = Stop
+		}
+		status.Xray.ErrorMsg = s.xrayService.GetHeldBackConfig()
+		if status.Xray.ErrorMsg == "" && status.Xray.State == Error {
+			status.Xray.ErrorMsg = s.xrayService.GetXrayResult()
+		} else if status.Xray.ErrorMsg != "" {
+			status.Xray.State = Error
+		}
+	}
+	status.Xray.Version = s.xrayService.GetXrayVersion()
 }
 
 // AppendCpuSample is preserved for callers that only have the CPU number.

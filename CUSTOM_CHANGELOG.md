@@ -1,3 +1,8 @@
+## v3.9.25 — Xray restart diagnostics and light CPU display
+
+- Report early startup failures and show the core error directly on Overview. Refresh Xray state independently of host metric sampling.
+- Show a single host CPU value in light relay mode.
+
 ## v3.9.24 — fix light relay mode confirmation
 
 - Accept both JSON and URL-encoded confirmation bodies for the light relay mode, including requests from cached v3.9.23 panel pages.

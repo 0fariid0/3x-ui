@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/config"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
@@ -1103,7 +1104,7 @@ func (s *XrayService) TestRoute(req xray.RouteTestRequest) (*xray.RouteTestResul
 // the Xray gRPC API without restarting the process (inbounds, outbounds and
 // routing rules/balancers are hot-reloadable); only changes the core cannot
 // take at runtime — or a force request — stop and restart the process.
-func (s *XrayService) RestartXray(isForce bool) error {
+func (s *XrayService) RestartXray(isForce bool) (resultErr error) {
 	lock.Lock()
 	defer lock.Unlock()
 	isRestarting.Store(true)
@@ -1112,11 +1113,17 @@ func (s *XrayService) RestartXray(isForce bool) error {
 	if !isForce && isManuallyStopped.Load() {
 		return nil
 	}
-	isManuallyStopped.Store(false)
+	defer func() {
+		if resultErr != nil {
+			xrayState.holdBack(resultErr.Error())
+		} else {
+			xrayState.holdBack("")
+		}
+	}()
 
 	xrayConfig, err := s.GetXrayConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("build Xray configuration: %w", err)
 	}
 
 	process := currentXrayProcess()
@@ -1135,29 +1142,29 @@ func (s *XrayService) RestartXray(isForce bool) error {
 			}
 			// The refusal is otherwise invisible: the operator's request
 			// succeeded, so the status page has to carry the stale state.
-			xrayState.holdBack(refused)
 			return fmt.Errorf("xray %s", refused)
 		}
 		if !isForce && !configUnchanged && s.tryHotApply(process, xrayConfig) {
 			logger.Info("Xray config changes applied through the core API, no restart needed")
 			return nil
 		}
-		_ = process.Stop()
+		if err := process.Stop(); err != nil && process.IsRunning() {
+			return fmt.Errorf("stop previous Xray process: %w", err)
+		}
 	} else if conflicts := bindConflicts(xrayConfig, nil); len(conflicts) > 0 {
 		// Nothing is running to protect and the core is the authority on what it
 		// can bind: start it and let its own error name the port it lost.
 		logger.Warning("xray config may not start:", conflicts[0].String())
 	}
 
+	isManuallyStopped.Store(false)
 	process = xray.NewProcess(xrayConfig)
 	xrayState.replace(process)
 	s.xrayAPI.StatsLastValues = nil
-	err = process.Start()
-	if err != nil {
-		return err
+	if err := process.Start(); err != nil {
+		return fmt.Errorf("start Xray process: %w", err)
 	}
-
-	return nil
+	return process.CheckStartup(500 * time.Millisecond)
 }
 
 // restartToDropClients reports whether a diff that strands clients must be

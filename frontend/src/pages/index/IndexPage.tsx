@@ -58,6 +58,8 @@ export default function IndexPage() {
 
   const basePath = window.X_UI_BASE_PATH || '';
 
+  const [xrayAction, setXrayAction] = useState<'restart' | 'stop' | null>(null);
+  const [xrayActionError, setXrayActionError] = useState('');
   const [showIp, setShowIp] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
@@ -105,15 +107,22 @@ export default function IndexPage() {
     [],
   );
 
-  const stopXray = useCallback(async () => {
-    await HttpUtil.post('/panel/api/server/stopXrayService');
-    await refresh();
-  }, [refresh]);
-
-  const restartXray = useCallback(async () => {
-    await HttpUtil.post('/panel/api/server/restartXrayService');
-    await refresh();
-  }, [refresh]);
+  async function controlXray(action: 'restart' | 'stop') {
+    if (xrayAction) return;
+    setXrayAction(action);
+    setXrayActionError('');
+    try {
+      const result = await HttpUtil.post(`/panel/api/server/${action}XrayService`, undefined, { silent: true });
+      if (!result?.success) {
+        setXrayActionError(result?.msg || t('somethingWentWrong'));
+      } else if (result.msg) {
+        messageApi.success(result.msg);
+      }
+      await refresh();
+    } finally {
+      setXrayAction(null);
+    }
+  }
 
   async function handleChannelChange(dev: boolean) {
     const res = await HttpUtil.post('/panel/api/server/setUpdateChannel', { dev });
@@ -195,8 +204,9 @@ export default function IndexPage() {
                     panelVersion={displayVersion}
                     latestVersion={panelUpdateInfo.latestVersion}
                     updateAvailable={panelUpdateInfo.updateAvailable}
-                    onStopXray={stopXray}
-                    onRestartXray={restartXray}
+                    xrayAction={xrayAction}
+                    onStopXray={() => void controlXray('stop')}
+                    onRestartXray={() => void controlXray('restart')}
                     onOpenLogs={() => setLogsOpen(true)}
                     onOpenXrayLogs={() => setXrayLogsOpen(true)}
                     onOpenConfig={openConfig}
@@ -207,7 +217,14 @@ export default function IndexPage() {
                     onOpenVersionSwitch={() => setVersionOpen(true)}
                   />
 
-                  {health && (
+                  {(xrayActionError || status.xray.errorMsg) && (
+                    <Alert showIcon type="error" title={t('pages.index.xrayStatusError')}
+                      description={[...new Set([xrayActionError, status.xray.errorMsg].filter(Boolean))].map(detail => (
+                        <div className="ov-xray-diagnostic" dir="auto" key={detail}>{detail}</div>
+                      ))} />
+                  )}
+
+                  {health && !status.relayLightMode && (
                     <div className="ov-health" style={{ color: health.color }}>
                       <span className="ov-health-mark" />
                       {health.text}
@@ -218,7 +235,10 @@ export default function IndexPage() {
 
                   {status.relayLightMode ? (
                     <Alert showIcon type="info" title={t('pages.settings.relayLightMode')}
-                      description={t('pages.settings.relayLightModeActive')}
+                      description={<>
+                        <div>{t('pages.settings.relayLightModeActive')}</div>
+                        <span className="ov-relay-cpu">{t('pages.index.cpu')}: <strong dir="ltr">{status.cpu.percent.toFixed(0)}%</strong></span>
+                      </>}
                       action={<Button size="small" onClick={() => navigate('/settings')}>{t('menu.settings')}</Button>} />
                   ) : <>
                   <div className="ov-vitals">

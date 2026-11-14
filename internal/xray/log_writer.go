@@ -23,8 +23,9 @@ func NewLogWriter() *LogWriter {
 
 // LogWriter processes and filters log output from the Xray process, handling crash detection and message filtering.
 type LogWriter struct {
-	mu       sync.RWMutex
-	lastLine string
+	mu          sync.RWMutex
+	lastLine    string
+	failureLine string
 }
 
 // LastLine returns the most recently processed Xray log line. It is safe for
@@ -42,6 +43,23 @@ func (lw *LogWriter) setLastLine(line string) {
 	lw.mu.Unlock()
 }
 
+// FailureLine retains the useful diagnostic when later output contains only
+// startup chatter or stack frames. Each process gets its own writer.
+func (lw *LogWriter) FailureLine() string {
+	lw.mu.RLock()
+	defer lw.mu.RUnlock()
+	return lw.failureLine
+}
+
+func (lw *LogWriter) setFailureLine(line string) {
+	const maxDiagnostic = 4096
+	line = strings.ToValidUTF8(line, "�")
+	line = strings.ToValidUTF8(line[:min(len(line), maxDiagnostic)], "�")
+	lw.mu.Lock()
+	lw.failureLine = line
+	lw.mu.Unlock()
+}
+
 // Write processes and filters log output from the Xray process, handling crash detection and message filtering.
 func (lw *LogWriter) Write(m []byte) (n int, err error) {
 	// Convert the data to a string
@@ -56,6 +74,14 @@ func (lw *LogWriter) Write(m []byte) (n int, err error) {
 	// Check if the message contains a crash
 	if crashRegex.MatchString(message) {
 		logger.Debug("Core crash detected:\n", message)
+		for line := range strings.SplitSeq(message, "\n") {
+			line = strings.TrimSpace(line)
+			lower := strings.ToLower(line)
+			if strings.HasPrefix(lower, "panic:") || strings.HasPrefix(lower, "fatal error:") {
+				lw.setFailureLine(line)
+				break
+			}
+		}
 		lw.setLastLine(message)
 		err1 := writeCrashReport(m)
 		if err1 != nil {
@@ -81,7 +107,8 @@ func (lw *LogWriter) Write(m []byte) (n int, err error) {
 				continue
 			}
 
-			if strings.Contains(msgBodyLower, "failed") {
+			if strings.Contains(msgBodyLower, "failed") || level == "Error" {
+				lw.setFailureLine(msgBody)
 				logger.Error("XRAY: " + msgBody)
 			} else {
 				switch level {
@@ -108,7 +135,8 @@ func (lw *LogWriter) Write(m []byte) (n int, err error) {
 				continue
 			}
 
-			if strings.Contains(msgLower, "failed") {
+			if strings.Contains(msgLower, "failed") || strings.HasPrefix(msgLower, "error:") {
+				lw.setFailureLine(msg)
 				logger.Error("XRAY: " + msg)
 			} else {
 				logger.Debug("XRAY: " + msg)

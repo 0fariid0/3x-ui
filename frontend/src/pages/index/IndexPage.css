@@ -720,3 +720,15 @@
   .ov-tile-foot { gap: 4px; letter-spacing: normal; }
   .ov-tile-detail { font-size: 10px; }
 }
+
+
+.ov-xray-diagnostic {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ov-relay-cpu {
+  display: inline-block;
+  margin-block-start: 4px;
+  font-variant-numeric: tabular-nums;
+}
