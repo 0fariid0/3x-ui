@@ -81,6 +81,7 @@ interface OutboundFormModalProps {
   open: boolean;
   outbound: Record<string, unknown> | null;
   existingTags: string[];
+  custom?: boolean;
   dialerProxyTags?: string[];
   onClose: () => void;
   onConfirm: (outbound: Record<string, unknown>) => void;
@@ -90,20 +91,25 @@ export default function OutboundFormModal({
   open,
   outbound: outboundProp,
   existingTags,
+  custom = false,
   dialerProxyTags,
   onClose,
   onConfirm,
 }: OutboundFormModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [messageApi, messageContextHolder] = message.useMessage();
   const methods = useForm<OutboundFormValues>({ defaultValues: buildAddModeValues() });
   const [activeKey, setActiveKey] = useState('1');
   const [jsonText, setJsonText] = useState('');
   const [jsonDirty, setJsonDirty] = useState(false);
+  const [formSnapshot, setFormSnapshot] = useState('');
   const [linkInput, setLinkInput] = useState('');
 
   const isEdit = outboundProp != null;
-  const title = isEdit
+  const jsonOnly = isEdit && !PROTOCOL_OPTIONS.some(option => option.value === outboundProp?.protocol);
+  const title = custom
+    ? (i18n.language?.startsWith('fa') ? 'افزودن خروجی سفارشی' : 'Add custom outbound')
+    : isEdit
     ? `${t('edit')} ${t('pages.xray.Outbounds')}`
     : `+ ${t('pages.xray.Outbounds')}`;
   const okText = isEdit ? t('pages.clients.submitEdit') : t('create');
@@ -138,11 +144,12 @@ export default function OutboundFormModal({
     if (!parsed.tag && currentTag) parsed.tag = currentTag;
     const next = rawOutboundToFormValues(parsed);
     methods.reset(next);
+    setFormSnapshot(JSON.stringify(formValuesToWirePayload(next)));
     setJsonText(JSON.stringify(formValuesToWirePayload(next), null, 2));
     setJsonDirty(false);
     setLinkInput('');
     messageApi.success('Link imported successfully');
-    switchTab('1');
+    if (!jsonOnly) switchTab('1');
   }
 
   useEffect(() => {
@@ -151,10 +158,12 @@ export default function OutboundFormModal({
       ? rawOutboundToFormValues(outboundProp)
       : buildAddModeValues();
     methods.reset(initial);
-    setActiveKey('1');
-    setJsonText(JSON.stringify(formValuesToWirePayload(initial), null, 2));
+    setFormSnapshot(JSON.stringify(formValuesToWirePayload(initial)));
+    setActiveKey(jsonOnly ? '2' : '1');
+    setJsonText(JSON.stringify(outboundProp ?? formValuesToWirePayload(initial), null, 2));
+    setLinkInput('');
     setJsonDirty(false);
-  }, [open, outboundProp, methods]);
+  }, [open, outboundProp, jsonOnly, methods]);
 
   useEffect(() => {
     if (!streamAllowed) return;
@@ -281,8 +290,15 @@ export default function OutboundFormModal({
       messageApi.error(`JSON: ${(e as Error).message}`);
       return false;
     }
+    if (!parsed || !PROTOCOL_OPTIONS.some(option => option.value === parsed.protocol)) {
+      messageApi.error(i18n.language?.startsWith('fa')
+        ? 'این پروتکل فقط از تب JSON قابل ویرایش است.'
+        : 'This protocol can only be edited in the JSON tab.');
+      return false;
+    }
     const next = rawOutboundToFormValues(parsed);
     methods.reset(next);
+    setFormSnapshot(JSON.stringify(formValuesToWirePayload(next)));
     setJsonDirty(false);
     return true;
   }
@@ -296,8 +312,11 @@ export default function OutboundFormModal({
 
   function onTabChange(key: string) {
     if (key === '2') {
-      const values = methods.getValues();
-      setJsonText(JSON.stringify(formValuesToWirePayload(values), null, 2));
+      const payload = formValuesToWirePayload(methods.getValues());
+      if (JSON.stringify(payload) !== formSnapshot) {
+        setJsonText(JSON.stringify(payload, null, 2));
+        setFormSnapshot(JSON.stringify(payload));
+      }
       setJsonDirty(false);
       switchTab(key);
       return;
@@ -309,25 +328,28 @@ export default function OutboundFormModal({
   }
 
   async function onOk() {
-    let values: OutboundFormValues;
+    let payload: Record<string, unknown>;
     if (activeKey === '2') {
-      const raw = jsonText.trim();
-      if (!raw) return;
-      let parsed: Record<string, unknown>;
       try {
-        parsed = JSON.parse(raw) as Record<string, unknown>;
+        const parsed: unknown = JSON.parse(jsonText);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          throw new Error(t('pages.xray.importInvalidJson'));
+        }
+        payload = parsed as Record<string, unknown>;
+        if (typeof payload.protocol !== 'string' || !payload.protocol.trim()) {
+          messageApi.error(i18n.language?.startsWith('fa') ? 'پروتکل را در JSON وارد کن.' : 'Enter an outbound protocol in the JSON.');
+          return;
+        }
+        payload.protocol = payload.protocol.trim();
       } catch (e) {
         messageApi.error(`JSON: ${(e as Error).message}`);
         return;
       }
-      values = rawOutboundToFormValues(parsed);
-      methods.reset(values);
-      setJsonDirty(false);
     } else {
       if (!(await methods.trigger())) return;
-      values = methods.getValues();
+      payload = formValuesToWirePayload(methods.getValues());
     }
-    const tagValue = (values.tag ?? '').trim();
+    const tagValue = typeof payload.tag === 'string' ? payload.tag.trim() : '';
     if (!tagValue) {
       messageApi.error(t('pages.xray.outboundForm.tagRequired'));
       return;
@@ -342,7 +364,7 @@ export default function OutboundFormModal({
       messageApi.error('Tag already used by another outbound');
       return;
     }
-    onConfirm(formValuesToWirePayload(values));
+    onConfirm({ ...payload, tag: tagValue });
   }
 
   return (
@@ -350,6 +372,7 @@ export default function OutboundFormModal({
       {messageContextHolder}
       <Modal
         open={open}
+        className={custom ? 'custom-outbound-modal' : undefined}
         title={title}
         okText={okText}
         cancelText={t('close')}
@@ -372,6 +395,7 @@ export default function OutboundFormModal({
               items={[
                 {
                   key: '1',
+                  disabled: jsonOnly,
                   label: t('pages.xray.basicTemplate'),
                   children: (
                     <>

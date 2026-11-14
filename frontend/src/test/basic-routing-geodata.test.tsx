@@ -19,23 +19,23 @@ vi.mock('@/components/geodata', () => ({
 it('opens the right database for each routing field and adds entries to its own rule', () => {
   function Harness() {
     const [settings, setSettings] = useState<XraySettingsValue | null>({
-      outbounds: ['direct', 'blocked', 'warp', 'NordVPN', 'proton-free'].map(tag => ({
-        tag, protocol: tag === 'blocked' ? 'blackhole' : tag === 'proton-free' ? 'wireguard' : 'freedom',
+      outbounds: ['direct', 'blocked', 'warp', 'NordVPN', 'custom-vless'].map(tag => ({
+        tag, protocol: tag === 'blocked' ? 'blackhole' : tag === 'custom-vless' ? 'vless' : 'freedom',
       })),
       routing: { rules: [{ type: 'field', outboundTag: 'direct', domain: ['full:www.google.com'] }] },
     });
     return <>
-      <RoutingBasic templateSettings={settings} setTemplateSettings={setSettings} />
+      <RoutingBasic templateSettings={settings} setTemplateSettings={setSettings} onShowCustomOutbound={vi.fn()} onSelectCustomOutbound={vi.fn()} />
       <pre data-testid="rules">{JSON.stringify(settings?.routing?.rules)}</pre>
     </>;
   }
 
   renderWithProviders(<Harness />);
   const buttons = screen.getAllByRole('button', { name: / — / });
-  expect(buttons).toHaveLength(8);
+  expect(buttons).toHaveLength(9);
   const cases = [
     ['blocked', 'ip'], ['blocked', 'site'], ['direct', 'ip'], ['direct', 'site'],
-    ['IPv4', 'site'], ['warp', 'site'], ['NordVPN', 'site'], ['proton-free', 'site'],
+    ['IPv4', 'site'], ['warp', 'site'], ['NordVPN', 'site'], ['custom-vless', 'site'], ['custom-vless', 'ip'],
   ] as const;
   for (const [index, [outboundTag, kind]] of cases.entries()) {
     fireEvent.click(buttons[index]);

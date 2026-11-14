@@ -33,8 +33,7 @@ import { BalancersTab } from './balancers';
 import { cleanupOrphanedBalancerLoopbacks, ensureMissingBalancerLoopbacks, detectBalancerCycles } from './balancers/balancer-loopback';
 import { DnsTab } from './dns';
 import { WarpModal, NordModal } from './overrides';
-import { saveProtonOutbound } from '@/lib/xray/proton-routing';
-import ProtonModal from './overrides/ProtonModal';
+import OutboundFormModal from './outbounds/OutboundFormModal';
 import './XrayPage.css';
 
 const SECTION_SLUGS = ['basic', 'routing', 'outbound', 'balancer', 'dns', 'advanced'];
@@ -100,7 +99,8 @@ export default function XrayPage() {
 
   const [warpOpen, setWarpOpen] = useState(false);
   const [nordOpen, setNordOpen] = useState(false);
-  const [protonOpen, setProtonOpen] = useState(false);
+  const [customOutboundOpen, setCustomOutboundOpen] = useState(false);
+  const [customOutboundTag, setCustomOutboundTag] = useState<string>();
   const [advSettings, setAdvSettings] = useState<AdvKey>('xraySetting');
   const location = useLocation();
   const navigate = useNavigate();
@@ -242,7 +242,9 @@ export default function XrayPage() {
       case 'routing':
         return (
           <RoutingTab
-            onShowProton={() => setProtonOpen(true)}
+            onShowCustomOutbound={() => setCustomOutboundOpen(true)}
+            customOutboundTag={customOutboundTag}
+            onSelectCustomOutbound={setCustomOutboundTag}
             templateSettings={templateSettings}
             setTemplateSettings={setTemplateSettings}
             inboundTags={inboundTags}
@@ -270,7 +272,7 @@ export default function XrayPage() {
             onTestAll={testAllOutbounds}
             onShowWarp={() => setWarpOpen(true)}
             onShowNord={() => setNordOpen(true)}
-            onShowProton={() => setProtonOpen(true)}
+            onShowCustomOutbound={() => setCustomOutboundOpen(true)}
             onRefreshXrayData={fetchAll}
           />
         );
@@ -410,14 +412,18 @@ export default function XrayPage() {
           onResetOutbound={onResetOutbound}
           onRemoveOutbound={onRemoveOutboundByTag}
         />
-        <ProtonModal
-          open={protonOpen}
-          template={templateSettings}
-          reservedTags={[...subscriptionOutboundTags, ...clientReverseTags]}
-          onClose={() => setProtonOpen(false)}
-          onAdd={(outbound, legacyTag) => mutate(tt => {
-            saveProtonOutbound(tt, outbound, [...subscriptionOutboundTags, ...clientReverseTags], legacyTag);
-          })}
+        <OutboundFormModal
+          open={customOutboundOpen}
+          outbound={null}
+          custom
+          existingTags={[...(templateSettings?.outbounds ?? []).flatMap(o => o.tag ? [o.tag] : []), ...subscriptionOutboundTags, ...clientReverseTags]}
+          dialerProxyTags={[...(templateSettings?.outbounds ?? []).flatMap(o => o.tag && o.protocol !== 'blackhole' ? [o.tag] : []), ...subscriptionOutboundTags]}
+          onClose={() => setCustomOutboundOpen(false)}
+          onConfirm={outbound => {
+            onAddOutbound(outbound);
+            setCustomOutboundTag(String(outbound.tag));
+            setCustomOutboundOpen(false);
+          }}
         />
         <NordModal
           open={nordOpen}

@@ -1,4 +1,5 @@
 import type { XraySettingsValue } from '@/hooks/useXraySetting';
+import { renameCustomRouteMarker } from '@/lib/xray/custom-outbound-routing';
 import { blockedSettings, directSettings } from './constants';
 
 export const NORDVPN_OUTBOUND_TAG = 'NordVPN';
@@ -103,7 +104,10 @@ export function propagateOutboundTagRename(
   const rules = t.routing?.rules;
   if (Array.isArray(rules)) {
     for (const rule of rules) {
-      if (rule?.outboundTag === oldTag) rule.outboundTag = newTag;
+      if (rule?.outboundTag === oldTag) {
+        rule.outboundTag = newTag;
+        renameCustomRouteMarker(rule, newTag);
+      }
     }
   }
 

@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Select, Switch } from 'antd';
 
-import ProtonRouting from './ProtonRouting';
+import CustomOutboundRouting from './CustomOutboundRouting';
 import RoutingGeoSelect from './RoutingGeoSelect';
 import { SettingListItem } from '@/components/ui';
 import type { XraySettingsValue, SetTemplate } from '@/hooks/useXraySetting';
@@ -27,10 +27,14 @@ import {
 interface RoutingBasicProps {
   templateSettings: XraySettingsValue | null;
   setTemplateSettings: SetTemplate;
-  onShowProton?: () => void;
+  onShowCustomOutbound: () => void;
+  customOutboundTag?: string;
+  onSelectCustomOutbound: (tag: string) => void;
 }
 
-export default function RoutingBasic({ templateSettings, setTemplateSettings, onShowProton }: RoutingBasicProps) {
+export default function RoutingBasic({
+  templateSettings, setTemplateSettings, onShowCustomOutbound, customOutboundTag, onSelectCustomOutbound,
+}: RoutingBasicProps) {
   const { t } = useTranslation();
 
   const mutate = useCallback(
@@ -230,7 +234,9 @@ export default function RoutingBasic({ templateSettings, setTemplateSettings, on
           />
         }
       />
-      <ProtonRouting {...{ templateSettings, setTemplateSettings, onShowProton }} />
+      <CustomOutboundRouting
+        {...{ templateSettings, setTemplateSettings, onShowCustomOutbound, customOutboundTag, onSelectCustomOutbound }}
+      />
     </>
   );
 }

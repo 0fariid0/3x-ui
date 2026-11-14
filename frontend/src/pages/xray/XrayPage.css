@@ -39,15 +39,9 @@
 @media (max-width: 767px) {
   .xray-page .setting-list-item .ant-select,
   .xray-page .setting-list-item .ant-input,
-  .proton-config-modal input.ant-input,
-  .proton-config-modal textarea.ant-input,
+  .custom-outbound-modal input.ant-input,
   .geo-browser-modal input.ant-input {
     font-size: 16px;
-  }
-
-  .proton-config-modal textarea.ant-input {
-    max-width: 100%;
-    resize: vertical;
   }
 
   .xray-page .setting-list-item .ant-select-selection-item,

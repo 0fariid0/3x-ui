@@ -1,3 +1,8 @@
+## v3.9.27 — custom outbound quick controls
+
+- Replace the dedicated Proton controls with a generic outbound editor and per-outbound domain and IP routing with Geosite and GeoIP search.
+- Preserve existing saved outbounds and routing rules, including previously configured WireGuard connections.
+
 ## v3.9.26 — forwarding-only relay mode
 
 - Add `x-ui swap` to inspect, create, enable and remove a dedicated Linux swap file that persists across reboots.

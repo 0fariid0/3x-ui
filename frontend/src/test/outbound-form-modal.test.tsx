@@ -55,6 +55,18 @@ describe('OutboundFormModal', () => {
     }
   }, 30000); // iterates every protocol, re-rendering a heavy modal each time — slow on CI runners
 
+  it('keeps raw JSON fields for protocols not represented in the form', async () => {
+    const onConfirm = vi.fn();
+    const outbound = { tag: 'advanced', protocol: 'custom-protocol', settings: { customKey: 'test' },
+      streamSettings: { futureTransport: { x: true } } };
+    renderWithProviders(
+      <OutboundFormModal open outbound={outbound} existingTags={[]} onClose={vi.fn()} onConfirm={onConfirm} />,
+    );
+    const ok = document.querySelector('.ant-modal-footer .ant-btn-primary') as HTMLElement;
+    await act(async () => { fireEvent.click(ok); });
+    expect(onConfirm).toHaveBeenCalledWith(outbound);
+  });
+
   it('saves a vless reverse outbound while reverse sniffing stays disabled', async () => {
     const onConfirm = vi.fn();
     renderWithProviders(

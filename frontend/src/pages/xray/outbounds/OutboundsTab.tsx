@@ -90,7 +90,7 @@ interface OutboundsTabProps {
   onTestAll: (mode: string) => void;
   onShowWarp: () => void;
   onShowNord: () => void;
-  onShowProton?: () => void;
+  onShowCustomOutbound: () => void;
   onRefreshXrayData?: () => void;
 }
 
@@ -111,10 +111,11 @@ export default function OutboundsTab({
   onTestAll,
   onShowWarp,
   onShowNord,
-  onShowProton,
+  onShowCustomOutbound,
   onRefreshXrayData,
 }: OutboundsTabProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const customLabel = i18n.language?.startsWith('fa') ? 'خروجی سفارشی' : 'Custom outbound';
   const panelDateTime = usePanelDateTime();
   const [modal, modalContextHolder] = Modal.useModal();
   const [messageApi, messageContextHolder] = message.useMessage();
@@ -487,6 +488,9 @@ export default function OutboundsTab({
               <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>
                 {!isMobile && t('pages.xray.Outbounds')}
               </Button>
+              <Button icon={<PlusOutlined />} onClick={onShowCustomOutbound}>
+                {customLabel}
+              </Button>
               <Button icon={<CloudOutlined />} onClick={openSubManager}>
                 {t('pages.xray.outboundSub.manage')}
               </Button>
@@ -496,7 +500,6 @@ export default function OutboundsTab({
                   items: [
                     { key: 'warp', icon: <CloudOutlined />, label: 'WARP', onClick: onShowWarp },
                     { key: 'nord', icon: <ApiOutlined />, label: 'NordVPN', onClick: onShowNord },
-                    { key: 'proton', icon: <ApiOutlined />, label: "Proton VPN", disabled: !onShowProton, onClick: onShowProton },
                     { type: 'divider' },
                     { key: 'import', icon: <ImportOutlined />, label: t('pages.xray.importOutbounds'), onClick: () => setImportOpen(true) },
                     { key: 'export', icon: <ExportOutlined />, label: t('pages.xray.exportOutbounds'), disabled: outbounds.length === 0, onClick: exportOutbounds },
