@@ -7,6 +7,7 @@ import (
 	"github.com/xtls/xray-core/common/buf"
 	"github.com/xtls/xray-core/features/stats"
 	"github.com/xtls/xray-core/transport"
+	"github.com/xtls/xray-core/transport/pipe"
 	"sync"
 	"time"
 )
@@ -25,6 +26,13 @@ func (r *gateReader) ReadMultiBuffer() (buf.MultiBuffer, error) {
 }
 func (r *gateReader) Interrupt()   { common.Interrupt(r.Reader); r.done() }
 func (r *gateReader) Close() error { e := common.Close(r.Reader); r.done(); return e }
+
+// XUDPPipeReader exposes the pipe's temporary wake-up operation without
+// bypassing the gate for ordinary reads or interrupts.
+func (r *gateReader) XUDPPipeReader() *pipe.Reader {
+	reader, _ := r.Reader.(*pipe.Reader)
+	return reader
+}
 
 type gateWriter struct {
 	buf.Writer

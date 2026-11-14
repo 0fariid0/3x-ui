@@ -55,3 +55,17 @@ func TestGateClosesOnlyExactAuthenticatedStream(t *testing.T) {
 	}
 	_ = sessiongate.Default.Unblock("gate-a", "192.0.2.1")
 }
+
+func TestGateExposesUnderlyingXUDPPipe(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	r, w := pipe.New()
+	defer r.Interrupt()
+	defer w.Interrupt()
+	link := &transport.Link{Reader: r, Writer: w}
+	trackClientIP(ctx, nil, "gate-xudp", "192.0.2.44", link, false)
+	wrapped, ok := link.Reader.(interface{ XUDPPipeReader() *pipe.Reader })
+	if !ok || wrapped.XUDPPipeReader() != r {
+		t.Fatal("XUDP cannot detach from the gated dispatcher link")
+	}
+}

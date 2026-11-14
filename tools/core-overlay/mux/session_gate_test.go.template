@@ -1,0 +1,40 @@
+package mux
+
+import (
+	"testing"
+
+	"github.com/xtls/xray-core/common/buf"
+	"github.com/xtls/xray-core/transport/pipe"
+)
+
+type testXUDPReader struct{ buf.Reader }
+
+func (r testXUDPReader) XUDPPipeReader() *pipe.Reader { return r.Reader.(*pipe.Reader) }
+
+func TestXUDPCloseKeepsWrappedPipeReusable(t *testing.T) {
+	r, w := pipe.New()
+	defer r.Interrupt()
+	defer w.Interrupt()
+	manager := NewSessionManager()
+	xudp := &XUDP{Status: Active}
+	s := &Session{input: testXUDPReader{r}, output: w, XUDP: xudp, parent: manager, ID: 1}
+	if !manager.Add(s) {
+		t.Fatal("could not add session")
+	}
+	if err := s.Close(false); err != nil {
+		t.Fatal(err)
+	}
+	if !s.closed || manager.Size() != 0 || xudp.Status != Expiring {
+		t.Fatal("closed session was not detached")
+	}
+	b := buf.New()
+	b.WriteString("reuse")
+	if err := w.WriteMultiBuffer(buf.MultiBuffer{b}); err != nil {
+		t.Fatal(err)
+	}
+	mb, err := s.input.ReadMultiBuffer()
+	defer buf.ReleaseMulti(mb)
+	if err != nil || mb.String() != "reuse" {
+		t.Fatalf("wrapped pipe did not survive detach: %v", err)
+	}
+}

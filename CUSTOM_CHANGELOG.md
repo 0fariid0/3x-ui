@@ -1,3 +1,7 @@
+## v3.9.22 — fix Xray crash when XUDP closes
+
+- Preserve XUDP session detach and reuse with the per-account IP gate reader.
+
 ## v3.9.21 — geodata browser for basic routing
 
 - Add database search to blocked and direct IPs and domains, IPv4, WARP and NordVPN, using the same control as Proton VPN.
