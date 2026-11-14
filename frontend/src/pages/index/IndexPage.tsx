@@ -20,6 +20,7 @@ import AppSidebar from '@/layouts/AppSidebar';
 import { LazyMount } from '@/components/utility';
 import { setMessageInstance } from '@/utils/messageBus';
 import OverviewActionBar from './OverviewActionBar';
+import ClientOverviewCard from './ClientOverviewCard';
 import VitalTile from './VitalTile';
 import ThroughputCard from './ThroughputCard';
 import ConnectionsCard from './ConnectionsCard';
@@ -213,7 +214,7 @@ export default function IndexPage() {
                     </div>
                   )}
 
-                  <hr className="ov-rule" />
+                  <ClientOverviewCard />
 
                   <div className="ov-vitals">
                     <VitalTile

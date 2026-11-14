@@ -125,6 +125,7 @@
       }
     },
     "index": {
+      "openClients": "檢視使用者",
       "cpu": "CPU",
       "swap": "交換空間",
       "storage": "儲存",

@@ -125,6 +125,7 @@
       }
     },
     "index": {
+      "openClients": "Xem người dùng",
       "cpu": "CPU",
       "swap": "Swap",
       "storage": "Lưu trữ",

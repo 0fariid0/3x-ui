@@ -1,3 +1,8 @@
+## v3.9.20 — compact dashboard and client counters
+
+- Show global client totals, online, active, expiring, depleted and disabled counts on the overview, with a link to Clients.
+- Keep existing charts, traffic ranges, usage alerts and server details in a tighter mobile and desktop layout.
+
 ## v3.9.19 — stable Proton outbound
 
 - Import Proton into the fixed proton-free outbound, updating it in place. Basic Routing detects the outbound automatically.

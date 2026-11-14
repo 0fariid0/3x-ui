@@ -125,6 +125,7 @@
       }
     },
     "index": {
+      "openClients": "View clients",
       "cpu": "CPU",
       "swap": "Swap",
       "storage": "Storage",

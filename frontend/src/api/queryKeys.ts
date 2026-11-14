@@ -28,6 +28,7 @@ export const keys = {
   clients: {
     root: () => ['clients'] as const,
     list: (params: unknown) => ['clients', 'list', params] as const,
+    overview: () => ['clients', 'overview'] as const,
     all: () => ['clients', 'all'] as const,
     onlines: () => ['clients', 'onlines'] as const,
     onlinesByGuid: () => ['clients', 'onlinesByGuid'] as const,

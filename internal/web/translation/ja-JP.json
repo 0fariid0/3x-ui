@@ -125,6 +125,7 @@
       }
     },
     "index": {
+      "openClients": "ユーザーを表示",
       "cpu": "CPU",
       "swap": "スワップ",
       "storage": "ストレージ",

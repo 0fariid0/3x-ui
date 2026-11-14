@@ -125,6 +125,7 @@
       }
     },
     "index": {
+      "openClients": "查看用户",
       "cpu": "CPU",
       "swap": "交换空间",
       "storage": "存储",

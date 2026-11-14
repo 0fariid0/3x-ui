@@ -125,6 +125,7 @@
       }
     },
     "index": {
+      "openClients": "Lihat pengguna",
       "cpu": "CPU",
       "swap": "Swap",
       "storage": "Penyimpanan",

@@ -58,7 +58,7 @@ export default function VitalTile({
       <div className="ov-tile-chart">
         <Sparkline
           data={data}
-          height={isMobile ? 48 : 62}
+          height={isMobile ? 36 : 46}
           strokeWidth={1.5}
           fillOpacity={0.3}
           showGrid={false}

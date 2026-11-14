@@ -159,7 +159,7 @@ export default function ThroughputCard({ status, up, down, labels, isMobile }: T
           data={chartUp}
           data2={chartDown}
           labels={chartLabels}
-          height={isMobile ? 140 : 186}
+          height={isMobile ? 118 : 145}
           strokeWidth={1.75}
           fillOpacity={0.24}
           showTooltip

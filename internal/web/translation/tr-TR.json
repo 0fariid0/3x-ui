@@ -125,6 +125,7 @@
       }
     },
     "index": {
+      "openClients": "Kullanıcıları göster",
       "cpu": "CPU",
       "swap": "Takas",
       "storage": "Depolama",
