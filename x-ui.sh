@@ -3376,6 +3376,146 @@ migrate_db_prompt() {
     migrate_db "$input" "$output"
 }
 
+# Keep this separate from administrator-managed swap and require explicit consent.
+xui_swap_active() {
+    awk -v file="$1" 'NR > 1 && $1 == file { found = 1 } END { exit !found }' /proc/swaps
+}
+
+xui_swap_fstab() (
+    local action="$1" file="$2" fstab="$3" tmp
+    [[ -f "$fstab" && ! -L "$fstab" ]] || return 1
+    # Never change a separately managed entry, even if it points at our path.
+    if awk -v file="$file" '$1 == file && $NF != "x-ui-managed-swap" { found = 1 }
+        END { exit !found }' "$fstab"; then
+        return 1
+    fi
+    tmp=$(mktemp "${fstab}.x-ui.XXXXXX") || return 1
+    trap 'rm -f -- "$tmp"' EXIT
+    cp -a -- "$fstab" "$tmp" || return 1
+    awk -v file="$file" '$1 != file || $NF != "x-ui-managed-swap"' "$fstab" > "$tmp" || return 1
+    if [[ "$action" == add ]]; then
+        printf '%s none swap sw 0 0 # x-ui-managed-swap\n' "$file" >> "$tmp" || return 1
+    fi
+    mv -T -- "$tmp" "$fstab"
+)
+
+xui_swap_menu() (
+    local dir=/var/lib/x-ui-swap fstab=/etc/fstab file gib avail answer action
+    local active used mem_available
+    file="$dir/swapfile"
+    printf '\n'
+    free -h
+    swapon --show
+    echo "1. Create or enable x-ui swap"
+    echo "2. Disable and remove x-ui swap"
+    echo "0. Back"
+    read -rp "Choose [0-2]: " action || return 0
+    case "$action" in
+        1|2) ;;
+        *) return 0 ;;
+    esac
+    if [[ "$running_in_docker" == "true" || ! -r /proc/swaps || ! -f "$fstab" ]]; then
+        LOGE "Swap is managed on the Linux host. Run x-ui swap on the host."
+        return 1
+    fi
+    if [[ "$action" == 2 && ! -e "$dir" ]]; then
+        LOGI "No x-ui swap file to remove."
+        return 0
+    fi
+    if ! mkdir -m 700 -- "$dir" 2>/dev/null && [[ ! -d "$dir" ]]; then
+        LOGE "Could not create $dir."
+        return 1
+    fi
+    if [[ -L "$dir" || "$(stat -c '%u:%a' -- "$dir")" != "0:700" ]]; then
+        LOGE "$dir must be a root-owned directory with permissions 700."
+        return 1
+    fi
+    exec 9>"$dir/operation.lock" || return 1
+    flock -n 9 || { LOGE "Another x-ui swap operation is running."; return 1; }
+    if [[ -L "$file" || ( -e "$file" && ( ! -f "$file" || "$(stat -c '%u:%a:%h' -- "$file")" != "0:600:1" ) ) ]]; then
+        LOGE "Unexpected file at $file. No changes made."
+        return 1
+    fi
+    if awk -v file="$file" '$1 == file && $NF != "x-ui-managed-swap" { found = 1 }
+        END { exit !found }' "$fstab"; then
+        LOGE "$file already has an administrator-managed entry in $fstab."
+        return 1
+    fi
+    if [[ "$action" == 2 ]]; then
+        if xui_swap_active "$file"; then
+            used=$(awk -v file="$file" '$1 == file {print $4}' /proc/swaps)
+            mem_available=$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)
+            if [[ ! "$used" =~ ^[0-9]+$ || ! "$mem_available" =~ ^[0-9]+$ ]] ||
+                (( used > 0 && mem_available < used + 131072 )); then
+                LOGE "Not enough available RAM to safely remove this swap. Reduce memory use first."
+                return 1
+            fi
+        fi
+        read -rp "Disable and delete only $file? [y/N] " answer || return 0
+        [[ "$answer" =~ ^[yY]$ ]] || return 0
+        active=false
+        if xui_swap_active "$file"; then
+            swapoff "$file" || { LOGE "swapoff failed; the file and startup entry were kept."; return 1; }
+            active=true
+        fi
+        if ! xui_swap_fstab remove "$file" "$fstab"; then
+            if [[ "$active" == true ]]; then swapon "$file" || LOGE "Could not re-enable $file."; fi
+            LOGE "Could not update $fstab; the file was kept."
+            return 1
+        fi
+        rm -f -- "$file" || return 1
+        LOGI "x-ui swap removed. Other swap devices were left alone."
+        return 0
+    fi
+
+    if [[ -e "$file" ]]; then
+        if ! xui_swap_active "$file"; then
+            read -rp "Enable the existing x-ui swap file? [y/N] " answer || return 0
+            [[ "$answer" =~ ^[yY]$ ]] || return 0
+            swapon "$file" || return 1
+            if ! xui_swap_fstab add "$file" "$fstab"; then
+                swapoff "$file" || LOGE "Swap is still active but persistence failed."
+                return 1
+            fi
+        fi
+        LOGI "x-ui swap is active. To change its size, remove it and create it again."
+        swapon --show
+        return 0
+    fi
+    read -rp "Swap size in whole GiB (e.g. 1, 2, 3, 4, 6, 8): " gib || return 0
+    if [[ ! "$gib" =~ ^[1-9][0-9]{0,5}$ ]]; then
+        LOGE "Enter a positive whole number in GiB."
+        return 1
+    fi
+    case "$(stat -f -c %T -- "$dir")" in
+        btrfs|tmpfs|ramfs|overlayfs)
+            LOGE "This filesystem is not supported by x-ui swap management."
+            return 1
+            ;;
+    esac
+    avail=$(df -Pk -- "$dir" | awk 'NR == 2 {print $4}')
+    if [[ ! "$avail" =~ ^[0-9]+$ ]] || (( avail < gib * 1048576 + 1048576 )); then
+        LOGE "Not enough disk space; at least 1 GiB must remain free."
+        return 1
+    fi
+    read -rp "Create and enable ${gib} GiB of swap now and on startup? [y/N] " answer || return 0
+    [[ "$answer" =~ ^[yY]$ ]] || return 0
+    umask 077
+    # Clean up partial allocation, but never unlink a live swap file.
+    trap 'if ! xui_swap_active "$file"; then rm -f -- "$file"; fi' EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    dd if=/dev/zero of="$file" bs=1M count="$((gib * 1024))" conv=excl,fsync status=progress || return 1
+    mkswap "$file" && swapon "$file" || return 1
+    if ! xui_swap_fstab add "$file" "$fstab"; then
+        swapoff "$file" || LOGE "Swap is still active but persistence failed."
+        LOGE "Could not configure swap at startup."
+        return 1
+    fi
+    trap - EXIT INT TERM
+    swapon --show
+)
+
 show_usage() {
     echo -e "┌────────────────────────────────────────────────────────────────┐
 │  ${blue}x-ui control menu usages (subcommands):${plain}                       │
@@ -3395,6 +3535,7 @@ show_usage() {
 │  ${blue}x-ui update-dev${plain}            - Update to Dev channel (latest)   │
 │  ${blue}x-ui update-all-geofiles${plain}   - Update all geo files             │
 │  ${blue}x-ui migrateDB [file]${plain}      - Convert .db <-> .dump (SQLite)   │
+│  ${blue}x-ui swap${plain}                  - Manage Linux swap       │
 │  ${blue}x-ui pgclient [ver]${plain}        - Upgrade pg_dump/pg_restore tools │
 │  ${blue}x-ui legacy${plain}                - Legacy version                   │
 │  ${blue}x-ui install${plain}               - Install                          │
@@ -3441,10 +3582,11 @@ show_menu() {
 │  ${green}26.${plain} Enable BBR                               │
 │  ${green}27.${plain} Update Geo Files                         │
 │  ${green}28.${plain} Speedtest by Ookla                       │
+│  ${green}29.${plain} Swap Management                          │
 ╚────────────────────────────────────────────────╝
 "
     show_status
-    echo && read -rp "Please enter your selection [0-28]: " num
+    echo && read -rp "Please enter your selection [0-29]: " num
 
     case "${num}" in
         0)
@@ -3534,8 +3676,11 @@ show_menu() {
         28)
             run_speedtest
             ;;
+        29)
+            xui_swap_menu
+            ;;
         *)
-            LOGE "Please enter the correct number [0-28]"
+            LOGE "Please enter the correct number [0-29]"
             ;;
     esac
 }
@@ -3598,6 +3743,9 @@ if [[ $# > 0 ]]; then
             ;;
         "migrateDB")
             migrate_db "$2" "$3"
+            ;;
+        "swap")
+            xui_swap_menu
             ;;
         "pgclient")
             pg_upgrade_client "$2"

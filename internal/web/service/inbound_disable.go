@@ -5,6 +5,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 
@@ -237,6 +238,18 @@ func (s *InboundService) markClientsDisabledInSettings(tx *gorm.DB, inboundID in
 
 func trafficDisabledEmails(db *gorm.DB, emails []string) (map[string]struct{}, error) {
 	disabled := make(map[string]struct{})
+	// The same effective client set is used on hot edits and by the MTProto sidecar.
+	if len(emails) == 0 {
+		return disabled, nil
+	}
+	var row model.Setting
+	err := db.Where("key = ?", "relayLightMode").First(&row).Error
+	if err == nil && effectiveSettingValue("relayLightMode", row.Value) == "true" {
+		return disabled, nil
+	}
+	if err != nil && !database.IsNotFound(err) {
+		return nil, err
+	}
 	for _, batch := range chunkStrings(uniqueNonEmptyStrings(emails), sqlInChunk) {
 		var page []string
 		if err := db.Model(xray.ClientTraffic{}).

@@ -1,3 +1,10 @@
+## v3.9.26 — forwarding-only relay mode
+
+- Add `x-ui swap` to inspect, create, enable and remove a dedicated Linux swap file that persists across reboots.
+
+- Pause IP enforcement, traffic accounting, quota and expiry checks, access logging and optional background jobs in light relay mode. Preserve settings, routing, user management and the Xray watchdog.
+- Display only host CPU and RAM in the light dashboard. A running core restarts when switching modes.
+
 ## v3.9.25 — Xray restart diagnostics and light CPU display
 
 - Report early startup failures and show the core error directly on Overview. Refresh Xray state independently of host metric sampling.

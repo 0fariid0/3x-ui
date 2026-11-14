@@ -8,9 +8,13 @@ import (
 	"github.com/xtls/xray-core/features/stats"
 	"github.com/xtls/xray-core/transport"
 	"github.com/xtls/xray-core/transport/pipe"
+	"os"
 	"sync"
 	"time"
 )
+
+// A forwarding-only core does not allocate online-IP or account gate state.
+var relayMode = os.Getenv("FARA_CORE_RELAY_MODE") == "1"
 
 type gateReader struct {
 	buf.Reader
@@ -52,6 +56,9 @@ func (w *gateWriter) Interrupt()   { common.Interrupt(w.Writer); w.done() }
 // Track only the authenticated stream. Closing these links never closes the
 // shared listener, a different account, or the same account's other source IP.
 func trackClientIP(ctx context.Context, sm stats.Manager, email, ip string, link *transport.Link, trackOnline bool) {
+	if relayMode {
+		return
+	}
 	var om stats.OnlineMap
 	if trackOnline {
 		om, _ = sm.GetOrRegisterOnlineMap("user>>>" + email + ">>>online")

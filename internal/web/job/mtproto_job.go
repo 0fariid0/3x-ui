@@ -13,12 +13,15 @@ import (
 // and inbound traffic accounting.
 type MtprotoJob struct {
 	inboundService service.InboundService
+	relay          bool
 }
 
 // NewMtprotoJob creates a new mtproto reconcile/traffic job instance.
 func NewMtprotoJob() *MtprotoJob {
 	return new(MtprotoJob)
 }
+
+func NewRelayMtprotoJob() *MtprotoJob { return &MtprotoJob{relay: true} }
 
 // Run reconciles desired mtproto inbounds with running mtg processes and records
 // per-client traffic deltas and online status.
@@ -40,6 +43,9 @@ func (j *MtprotoJob) Run() {
 
 	mgr := mtproto.GetManager()
 	mgr.Reconcile(desired)
+	if j.relay {
+		return
+	}
 
 	deltas, onlineEmails := mgr.CollectTraffic()
 

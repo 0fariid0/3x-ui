@@ -36,10 +36,15 @@ func startGateCore(t *testing.T, bin string, cfg map[string]any, port int) {
 }
 func TestFaraCoreExactAccountIPLiveDisconnect(t *testing.T) {
 	for _, network := range []string{"tcp", "ws", "grpc"} {
-		t.Run(network, func(t *testing.T) { runFaraGateE2E(t, network) })
+		t.Run(network, func(t *testing.T) { runFaraGateE2E(t, network, false) })
 	}
 }
-func runFaraGateE2E(t *testing.T, network string) {
+func TestFaraCoreRelayForwardingAndUserManagement(t *testing.T) {
+	t.Setenv("FARA_CORE_RELAY_MODE", "1")
+	runFaraGateE2E(t, "tcp", true)
+}
+
+func runFaraGateE2E(t *testing.T, network string, relay bool) {
 	bin := os.Getenv("FARA_CORE_BINARY")
 	if bin == "" {
 		t.Skip("set FARA_CORE_BINARY to the bundled patched core")
@@ -53,12 +58,17 @@ func runFaraGateE2E(t *testing.T, network string) {
 		stream["grpcSettings"] = map[string]any{"serviceName": "gate-test"}
 	}
 	ids := []string{"11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"}
-	startGateCore(t, bin, map[string]any{
-		"log": map[string]any{"loglevel": "warning"}, "api": map[string]any{"services": []string{"StatsService"}, "tag": "api"}, "stats": map[string]any{},
+	serverConfig := map[string]any{
+		"log": map[string]any{"loglevel": "warning"}, "api": map[string]any{"services": []string{"StatsService", "HandlerService"}, "tag": "api"}, "stats": map[string]any{},
 		"policy":    map[string]any{"levels": map[string]any{"0": map[string]any{"statsUserOnline": true, "statsUserDownlink": true, "statsUserUplink": true}}},
-		"inbounds":  []any{map[string]any{"listen": "127.0.0.1", "port": apiPort, "protocol": "tunnel", "tag": "api", "settings": map[string]any{"rewriteAddress": "127.0.0.1"}}, map[string]any{"listen": "127.0.0.1", "port": inPort, "protocol": "vless", "sniffing": map[string]any{"enabled": true, "destOverride": []string{"http", "tls"}, "routeOnly": true}, "streamSettings": stream, "settings": map[string]any{"decryption": "none", "clients": []any{map[string]any{"id": ids[0], "email": "account-a"}, map[string]any{"id": ids[1], "email": "account-b"}}}}},
+		"inbounds":  []any{map[string]any{"listen": "127.0.0.1", "port": apiPort, "protocol": "tunnel", "tag": "api", "settings": map[string]any{"rewriteAddress": "127.0.0.1"}}, map[string]any{"listen": "127.0.0.1", "port": inPort, "protocol": "vless", "tag": "relay-test", "sniffing": map[string]any{"enabled": true, "destOverride": []string{"http", "tls"}, "routeOnly": true}, "streamSettings": stream, "settings": map[string]any{"decryption": "none", "clients": []any{map[string]any{"id": ids[0], "email": "account-a"}, map[string]any{"id": ids[1], "email": "account-b"}}}}},
 		"outbounds": []any{map[string]any{"protocol": "freedom", "tag": "direct", "settings": map[string]any{"finalRules": []any{map[string]any{"action": "allow", "ip": []string{"127.0.0.0/8"}}}}}}, "routing": map[string]any{"rules": []any{map[string]any{"type": "field", "inboundTag": []string{"api"}, "outboundTag": "api"}}},
-	}, apiPort)
+	}
+	if relay {
+		delete(serverConfig, "stats")
+		delete(serverConfig, "policy")
+	}
+	startGateCore(t, bin, serverConfig, apiPort)
 	api := new(XrayAPI)
 	if e := api.Init(apiPort); e != nil {
 		t.Fatal(e)
@@ -125,6 +135,18 @@ func runFaraGateE2E(t *testing.T, network string) {
 		if e := exchange(c); e != nil {
 			t.Fatalf("initial stream %d: %v", i, e)
 		}
+	}
+	if relay {
+		if err := api.RemoveUser("relay-test", "account-a"); err != nil {
+			t.Fatal(err)
+		}
+		if err := api.AddUser("vless", "relay-test", map[string]any{"email": "account-a", "id": ids[0]}); err != nil {
+			t.Fatal(err)
+		}
+		if err := exchange(dial(0)); err != nil {
+			t.Fatalf("traffic after editing account: %v", err)
+		}
+		return
 	}
 	for i := 0; i < 3; i++ {
 		if e := exchange(streams[0]); e != nil {

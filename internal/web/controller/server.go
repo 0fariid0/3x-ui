@@ -116,7 +116,9 @@ func (a *ServerController) startTask(relay bool) {
 		if !relay {
 			a.xrayMetricsService.Sample(time.Now())
 		}
-		websocket.BroadcastStatus(status)
+		if !relay {
+			websocket.BroadcastStatus(status)
+		}
 	})
 	if relay {
 		return
@@ -134,6 +136,10 @@ func (a *ServerController) status(c *gin.Context) {
 }
 
 func (a *ServerController) getFail2banStatus(c *gin.Context) {
+	if a.relayLightMode {
+		jsonObj(c, service.Fail2banStatus{}, nil)
+		return
+	}
 	jsonObj(c, a.serverService.GetFail2banStatus(), nil)
 }
 

@@ -1350,7 +1350,7 @@ export const sections: readonly Section[] = [
       {
         method: 'POST',
         path: '/panel/api/setting/relayLightMode',
-        summary: 'Save the relay mode preference with explicit confirmation (JSON or URL-encoded form). A changed value reloads the panel and subscription server without restarting Xray.',
+        summary: 'Save the relay mode preference with explicit confirmation (JSON or URL-encoded form). A changed value reloads the panel and applies the core profile. A running core restarts once if its profile changes.',
         body: '{"enabled":true,"confirmed":true}',
         response: '{"success":true,"obj":{"enabled":true,"restarting":true}}',
       },

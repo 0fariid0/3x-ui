@@ -728,7 +728,9 @@
 }
 
 .ov-relay-cpu {
-  display: inline-block;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem 1rem;
   margin-block-start: 4px;
   font-variant-numeric: tabular-nums;
 }

@@ -137,6 +137,13 @@ func changeScopedIPBlock(ctx context.Context, req entity.IPBlockChange, source s
 	if err != nil {
 		return nil, err
 	}
+	if req.Action == "ban" {
+		if relay, err := (&SettingService{}).GetRelayLightMode(); err != nil {
+			return nil, err
+		} else if relay {
+			return nil, fmt.Errorf("IP blocking is paused in relay light mode")
+		}
+	}
 	if req.Action == "ban" && IsIPBlockExempt(ip, policy) {
 		return nil, fmt.Errorf("IP is exempt")
 	}

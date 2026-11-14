@@ -200,7 +200,7 @@ export default function IndexPage() {
                   <OverviewActionBar
                     status={status}
                     isMobile={isMobile}
-                    accessLogEnable={accessLogEnable}
+                    accessLogEnable={accessLogEnable && !status.relayLightMode}
                     panelVersion={displayVersion}
                     latestVersion={panelUpdateInfo.latestVersion}
                     updateAvailable={panelUpdateInfo.updateAvailable}
@@ -231,13 +231,18 @@ export default function IndexPage() {
                     </div>
                   )}
 
-                  <ClientOverviewCard />
+                  {!status.relayLightMode && <ClientOverviewCard />}
 
                   {status.relayLightMode ? (
                     <Alert showIcon type="info" title={t('pages.settings.relayLightMode')}
                       description={<>
                         <div>{t('pages.settings.relayLightModeActive')}</div>
-                        <span className="ov-relay-cpu">{t('pages.index.cpu')}: <strong dir="ltr">{status.cpu.percent.toFixed(0)}%</strong></span>
+                        <div className="ov-relay-cpu">
+                          <span>{t('pages.index.cpu')}: <strong dir="ltr">{status.cpu.percent.toFixed(0)}%</strong></span>
+                          <span>{t('pages.index.memory')}: <strong dir="ltr">{status.mem.total > 0
+                            ? `${SizeFormatter.sizeFormat(status.mem.current)} / ${SizeFormatter.sizeFormat(status.mem.total)} (${status.mem.percent.toFixed(0)}%)`
+                            : '—'}</strong></span>
+                        </div>
                       </>}
                       action={<Button size="small" onClick={() => navigate('/settings')}>{t('menu.settings')}</Button>} />
                   ) : <>

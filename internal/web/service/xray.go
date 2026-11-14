@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/mhsanaei/3x-ui/v3/internal/config"
+	"github.com/mhsanaei/3x-ui/v3/internal/database"
 	"github.com/mhsanaei/3x-ui/v3/internal/database/model"
 	"github.com/mhsanaei/3x-ui/v3/internal/logger"
 	"github.com/mhsanaei/3x-ui/v3/internal/util/json_util"
@@ -174,18 +175,33 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		return nil, err
 	}
 	xrayConfig.LogConfig = resolveXrayLogPaths(xrayConfig.LogConfig)
-	xrayConfig.LogConfig = ensureClientRuntimeAccessLog(xrayConfig.LogConfig)
 	xrayConfig.API = ensureAPIServices(xrayConfig.API)
-	xrayConfig.Policy = ensureStatsPolicy(xrayConfig.Policy)
+	relay, err := s.settingService.GetRelayLightMode()
+	if err != nil {
+		return nil, fmt.Errorf("read relay mode: %w", err)
+	}
+	if relay {
+		applyRelayRuntimeConfig(xrayConfig)
+	} else {
+		xrayConfig.LogConfig = ensureClientRuntimeAccessLog(xrayConfig.LogConfig)
+		xrayConfig.Policy = ensureStatsPolicy(xrayConfig.Policy)
+	}
 	xrayConfig.RouterConfig = stripDisabledRules(xrayConfig.RouterConfig)
 	// Template outbounds authored before the xray-core #6258 XHTTP rename may
 	// still carry sessionPlacement/sessionKey; lift them too (same reason as
 	// the per-inbound lift below).
 	xrayConfig.OutboundConfigs = liftOutboundsXhttpSessionIDKeys(xrayConfig.OutboundConfigs)
 
-	_, _, _ = s.inboundService.AddTraffic(nil, nil)
+	if !relay {
+		_, _, _ = s.inboundService.AddTraffic(nil, nil)
+	}
 
-	inbounds, err := s.inboundService.GetAllInbounds()
+	var inbounds []*model.Inbound
+	if relay {
+		err = database.GetDB().Where("enable = ? AND node_id IS NULL", true).Find(&inbounds).Error
+	} else {
+		inbounds, err = s.inboundService.GetAllInbounds()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +233,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		var wgPeers []any
 		for i := range dbClients {
 			c := dbClients[i]
-			if enable, exists := enableMap[c.Email]; exists && !enable {
+			if enable, exists := enableMap[c.Email]; !relay && exists && !enable {
 				logger.Infof("Remove Inbound User %s due to expiration or traffic limit", c.Email)
 				continue
 			}
@@ -1144,7 +1160,7 @@ func (s *XrayService) RestartXray(isForce bool) (resultErr error) {
 			// succeeded, so the status page has to carry the stale state.
 			return fmt.Errorf("xray %s", refused)
 		}
-		if !isForce && !configUnchanged && s.tryHotApply(process, xrayConfig) {
+		if !isForce && !configUnchanged && process.GetConfig().RelayLightMode == xrayConfig.RelayLightMode && s.tryHotApply(process, xrayConfig) {
 			logger.Info("Xray config changes applied through the core API, no restart needed")
 			return nil
 		}

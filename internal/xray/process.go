@@ -670,6 +670,11 @@ func (p *process) Start() (err error) {
 	}
 
 	cmd := exec.CommandContext(context.Background(), GetBinaryPath(), "-c", configPath)
+	relayFlag := "0"
+	if p.config.RelayLightMode {
+		relayFlag = "1"
+	}
+	cmd.Env = append(os.Environ(), "FARA_CORE_RELAY_MODE="+relayFlag)
 	cmd.Stdout = p.logWriter
 	cmd.Stderr = p.logWriter
 

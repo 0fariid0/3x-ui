@@ -99,6 +99,7 @@ type CheckXrayRunningJob struct {
 	policy         xrayHealthPolicy
 	policyLoadedAt time.Time
 	lastSkipReason string
+	relay          bool
 }
 
 // NewCheckXrayRunningJob creates a new Xray health check job instance.
@@ -108,6 +109,13 @@ func NewCheckXrayRunningJob(xrayService *service.XrayService, settingService *se
 		settingService: settingService,
 		policy:         defaultXrayHealthPolicy(),
 	}
+}
+
+// Relay mode reads the restart policy only after a crash, avoiding a
+// periodic full settings query while the forwarding core is healthy.
+func (j *CheckXrayRunningJob) WithRelayMode(relay bool) *CheckXrayRunningJob {
+	j.relay = relay
+	return j
 }
 
 func (j *CheckXrayRunningJob) loadPolicy(now time.Time) xrayHealthPolicy {
@@ -147,8 +155,12 @@ func (j *CheckXrayRunningJob) Run() {
 	defer j.mu.Unlock()
 
 	now := time.Now()
-	policy := j.loadPolicy(now)
-	shouldRestart, reason := j.state.shouldRestart(now, j.xrayService.DidXrayCrash(), policy)
+	crashed := j.xrayService.DidXrayCrash()
+	policy := j.policy
+	if !j.relay || crashed {
+		policy = j.loadPolicy(now)
+	}
+	shouldRestart, reason := j.state.shouldRestart(now, crashed, policy)
 	if !shouldRestart {
 		if reason != "" && reason != "waiting for consecutive failure confirmation" && reason != j.lastSkipReason {
 			logger.Warning("xray health monitor:", reason)

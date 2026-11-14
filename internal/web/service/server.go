@@ -493,6 +493,19 @@ func (s *ServerService) getStatus(lastStatus *Status, relay bool) *Status {
 		status.Cpu = util
 	}
 
+	if relay {
+		if memory, err := mem.VirtualMemory(); err == nil {
+			status.Mem.Current = memory.Total - min(memory.Total, memory.Available)
+			status.Mem.Total = memory.Total
+		}
+		s.fillXrayStatus(status)
+		status.PanelVersion = config.GetPanelVersion()
+		if guid, err := s.settingService.GetPanelGuid(); err == nil {
+			status.PanelGuid = guid
+		}
+		return status
+	}
+
 	status.CpuCores, err = cpu.Counts(false)
 	if err != nil {
 		logger.Warning("get cpu cores count failed:", err)
@@ -560,96 +573,93 @@ func (s *ServerService) getStatus(lastStatus *Status, relay bool) *Status {
 		status.Disk.Total = diskInfo.Total
 	}
 
-	if !relay {
-		diskIOStats, err := disk.IOCounters()
-		if err != nil {
-			logger.Warning("get disk io counters failed:", err)
-		} else {
-			var totalRead, totalWrite uint64
-			for _, counter := range diskIOStats {
-				totalRead += counter.ReadBytes
-				totalWrite += counter.WriteBytes
-			}
-			status.DiskTraffic.Read = totalRead
-			status.DiskTraffic.Write = totalWrite
+	diskIOStats, err := disk.IOCounters()
+	if err != nil {
+		logger.Warning("get disk io counters failed:", err)
+	} else {
+		var totalRead, totalWrite uint64
+		for _, counter := range diskIOStats {
+			totalRead += counter.ReadBytes
+			totalWrite += counter.WriteBytes
+		}
+		status.DiskTraffic.Read = totalRead
+		status.DiskTraffic.Write = totalWrite
 
-			if lastStatus != nil {
-				duration := now.Sub(lastStatus.T)
-				seconds := float64(duration) / float64(time.Second)
-				if seconds > 0 && status.DiskTraffic.Read >= lastStatus.DiskTraffic.Read {
-					status.DiskIO.Read = uint64(float64(status.DiskTraffic.Read-lastStatus.DiskTraffic.Read) / seconds)
-				}
-				if seconds > 0 && status.DiskTraffic.Write >= lastStatus.DiskTraffic.Write {
-					status.DiskIO.Write = uint64(float64(status.DiskTraffic.Write-lastStatus.DiskTraffic.Write) / seconds)
-				}
+		if lastStatus != nil {
+			duration := now.Sub(lastStatus.T)
+			seconds := float64(duration) / float64(time.Second)
+			if seconds > 0 && status.DiskTraffic.Read >= lastStatus.DiskTraffic.Read {
+				status.DiskIO.Read = uint64(float64(status.DiskTraffic.Read-lastStatus.DiskTraffic.Read) / seconds)
+			}
+			if seconds > 0 && status.DiskTraffic.Write >= lastStatus.DiskTraffic.Write {
+				status.DiskIO.Write = uint64(float64(status.DiskTraffic.Write-lastStatus.DiskTraffic.Write) / seconds)
 			}
 		}
-
-		// Load averages
-		avgState, err := load.Avg()
-		if err != nil {
-			logger.Warning("get load avg failed:", err)
-		} else {
-			status.Loads = []float64{avgState.Load1, avgState.Load5, avgState.Load15}
-		}
-
-		// Network stats
-		ioStats, err := net.IOCounters(true)
-		if err != nil {
-			logger.Warning("get io counters failed:", err)
-		} else {
-			var totalSent, totalRecv, totalPktSent, totalPktRecv uint64
-			for _, iface := range ioStats {
-				name := strings.ToLower(iface.Name)
-				if isVirtualInterface(name) {
-					continue
-				}
-				totalSent += iface.BytesSent
-				totalRecv += iface.BytesRecv
-				totalPktSent += iface.PacketsSent
-				totalPktRecv += iface.PacketsRecv
-			}
-			status.NetTraffic.Sent = totalSent
-			status.NetTraffic.Recv = totalRecv
-			status.NetTraffic.PktSent = totalPktSent
-			status.NetTraffic.PktRecv = totalPktRecv
-
-			if lastStatus != nil {
-				duration := now.Sub(lastStatus.T)
-				seconds := float64(duration) / float64(time.Second)
-				if seconds > 0 && status.NetTraffic.Sent >= lastStatus.NetTraffic.Sent {
-					status.NetTrafficDelta.Sent = status.NetTraffic.Sent - lastStatus.NetTraffic.Sent
-					status.NetIO.Up = uint64(float64(status.NetTrafficDelta.Sent) / seconds)
-				}
-				if seconds > 0 && status.NetTraffic.Recv >= lastStatus.NetTraffic.Recv {
-					status.NetTrafficDelta.Recv = status.NetTraffic.Recv - lastStatus.NetTraffic.Recv
-					status.NetIO.Down = uint64(float64(status.NetTrafficDelta.Recv) / seconds)
-				}
-				if seconds > 0 && status.NetTraffic.PktSent >= lastStatus.NetTraffic.PktSent {
-					status.NetIO.PktUp = uint64(float64(status.NetTraffic.PktSent-lastStatus.NetTraffic.PktSent) / seconds)
-				}
-				if seconds > 0 && status.NetTraffic.PktRecv >= lastStatus.NetTraffic.PktRecv {
-					status.NetIO.PktDown = uint64(float64(status.NetTraffic.PktRecv-lastStatus.NetTraffic.PktRecv) / seconds)
-				}
-			}
-		}
-
-		// TCP/UDP connections
-		status.TcpCount, err = sys.GetTCPCount()
-		if err != nil {
-			logger.Warning("get tcp connections failed:", err)
-		}
-
-		status.UdpCount, err = sys.GetUDPCount()
-		if err != nil {
-			logger.Warning("get udp connections failed:", err)
-		}
-
-		s.resolvePublicIPs()
-		status.PublicIP.IPv4 = s.cachedIPv4
-		status.PublicIP.IPv6 = s.cachedIPv6
-
 	}
+
+	// Load averages
+	avgState, err := load.Avg()
+	if err != nil {
+		logger.Warning("get load avg failed:", err)
+	} else {
+		status.Loads = []float64{avgState.Load1, avgState.Load5, avgState.Load15}
+	}
+
+	// Network stats
+	ioStats, err := net.IOCounters(true)
+	if err != nil {
+		logger.Warning("get io counters failed:", err)
+	} else {
+		var totalSent, totalRecv, totalPktSent, totalPktRecv uint64
+		for _, iface := range ioStats {
+			name := strings.ToLower(iface.Name)
+			if isVirtualInterface(name) {
+				continue
+			}
+			totalSent += iface.BytesSent
+			totalRecv += iface.BytesRecv
+			totalPktSent += iface.PacketsSent
+			totalPktRecv += iface.PacketsRecv
+		}
+		status.NetTraffic.Sent = totalSent
+		status.NetTraffic.Recv = totalRecv
+		status.NetTraffic.PktSent = totalPktSent
+		status.NetTraffic.PktRecv = totalPktRecv
+
+		if lastStatus != nil {
+			duration := now.Sub(lastStatus.T)
+			seconds := float64(duration) / float64(time.Second)
+			if seconds > 0 && status.NetTraffic.Sent >= lastStatus.NetTraffic.Sent {
+				status.NetTrafficDelta.Sent = status.NetTraffic.Sent - lastStatus.NetTraffic.Sent
+				status.NetIO.Up = uint64(float64(status.NetTrafficDelta.Sent) / seconds)
+			}
+			if seconds > 0 && status.NetTraffic.Recv >= lastStatus.NetTraffic.Recv {
+				status.NetTrafficDelta.Recv = status.NetTraffic.Recv - lastStatus.NetTraffic.Recv
+				status.NetIO.Down = uint64(float64(status.NetTrafficDelta.Recv) / seconds)
+			}
+			if seconds > 0 && status.NetTraffic.PktSent >= lastStatus.NetTraffic.PktSent {
+				status.NetIO.PktUp = uint64(float64(status.NetTraffic.PktSent-lastStatus.NetTraffic.PktSent) / seconds)
+			}
+			if seconds > 0 && status.NetTraffic.PktRecv >= lastStatus.NetTraffic.PktRecv {
+				status.NetIO.PktDown = uint64(float64(status.NetTraffic.PktRecv-lastStatus.NetTraffic.PktRecv) / seconds)
+			}
+		}
+	}
+
+	// TCP/UDP connections
+	status.TcpCount, err = sys.GetTCPCount()
+	if err != nil {
+		logger.Warning("get tcp connections failed:", err)
+	}
+
+	status.UdpCount, err = sys.GetUDPCount()
+	if err != nil {
+		logger.Warning("get udp connections failed:", err)
+	}
+
+	s.resolvePublicIPs()
+	status.PublicIP.IPv4 = s.cachedIPv4
+	status.PublicIP.IPv6 = s.cachedIPv6
 
 	s.fillXrayStatus(status)
 	status.PanelVersion = config.GetPanelVersion()

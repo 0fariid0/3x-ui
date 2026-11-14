@@ -364,18 +364,32 @@ func (s *Server) startTask(restartXray bool, loc *time.Location) {
 			logger.Warning("start xray failed:", err)
 		}
 	}
-	// A full scheduled panel restart stores a durable follow-up flag before the
-	// old process exits. The replacement process consumes that flag and performs
-	// a second, explicit Xray restart after the panel has had time to settle.
-	go s.completeScheduledPanelRestart()
-
-	// Check whether xray is running every second
-	_, _ = s.cron.AddJob(cadenceXrayRunning, job.NewCheckXrayRunningJob(&s.xrayService, &s.settingService))
-
-	// Check if xray needs to be restarted every 30 seconds
+	// Keep the watchdog and applying edits even on a forwarding-only host.
+	healthCadence := cadenceXrayRunning
+	if s.relayLightMode {
+		healthCadence = "@every 5s"
+	}
+	_, _ = s.cron.AddJob(healthCadence, job.NewCheckXrayRunningJob(&s.xrayService, &s.settingService).WithRelayMode(s.relayLightMode))
 	_, _ = s.cron.AddFunc(cadenceXrayRestart, func() {
 		s.xrayService.ApplyPendingRestart()
 	})
+
+	if !restartXray {
+		// A panel-only reload follows the mode toggle. Restart the core once
+		// only if its running mode differs, and honor a deliberate stop.
+		if err := s.xrayService.ApplyRelayMode(s.relayLightMode); err != nil {
+			logger.Warning("apply Xray relay mode failed:", err)
+		}
+	}
+
+	// Prevent existing access/error logs from growing indefinitely.
+	_, _ = s.cron.AddJob(cadenceXrayLogPrune, job.NewPruneXrayLogsJob())
+	if s.relayLightMode {
+		// MTProto inbounds require their existing data-plane sidecar.
+		_, _ = s.cron.AddJob(cadenceMtproto, job.NewRelayMtprotoJob())
+		return
+	}
+	go s.completeScheduledPanelRestart()
 
 	scheduledRestart := &scheduledRestartState{}
 	_, _ = s.cron.AddFunc(cadenceScheduledRestart, func() {
@@ -465,7 +479,7 @@ func (s *Server) startTask(restartXray bool, loc *time.Location) {
 
 	go func() {
 		time.Sleep(time.Second * 5)
-		_, _ = s.cron.AddJob(cadenceXrayTraffic, job.NewXrayTrafficJob(s.relayLightMode))
+		_, _ = s.cron.AddJob(cadenceXrayTraffic, job.NewXrayTrafficJob(false))
 	}()
 
 	// Reconcile mtproto (mtg) sidecars and scrape their traffic
@@ -475,11 +489,7 @@ func (s *Server) startTask(restartXray bool, loc *time.Location) {
 
 	// check client ips from log file every 10 sec
 	_, _ = s.cron.AddJob(cadenceClientIPScan, job.NewCheckClientIpJob())
-	destinationCadence := cadenceXrayTraffic
-	if s.relayLightMode {
-		destinationCadence = "@every 15s"
-	}
-	_, _ = s.cron.AddJob(destinationCadence, job.NewClientDestinationJob(s.relayLightMode))
+	_, _ = s.cron.AddJob(cadenceXrayTraffic, job.NewClientDestinationJob(false))
 
 	_, _ = s.cron.AddJob(cadenceNodeHeartbeat, job.NewNodeHeartbeatJob())
 
@@ -498,10 +508,7 @@ func (s *Server) startTask(restartXray bool, loc *time.Location) {
 
 	// check client ips from log file every day
 	_, _ = s.cron.AddJob("@daily", job.NewClearLogsJob())
-	_, _ = s.cron.AddJob(cadenceXrayLogPrune, job.NewPruneXrayLogsJob())
-	if !s.relayLightMode {
-		_, _ = s.cron.AddJob("@hourly", job.NewWarpIpJob())
-	}
+	_, _ = s.cron.AddJob("@hourly", job.NewWarpIpJob())
 
 	// Inbound traffic reset jobs
 	// Run every hour

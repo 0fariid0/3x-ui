@@ -207,6 +207,13 @@ func (s *IPBlockService) Status(ctx context.Context) (*entity.IPBlockStatus, err
 }
 
 func (s *IPBlockService) Change(ctx context.Context, req entity.IPBlockChange) (*entity.IPBlockStatus, error) {
+	if req.Action == "ban" {
+		if relay, err := (&SettingService{}).GetRelayLightMode(); err != nil {
+			return nil, err
+		} else if relay {
+			return nil, fmt.Errorf("IP blocking is paused in relay light mode")
+		}
+	}
 	if req.Scope == "client" {
 		return ChangeScopedIPBlock(ctx, req)
 	}

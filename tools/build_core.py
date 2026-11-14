@@ -23,7 +23,7 @@ try:
  p=src/'app/dispatcher/default.go';s=p.read_text()
  s=s.replace('"github.com/xtls/xray-core/common"','"github.com/xtls/xray-core/common"\n "github.com/xtls/xray-core/app/stats/sessiongate"',1)
  for function in ['Dispatch(ctx context.Context, destination net.Destination) (*transport.Link, error)', 'DispatchLink(ctx context.Context, destination net.Destination, outbound *transport.Link) error']:
-  needle='func (d *DefaultDispatcher) '+function+' {';assert s.count(needle)==1;s=s.replace(needle,needle+'\n ctx=sessiongate.WithStream(ctx)')
+  needle='func (d *DefaultDispatcher) '+function+' {';assert s.count(needle)==1;s=s.replace(needle,needle+'\n if !relayMode {ctx=sessiongate.WithStream(ctx)}')
  old='''if p.Stats.UserOnline {
 			trackOnlineIP(ctx, d.stats, user.Email, sessionInbound.Source.Address.String())
 		}'''
@@ -65,6 +65,6 @@ try:
  else:
   output=Path(sys.argv[1]).resolve();output.parent.mkdir(parents=True,exist_ok=True)
   shutil.copyfile(src/'LICENSE',output.parent/'LICENSE.xray')
-  (output.parent/'CORE_SOURCE.txt').write_text('Xray core '+version+'\n'+meta['Sum']+'\nSource: https://github.com/XTLS/Xray-core/tree/5ca6f4b7d4dc\nFara modifications: https://github.com/0fariid0/3x-ui/tree/v3.9.25/tools/core-overlay\nShared gate source: https://github.com/0fariid0/3x-ui/tree/v3.9.25/internal/util/sessiongate\n')
-  subprocess.run([go,'build','-trimpath','-ldflags=-s -w -X github.com/xtls/xray-core/core.build=Fara-3.9.25','-o',str(output),'./main'],cwd=src,env=env,check=True)
+  (output.parent/'CORE_SOURCE.txt').write_text('Xray core '+version+'\n'+meta['Sum']+'\nSource: https://github.com/XTLS/Xray-core/tree/5ca6f4b7d4dc\nFara modifications: https://github.com/0fariid0/3x-ui/tree/v3.9.26/tools/core-overlay\nShared gate source: https://github.com/0fariid0/3x-ui/tree/v3.9.26/internal/util/sessiongate\n')
+  subprocess.run([go,'build','-trimpath','-ldflags=-s -w -X github.com/xtls/xray-core/core.build=Fara-3.9.26','-o',str(output),'./main'],cwd=src,env=env,check=True)
 finally:shutil.rmtree(work)
