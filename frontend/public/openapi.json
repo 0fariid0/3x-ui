@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.9.28",
+    "version": "3.9.29",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -5729,6 +5729,128 @@
                       "load5": 0.3,
                       "load15": 0.2
                     }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/server/siteProbes": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Read the ordered dashboard site list, latest HTTP results and whether a batch is running.",
+        "operationId": "get_panel_api_server_siteProbes",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/server/siteProbes/save": {
+      "post": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Replace the dashboard site list (up to 12 public HTTP(S) addresses).",
+        "operationId": "post_panel_api_server_siteProbes_save",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "targets": [
+                  {
+                    "url": "https://www.google.com/generate_204",
+                    "name": "Google",
+                    "starred": true
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/server/siteProbes/run": {
+      "post": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Start a background check through the live Xray routes and directly. Pass a saved URL to check only that site, or use an empty URL to check all.",
+        "operationId": "post_panel_api_server_siteProbes_run",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "url": ""
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
                   }
                 }
               }

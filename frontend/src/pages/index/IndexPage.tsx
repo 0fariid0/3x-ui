@@ -21,6 +21,7 @@ import { LazyMount } from '@/components/utility';
 import { setMessageInstance } from '@/utils/messageBus';
 import OverviewActionBar from './OverviewActionBar';
 import ClientOverviewCard from './ClientOverviewCard';
+import SiteProbeCard from './SiteProbeCard';
 import VitalTile from './VitalTile';
 import ThroughputCard from './ThroughputCard';
 import ConnectionsCard from './ConnectionsCard';
@@ -232,6 +233,7 @@ export default function IndexPage() {
                   )}
 
                   {!status.relayLightMode && <ClientOverviewCard />}
+                  <SiteProbeCard />
 
                   {status.relayLightMode ? (
                     <Alert showIcon type="info" title={t('pages.settings.relayLightMode')}

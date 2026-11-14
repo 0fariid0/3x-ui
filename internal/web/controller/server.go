@@ -51,6 +51,9 @@ func NewServerController(g *gin.RouterGroup) *ServerController {
 // initRouter sets up the routes for server status, Xray management, and utility endpoints.
 func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.GET("/status", a.status)
+	g.GET("/siteProbes", a.getSiteProbes)
+	g.POST("/siteProbes/save", a.saveSiteProbes)
+	g.POST("/siteProbes/run", a.runSiteProbes)
 	g.GET("/cpuHistory/:bucket", a.getCpuHistoryBucket)
 	g.GET("/history/:metric/:bucket", a.getMetricHistoryBucket)
 	g.GET("/trafficHistory", a.getTrafficHistory)
@@ -102,6 +105,11 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 // less frequent and avoids the history and detailed Xray metric samplers.
 func (a *ServerController) startTask(relay bool) {
 	c := global.GetWebServer().GetCron()
+	_, _ = c.AddFunc("@every 10m", func() {
+		if _, err := a.settingService.StartSiteProbes(""); err != nil {
+			logger.Warning("scheduled site check:", err)
+		}
+	})
 	interval := "@every 2s"
 	if relay {
 		interval = "@every 15s"

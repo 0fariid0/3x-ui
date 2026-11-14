@@ -267,6 +267,23 @@ export const sections: readonly Section[] = [
       },
       {
         method: 'GET',
+        path: '/panel/api/server/siteProbes',
+        summary: 'Read the ordered dashboard site list, latest HTTP results and whether a batch is running.',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/server/siteProbes/save',
+        summary: 'Replace the dashboard site list (up to 12 public HTTP(S) addresses).',
+        body: '{"targets":[{"url":"https://www.google.com/generate_204","name":"Google","starred":true}]}',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/server/siteProbes/run',
+        summary: 'Start a background check through the live Xray routes and directly. Pass a saved URL to check only that site, or use an empty URL to check all.',
+        body: '{"url":""}',
+      },
+      {
+        method: 'GET',
         path: '/panel/api/server/fail2banStatus',
         summary: 'Reports Fail2ban capability and, when configured, enforcementScope/client and enforcementAvailable for the bundled Fara core. Fail2ban fields retain their original meaning.',
         response: '{\n  "success": true,\n  "obj": {\n    "enabled": true,\n    "installed": true,\n    "usable": true,\n    "windows": false\n  }\n}',

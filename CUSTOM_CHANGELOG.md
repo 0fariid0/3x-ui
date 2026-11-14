@@ -1,3 +1,8 @@
+## v3.9.29 — dashboard site connectivity checks
+
+- Compare HTTP response time directly from the server and through live Xray routing every 10 minutes or on demand.
+- Add editable preset targets with favorites and ordering in a compact overview card.
+
 ## v3.9.28 — per-outbound routing shortcuts and lightweight client stats
 
 - Show one Warp-style Basic Routing row for each outbound opted in through its form. Turning off the shortcut leaves any saved routing rules in place.
