@@ -26,7 +26,9 @@ export default function RelayLightModeSetting() {
     if (target === null || saving) return;
     setSaving(true);
     try {
-      const response = await HttpUtil.post<RelayMode>(endpoint, { enabled: target, confirmed: true });
+      const response = await HttpUtil.post<RelayMode>(endpoint, { enabled: target, confirmed: true }, {
+        headers: { 'Content-Type': 'application/json' },
+      });
       if (!response.success || !response.obj) return;
       setTarget(null);
       if (response.obj.restarting) {

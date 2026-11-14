@@ -28,20 +28,24 @@ func TestRelayLightModeRequiresConfirmationAndPreservesSettings(t *testing.T) {
 	engine := gin.New()
 	a.initRouter(engine.Group("/"))
 	for _, tt := range []struct {
-		body     string
-		code     int
-		enabled  bool
-		restarts int
+		body        string
+		contentType string
+		query       string
+		code        int
+		enabled     bool
+		restarts    int
 	}{
-		{`{"enabled":true}`, http.StatusBadRequest, false, 0},
-		{`{"enabled":true,"confirmed":false}`, http.StatusBadRequest, false, 0},
-		{`{"confirmed":true}`, http.StatusBadRequest, false, 0},
-		{`{"enabled":true,"confirmed":true}`, http.StatusOK, true, 1},
-		{`{"enabled":true,"confirmed":true}`, http.StatusOK, true, 1},
-		{`{"enabled":false,"confirmed":true}`, http.StatusOK, false, 2},
+		{`{"enabled":true}`, "application/json", "", http.StatusBadRequest, false, 0},
+		{`{"enabled":true,"confirmed":false}`, "application/json", "", http.StatusBadRequest, false, 0},
+		{`{"confirmed":true}`, "application/json", "", http.StatusBadRequest, false, 0},
+		{"enabled=true", "application/x-www-form-urlencoded; charset=UTF-8", "?confirmed=true", http.StatusBadRequest, false, 0},
+		{"enabled=true&confirmed=true", "application/x-www-form-urlencoded; charset=UTF-8", "", http.StatusOK, true, 1},
+		{`{"enabled":true,"confirmed":true}`, "application/json", "", http.StatusOK, true, 1},
+		{`{"enabled":false,"confirmed":true}`, "application/json", "", http.StatusOK, false, 2},
+		{"enabled=true&confirmed=true", "text/plain", "", http.StatusUnsupportedMediaType, false, 2},
 	} {
-		req := httptest.NewRequest(http.MethodPost, "/setting/relayLightMode", strings.NewReader(tt.body))
-		req.Header.Set("Content-Type", "application/json")
+		req := httptest.NewRequest(http.MethodPost, "/setting/relayLightMode"+tt.query, strings.NewReader(tt.body))
+		req.Header.Set("Content-Type", tt.contentType)
 		w := httptest.NewRecorder()
 		engine.ServeHTTP(w, req)
 		if w.Code != tt.code || restarts != tt.restarts {

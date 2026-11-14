@@ -1,3 +1,7 @@
+## v3.9.24 — fix light relay mode confirmation
+
+- Accept both JSON and URL-encoded confirmation bodies for the light relay mode, including requests from cached v3.9.23 panel pages.
+
 ## v3.9.23 — light relay mode
 
 - Add reversible, opt-in light mode for relay servers. Pause detailed history, automatic notifications and anomaly detection, while retaining client management and quota, expiry and IP enforcement.

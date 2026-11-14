@@ -17,6 +17,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/web/session"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 // updateUserForm represents the form for updating user credentials.
@@ -45,8 +46,8 @@ type validateRegexForm struct {
 }
 
 type relayLightModeForm struct {
-	Enabled   *bool `json:"enabled" binding:"required"`
-	Confirmed bool  `json:"confirmed" binding:"required"`
+	Enabled   *bool `json:"enabled" form:"enabled" binding:"required"`
+	Confirmed bool  `json:"confirmed" form:"confirmed" binding:"required"`
 }
 
 // SettingController handles settings and user management operations.
@@ -96,7 +97,19 @@ func (a *SettingController) getRelayLightMode(c *gin.Context) {
 
 func (a *SettingController) setRelayLightMode(c *gin.Context) {
 	var form relayLightModeForm
-	if err := c.ShouldBindJSON(&form); err != nil {
+	var err error
+	switch c.ContentType() {
+	case binding.MIMEJSON:
+		err = c.ShouldBindJSON(&form)
+	case binding.MIMEPOSTForm:
+		// The panel HTTP helper historically sends URL-encoded forms.
+		// FormPost binds the body only, never confirmation from the query.
+		err = c.ShouldBindWith(&form, binding.FormPost)
+	default:
+		pureJsonMsg(c, http.StatusUnsupportedMediaType, false, "Expected JSON or a URL-encoded form")
+		return
+	}
+	if err != nil {
 		pureJsonMsg(c, http.StatusBadRequest, false, err.Error())
 		return
 	}
