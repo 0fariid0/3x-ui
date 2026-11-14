@@ -1,3 +1,8 @@
+## v3.9.30 — single result per site check
+
+- Check through the matching live Xray route. If no rule matches, only the probe uses a direct connection, independently of the live default outbound.
+- Show one result per site and give the overview tiles subtle accents.
+
 ## v3.9.29 — dashboard site connectivity checks
 
 - Compare HTTP response time directly from the server and through live Xray routing every 10 minutes or on demand.

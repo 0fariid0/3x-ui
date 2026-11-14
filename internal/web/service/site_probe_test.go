@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"golang.org/x/net/proxy"
 )
 
 func TestSiteProbeTargetsValidateAndPersist(t *testing.T) {
@@ -65,7 +67,8 @@ func TestSiteProbeHTTPDoesNotFollowRedirect(t *testing.T) {
 }
 
 // Run against the same standalone core shipped with the panel. A Host rule
-// changes the real request's path while the direct probe still reaches it.
+// blocks the probe, the probe's no-match path is direct, and ordinary traffic
+// still uses the configured default outbound.
 func TestSiteProbeUsesLiveXrayRules(t *testing.T) {
 	bin := os.Getenv("FARA_CORE_BINARY")
 	if bin == "" {
@@ -82,19 +85,28 @@ func TestSiteProbeUsesLiveXrayRules(t *testing.T) {
 		t.Fatal(err)
 	}
 	port := free.Addr().(*net.TCPAddr).Port
+	ordinary, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ordinaryPort := ordinary.Addr().(*net.TCPAddr).Port
 	_ = free.Close()
+	_ = ordinary.Close()
 	config := fmt.Sprintf(`{
-		"api":{"tag":"api","services":["HandlerService"]},
-		"inbounds":[{"tag":"api","listen":"127.0.0.1","port":%d,"protocol":"tunnel","settings":{"rewriteAddress":"127.0.0.1"}}],
-		"outbounds":[{"tag":"direct","protocol":"freedom","settings":{"finalRules":[{"action":"allow"}]}},{"tag":"blocked","protocol":"blackhole"}],
+		"log":{"loglevel":"debug"},
+        "api":{"tag":"api","services":["HandlerService","StatsService"]},
+		"inbounds":[{"tag":"api","listen":"127.0.0.1","port":%d,"protocol":"tunnel","settings":{"rewriteAddress":"127.0.0.1"}},
+		{"tag":"ordinary","listen":"127.0.0.1","port":%d,"protocol":"socks","settings":{"auth":"noauth"}}],
+		"outbounds":[{"tag":"default-deny","protocol":"blackhole"},{"tag":"blocked","protocol":"blackhole"}],
 		"routing":{"rules":[{"type":"field","inboundTag":["api"],"outboundTag":"api"},
 		{"type":"field","domain":["full:blocked.example"],"outboundTag":"blocked"}]}
-	}`, port)
+	}`, port, ordinaryPort)
 	path := filepath.Join(t.TempDir(), "config.json")
 	if err := os.WriteFile(path, []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}
 	process := exec.Command(bin, "run", "-c", path)
+	process.Stdout, process.Stderr = os.Stdout, os.Stderr
 	if err := process.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -124,8 +136,12 @@ func TestSiteProbeUsesLiveXrayRules(t *testing.T) {
 	if got := check("healthy.example", route); got.Status != "ok" || got.Code != http.StatusNoContent {
 		t.Fatalf("routed probe did not reach known healthy destination: %+v", got)
 	}
-	if got := check("blocked.example", (&net.Dialer{}).DialContext); got.Status != "ok" {
-		t.Fatalf("direct probe should bypass Xray's blocking rule: %+v", got)
+	ordinaryRoute, err := proxy.SOCKS5("tcp", fmt.Sprintf("127.0.0.1:%d", ordinaryPort), nil, proxy.Direct)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := check("healthy.example", ordinaryRoute.(proxy.ContextDialer).DialContext); got.Status == "ok" {
+		t.Fatalf("ordinary user traffic bypassed the configured default: %+v", got)
 	}
 	if got := check("blocked.example", route); got.Status == "ok" {
 		t.Fatalf("probe did not honor the live domain blocking rule: %+v", got)

@@ -12,7 +12,7 @@ it('shows only favorites in the overview and sends the saved order and manual ru
   const response = {
     targets, running: false, results: [
       { url: targets[0].url, at: 1787000000000,
-        direct: { status: 'ok', delay: 28 }, routed: { status: 'timeout' } },
+        ping: { status: 'ok', delay: 28 } },
     ],
   };
   const get = vi.spyOn(HttpUtil, 'get').mockResolvedValue({ success: true, obj: response, msg: '' } as never);
@@ -26,7 +26,9 @@ it('shows only favorites in the overview and sends the saved order and manual ru
     const card = screen.getByRole('region', { name: 'Site connectivity' });
     await within(card).findByText('Google');
     expect(within(card).getByText('28 ms')).toBeTruthy();
-    expect(within(card).getByText('Timeout')).toBeTruthy();
+    expect(within(card).getAllByText(/\d+ ms/)).toHaveLength(1);
+    expect(within(card).queryByText('Direct')).toBeNull();
+    expect(within(card).queryByText('Xray route')).toBeNull();
     expect(within(card).queryByText('YouTube')).toBeNull();
     fireEvent.click(within(card).getByRole('button', { name: 'Run checks' }));
     const dialog = await screen.findByRole('dialog');

@@ -12,12 +12,12 @@ import './SiteProbeCard.css';
 
 type Target = { url: string; name: string; starred: boolean };
 type Path = { status: 'ok' | 'http' | 'failed' | 'timeout' | 'dns' | 'private' | 'unavailable'; code?: number; delay?: number };
-type Result = { url: string; at: number; direct: Path; routed: Path };
+type Result = { url: string; at: number; ping: Path };
 type View = { targets: Target[]; results: Result[]; running: boolean };
 const key = ['overview', 'site-probes'] as const;
 const api = '/panel/api/server/siteProbes';
 
-function Word({ path, fa, label }: { path?: Path; fa: boolean; label: string }) {
+function Word({ path, fa }: { path?: Path; fa: boolean }) {
   const state = path?.status ?? 'idle';
   const text = state === 'ok' ? `${path?.delay} ms`
     : state === 'http' ? `HTTP ${path?.code}`
@@ -28,7 +28,6 @@ function Word({ path, fa, label }: { path?: Path; fa: boolean; label: string }) 
     : state === 'failed' ? (fa ? 'ناموفق' : 'Failed') : '—';
   return (
     <span className={`site-probe-path site-probe-path--${state}`}>
-      <span>{label}</span>
       <bdi title={path?.code ? `HTTP ${path.code} · ${path.delay} ms` : undefined}>{text}</bdi>
     </span>
   );
@@ -71,8 +70,6 @@ export default function SiteProbeCard() {
   const save = (next: Target[]) => action.mutateAsync({ method: 'save', data: { targets: next } });
   const update = (next: Target[]) => void save(next).catch(() => {});
   const run = (url = '') => action.mutate({ method: 'run', data: { url } });
-  const direct = l('مستقیم', 'Direct');
-  const routed = l('با روت', 'Xray route');
   const title = l('تست اتصال سایت‌ها', 'Site connectivity');
   const runLabel = l('پینگ گرفتن', 'Run checks');
   const nameLabel = l('نام سایت', 'Site name');
@@ -106,8 +103,7 @@ export default function SiteProbeCard() {
             const result = results.get(target.url);
             return <div className="site-probe-chip" key={target.url}>
               <bdi className="site-probe-name">{target.name}</bdi>
-              <Word label={direct} path={result?.direct} fa={fa} />
-              <Word label={routed} path={result?.routed} fa={fa} />
+              <Word path={result?.ping} fa={fa} />
             </div>;
           })}
           {!starred.length && <small>{l('برای نمایش، کنار سایت ستاره بزن.', 'Star sites to show them here.')}</small>}
@@ -120,9 +116,9 @@ export default function SiteProbeCard() {
       <Modal title={title} open={open} footer={null} width={780}
         onCancel={() => { setOpen(false); setEditor(undefined); setError(''); }}>
         <div className="site-probe-modal">
-          <p>{l(
-            'هر ۱۰ دقیقه خودکار چک می‌شود. عددها زمان پاسخ HTTP هستند. تست «با روت» از قوانین روشن Xray روی یک ورودی تست می‌گذرد؛ قوانین مخصوص ورودی یا کاربر واقعی را عیناً شبیه‌سازی نمی‌کند.',
-            'Checks run every 10 minutes. Times are HTTP response times. The routed test uses the live Xray rules through a test inbound; it does not simulate rules specific to a real inbound or user.',
+          <p title={l('تست از ورودی مخصوص پنل اجرا می‌شود؛ قوانین مختص یک ورودی یا کاربر دیگر در این تست اعمال نمی‌شوند.', 'Rules restricted to other inbounds or users are outside this test.')}>{l(
+            'هر ۱۰ دقیقه از مسیر تعیین‌شده در Xray تست می‌شود. اگر قانونی جور نشود، اتصال مستقیم است. عدد کنار هر سایت زمان پاسخ وب است.',
+            'Every 10 minutes, the check uses the matching Xray route, or connects directly if no rule matches. Each site shows one HTTP response time.',
           )}</p>
           <Space wrap>
             <Button type="primary" icon={<RetweetOutlined />} loading={running} disabled={pending || !targets.length} onClick={() => run()}>
@@ -159,8 +155,7 @@ export default function SiteProbeCard() {
                   <small dir="ltr" title={target.url}>{target.url}</small>
                 </div>
                 <div className="site-probe-results">
-                  <Word label={direct} path={result?.direct} fa={fa} />
-                  <Word label={routed} path={result?.routed} fa={fa} />
+                  <Word path={result?.ping} fa={fa} />
                   {result && <small>{dateTime.formatDateTime(result.at)}</small>}
                 </div>
                 <Space size={1} wrap className="site-probe-controls">

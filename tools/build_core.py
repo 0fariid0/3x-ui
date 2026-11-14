@@ -32,6 +32,34 @@ try:
 			trackOnlineIP(ctx, statsManager, user.Email, sessionInbound.Source.Address.String())
 		}'''
  assert s.count(old)==1;s=s.replace(old,'trackClientIP(ctx,statsManager,user.Email,sessionInbound.Source.Address.String(),link,p.Stats.UserOnline)');p.write_text(s)
+ p=src/'app/dispatcher/default.go';s=p.read_text()
+ needle='type DefaultDispatcher struct {'
+ assert s.count(needle)==1;s=s.replace(needle,needle+'\n siteProbeDirect func() (outbound.Handler,error)')
+ needle='d := new(DefaultDispatcher)'
+ assert s.count(needle)==1;s=s.replace(needle,needle+'\n d.siteProbeDirect=newSiteProbeDirect(ctx)')
+ needle='inTag := routingLink.GetInboundTag()'
+ assert s.count(needle)==1;s=s.replace(needle,needle+'\n probe := isSiteProbe(ctx,ob.Target)')
+ needle='errors.LogInfo(ctx, "default route for ", destination)'
+ assert s.count(needle)==1;s=s.replace(needle,needle+"""
+   if probe && err != common.ErrNoClue {
+    common.Close(link.Writer)
+    common.Interrupt(link.Reader)
+    return
+   }
+ """)
+ old='''		handler = d.ohm.GetDefaultHandler()
+'''
+ new='''		if probe {
+			if d.siteProbeDirect != nil {
+				var err error
+				handler, err = d.siteProbeDirect()
+				if err != nil { errors.LogWarning(ctx, "site probe direct fallback unavailable: ",err) }
+			}
+		} else {
+			handler = d.ohm.GetDefaultHandler()
+		}
+'''
+ assert s.count(old)==1;s=s.replace(old,new);p.write_text(s)
  # The pinned Mux close path assumes that the dispatcher returned a bare pipe.
  p=src/'common/mux/session.go';s=p.read_text()
  old='''s.input.(*pipe.Reader).ReturnAnError(io.EOF)
@@ -65,6 +93,6 @@ try:
  else:
   output=Path(sys.argv[1]).resolve();output.parent.mkdir(parents=True,exist_ok=True)
   shutil.copyfile(src/'LICENSE',output.parent/'LICENSE.xray')
-  (output.parent/'CORE_SOURCE.txt').write_text('Xray core '+version+'\n'+meta['Sum']+'\nSource: https://github.com/XTLS/Xray-core/tree/5ca6f4b7d4dc\nFara modifications: https://github.com/0fariid0/3x-ui/tree/v3.9.29/tools/core-overlay\nShared gate source: https://github.com/0fariid0/3x-ui/tree/v3.9.29/internal/util/sessiongate\n')
-  subprocess.run([go,'build','-trimpath','-ldflags=-s -w -X github.com/xtls/xray-core/core.build=Fara-3.9.29','-o',str(output),'./main'],cwd=src,env=env,check=True)
+  (output.parent/'CORE_SOURCE.txt').write_text('Xray core '+version+'\n'+meta['Sum']+'\nSource: https://github.com/XTLS/Xray-core/tree/5ca6f4b7d4dc\nFara modifications: https://github.com/0fariid0/3x-ui/tree/v3.9.30/tools/core-overlay\nShared gate source: https://github.com/0fariid0/3x-ui/tree/v3.9.30/internal/util/sessiongate\n')
+  subprocess.run([go,'build','-trimpath','-ldflags=-s -w -X github.com/xtls/xray-core/core.build=Fara-3.9.30','-o',str(output),'./main'],cwd=src,env=env,check=True)
 finally:shutil.rmtree(work)

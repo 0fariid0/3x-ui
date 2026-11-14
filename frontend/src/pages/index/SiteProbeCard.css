@@ -24,22 +24,30 @@
   scrollbar-width: thin;
 }
 .site-probe-chip {
-  padding: 3px 8px;
+  --probe-accent: var(--ant-color-primary);
+  border: 1px solid color-mix(in srgb, var(--probe-accent) 14%, var(--ant-color-border-secondary));
   border-radius: 8px;
-  background: var(--ant-color-fill-quaternary);
+  background: linear-gradient(118deg,
+    color-mix(in srgb, var(--probe-accent) 10%, var(--ant-color-bg-container)),
+    var(--ant-color-fill-quaternary));
+  padding: 3px 8px;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   flex: none;
   line-height: 20px;
 }
+.site-probe-chip:nth-child(3n + 2) { --probe-accent: #a583ee; }
+.site-probe-chip:nth-child(3n + 3) { --probe-accent: #2bb8a4; }
+.site-probe-chip:hover {
+  border-color: color-mix(in srgb, var(--probe-accent) 36%, var(--ant-color-border-secondary));
+}
 .site-probe-name { font-weight: 600; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .site-probe-path { display: inline-flex; gap: 3px; align-items: center; white-space: nowrap; font-size: 11px; }
-.site-probe-path > span { color: var(--ant-color-text-secondary); }
 .site-probe-path > bdi {
   border-radius: 6px;
   background: var(--ant-color-fill-secondary);
-  padding: 0 4px;
+  padding: 0 6px;
   font-size: 10px;
   font-weight: 600;
   line-height: 17px;

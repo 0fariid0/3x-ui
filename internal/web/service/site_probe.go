@@ -38,10 +38,9 @@ type SiteProbePath struct {
 }
 
 type SiteProbeResult struct {
-	URL    string        `json:"url"`
-	At     int64         `json:"at"`
-	Direct SiteProbePath `json:"direct"`
-	Routed SiteProbePath `json:"routed"`
+	URL  string        `json:"url"`
+	At   int64         `json:"at"`
+	Ping SiteProbePath `json:"ping"`
 }
 
 type SiteProbeView struct {
@@ -209,6 +208,15 @@ func openSiteProbeRouteAt(apiPort int) (probeDialContext, func(), error) {
 	if err := api.Init(apiPort); err != nil {
 		return nil, nil, err
 	}
+	// A stock or older Xray core would use its default outbound on no
+	// match, which would silently produce the wrong test result.
+	ctx, stop := context.WithTimeout(context.Background(), 4*time.Second)
+	capability, err := api.ClientIPControl(ctx, "site-probe-direct", "", "", 0)
+	stop()
+	if supported, _ := capability["supported"].(bool); err != nil || !supported {
+		api.Close()
+		return nil, nil, errors.New("site probe requires the current Fara Xray core")
+	}
 	var seed [24]byte
 	if _, err := rand.Read(seed[:]); err != nil {
 		api.Close()
@@ -285,16 +293,16 @@ func checkSiteProbe(ctx context.Context, target SiteProbeTarget, route probeDial
 	ips, err := net.DefaultResolver.LookupIP(dnsCtx, "ip", u.Hostname())
 	cancel()
 	if err != nil || len(ips) == 0 {
-		result.Direct.Status, result.Routed.Status = "dns", "dns"
+		result.Ping.Status = "dns"
 		return result
 	}
 	for _, ip := range ips {
 		if !publicProbeIP(ip) {
-			result.Direct.Status, result.Routed.Status = "private", "private"
+			result.Ping.Status = "private"
 			return result
 		}
 	}
-	// Pin the same address for both paths. HTTP Host and TLS SNI are
+	// Pin the connection address. HTTP Host and TLS SNI are
 	// preserved for Xray routing and normal certificate verification.
 	chosen := ips[0]
 	for _, ip := range ips {
@@ -303,19 +311,13 @@ func checkSiteProbe(ctx context.Context, target SiteProbeTarget, route probeDial
 			break
 		}
 	}
-	probe := func(dial probeDialContext) SiteProbePath {
-		c, stop := context.WithTimeout(ctx, 6*time.Second)
-		defer stop()
-		return probeHTTP(c, target.URL, chosen.String(), dial)
+	if route == nil {
+		result.Ping.Status = "unavailable"
+		return result
 	}
-	var done sync.WaitGroup
-	if route != nil {
-		done.Go(func() { result.Routed = probe(route) })
-	} else {
-		result.Routed.Status = "unavailable"
-	}
-	result.Direct = probe((&net.Dialer{}).DialContext)
-	done.Wait()
+	ctx, stop := context.WithTimeout(ctx, 6*time.Second)
+	defer stop()
+	result.Ping = probeHTTP(ctx, target.URL, chosen.String(), route)
 	return result
 }
 

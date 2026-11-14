@@ -1,0 +1,45 @@
+package dispatcher
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"sync"
+
+	"github.com/xtls/xray-core/common/net"
+	"github.com/xtls/xray-core/common/serial"
+	"github.com/xtls/xray-core/common/session"
+	"github.com/xtls/xray-core/core"
+	"github.com/xtls/xray-core/features/outbound"
+)
+
+// Only the panel's authenticated loopback probe listener uses this fallback.
+// Keep it outside the outbound manager: no user route, balancer, or
+// observatory can select it, and it cannot become the default outbound.
+func newSiteProbeDirect(ctx context.Context) func() (outbound.Handler, error) {
+	instance := core.MustFromContext(ctx)
+	return sync.OnceValues(func() (outbound.Handler, error) {
+		raw, err := core.CreateObject(instance, &core.OutboundHandlerConfig{
+			Tag:           "xui-site-probe-direct",
+			ProxySettings: &serial.TypedMessage{Type: "xray.proxy.freedom.Config"},
+		})
+		if err != nil {
+			return nil, err
+		}
+		handler, ok := raw.(outbound.Handler)
+		if !ok {
+			return nil, fmt.Errorf("invalid site probe direct handler")
+		}
+		return handler, nil
+	})
+}
+
+func isSiteProbe(ctx context.Context, destination net.Destination) bool {
+	inbound := session.InboundFromContext(ctx)
+	if inbound == nil || inbound.Name != "socks" || !strings.HasPrefix(inbound.Tag, "xui-site-probe-") ||
+		inbound.Source.Address == nil || !inbound.Source.Address.Family().IsIP() ||
+		!inbound.Source.Address.IP().IsLoopback() {
+		return false
+	}
+	return destination.Network == net.Network_TCP && destination.Address != nil && destination.Address.Family().IsIP()
+}

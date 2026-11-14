@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.9.29",
+    "version": "3.9.30",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -5742,7 +5742,7 @@
         "tags": [
           "Server"
         ],
-        "summary": "Read the ordered dashboard site list, latest HTTP results and whether a batch is running.",
+        "summary": "Read the ordered dashboard site list, one HTTP result per site, and whether a batch is running.",
         "operationId": "get_panel_api_server_siteProbes",
         "responses": {
           "200": {
@@ -5821,7 +5821,7 @@
         "tags": [
           "Server"
         ],
-        "summary": "Start a background check through the live Xray routes and directly. Pass a saved URL to check only that site, or use an empty URL to check all.",
+        "summary": "Start an HTTP check per site using its live Xray route, or direct egress when no rule matches. Pass a saved URL to check only that site, or use an empty URL to check all.",
         "operationId": "post_panel_api_server_siteProbes_run",
         "requestBody": {
           "required": true,

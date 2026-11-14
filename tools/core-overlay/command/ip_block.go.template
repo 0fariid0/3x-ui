@@ -24,6 +24,8 @@ func controlClientIP(req *structpb.Struct)(*structpb.Struct,error){
  if len(email)>255||len(ip)>128{return nil,fmt.Errorf("invalid target")}
  switch op {
  case "status":
+ case "site-probe-direct":
+  return structpb.NewStruct(map[string]interface{}{"supported":true})
  case "ban":
   seconds:=f["seconds"].GetNumberValue();if seconds!=float64(int64(seconds))||(seconds!=-1&&(seconds<1||seconds>31536000)){return nil,fmt.Errorf("invalid duration")}
   until:=time.Time{};if seconds>0{until=time.Now().Add(time.Duration(seconds)*time.Second)}
