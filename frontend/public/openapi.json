@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "3X-UI Panel API",
-    "version": "3.9.31",
+    "version": "3.9.32",
     "description": "Programmatic interface to a 3X-UI panel. Authenticate either by logging in (cookie) or with an API token from Settings → Security → API Token (Bearer). All endpoints under /panel/api/* honour both modes — an API token is a full-admin credential, so treat it like the panel password."
   },
   "servers": [
@@ -5742,7 +5742,7 @@
         "tags": [
           "Server"
         ],
-        "summary": "Read the ordered dashboard site list, one HTTP result per site, and whether a batch is running.",
+        "summary": "Read the dashboard site and outbound choices, one result per entry, and whether a batch is running.",
         "operationId": "get_panel_api_server_siteProbes",
         "responses": {
           "200": {
@@ -5821,7 +5821,7 @@
         "tags": [
           "Server"
         ],
-        "summary": "Start an HTTP check per site using its live Xray route, or direct egress when no rule matches. Pass a saved URL to check only that site, or use an empty URL to check all.",
+        "summary": "Start an HTTP check per site using its live Xray route, or direct egress when no rule matches. Pass a saved URL to check only that site, or an empty URL to check all sites and selected outbounds in their saved modes.",
         "operationId": "post_panel_api_server_siteProbes_run",
         "requestBody": {
           "required": true,
@@ -5832,6 +5832,84 @@
               },
               "example": {
                 "url": ""
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/server/siteProbes/outboundOptions": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "List tags and protocols of configured outbounds that can be added to the dashboard test.",
+        "operationId": "get_panel_api_server_siteProbes_outboundOptions",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "msg": {
+                      "type": "string"
+                    },
+                    "obj": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/api/server/siteProbes/outbounds": {
+      "post": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Replace the selected dashboard outbounds and their TCP, HTTP, or real delay test modes.",
+        "operationId": "post_panel_api_server_siteProbes_outbounds",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "targets": [
+                  {
+                    "tag": "proxy",
+                    "mode": "real"
+                  }
+                ]
               }
             }
           }

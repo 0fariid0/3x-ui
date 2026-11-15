@@ -268,7 +268,7 @@ export const sections: readonly Section[] = [
       {
         method: 'GET',
         path: '/panel/api/server/siteProbes',
-        summary: 'Read the ordered dashboard site list, one HTTP result per site, and whether a batch is running.',
+        summary: 'Read the dashboard site and outbound choices, one result per entry, and whether a batch is running.',
       },
       {
         method: 'POST',
@@ -279,8 +279,19 @@ export const sections: readonly Section[] = [
       {
         method: 'POST',
         path: '/panel/api/server/siteProbes/run',
-        summary: 'Start an HTTP check per site using its live Xray route, or direct egress when no rule matches. Pass a saved URL to check only that site, or use an empty URL to check all.',
+        summary: 'Start an HTTP check per site using its live Xray route, or direct egress when no rule matches. Pass a saved URL to check only that site, or an empty URL to check all sites and selected outbounds in their saved modes.',
         body: '{"url":""}',
+      },
+      {
+        method: 'GET',
+        path: '/panel/api/server/siteProbes/outboundOptions',
+        summary: 'List tags and protocols of configured outbounds that can be added to the dashboard test.',
+      },
+      {
+        method: 'POST',
+        path: '/panel/api/server/siteProbes/outbounds',
+        summary: 'Replace the selected dashboard outbounds and their TCP, HTTP, or real delay test modes.',
+        body: '{"targets":[{"tag":"proxy","mode":"real"}]}',
       },
       {
         method: 'GET',

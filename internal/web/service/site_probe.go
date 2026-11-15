@@ -44,9 +44,11 @@ type SiteProbeResult struct {
 }
 
 type SiteProbeView struct {
-	Targets []SiteProbeTarget `json:"targets"`
-	Results []SiteProbeResult `json:"results"`
-	Running bool              `json:"running"`
+	Targets         []SiteProbeTarget     `json:"targets"`
+	Results         []SiteProbeResult     `json:"results"`
+	OutboundTargets []OutboundProbeTarget `json:"outboundTargets"`
+	OutboundResults []OutboundProbeResult `json:"outboundResults"`
+	Running         bool                  `json:"running"`
 }
 
 func defaultSiteProbes() []SiteProbeTarget {
@@ -64,8 +66,9 @@ func defaultSiteProbes() []SiteProbeTarget {
 
 var siteProbes struct {
 	sync.Mutex
-	results map[string]SiteProbeResult
-	running bool
+	results         map[string]SiteProbeResult
+	outboundResults map[string]OutboundProbeResult
+	running         bool
 }
 
 func (s *SettingService) getSiteProbeTargets() ([]SiteProbeTarget, error) {
@@ -95,6 +98,16 @@ func (s *SettingService) siteProbeViewLocked() (SiteProbeView, error) {
 	for _, target := range targets {
 		if result, ok := siteProbes.results[target.URL]; ok {
 			view.Results = append(view.Results, result)
+		}
+	}
+	if err != nil {
+		return view, err
+	}
+	view.OutboundTargets, err = s.getOutboundProbeTargets()
+	view.OutboundResults = []OutboundProbeResult{}
+	for _, target := range view.OutboundTargets {
+		if row, ok := siteProbes.outboundResults[target.Tag]; ok && row.OutboundProbeTarget == target {
+			view.OutboundResults = append(view.OutboundResults, row)
 		}
 	}
 	return view, err
@@ -323,7 +336,7 @@ func checkSiteProbe(ctx context.Context, target SiteProbeTarget, route probeDial
 
 // StartSiteProbes starts one bounded batch at a time. Polling the dashboard
 // only reads the cached result and never starts network requests.
-func (s *SettingService) StartSiteProbes(onlyURL string) (SiteProbeView, error) {
+func (s *SettingService) StartSiteProbes(onlyURL string, includeOutbounds bool) (SiteProbeView, error) {
 	siteProbes.Lock()
 	defer siteProbes.Unlock()
 	view, err := s.siteProbeViewLocked()
@@ -343,20 +356,31 @@ func (s *SettingService) StartSiteProbes(onlyURL string) (SiteProbeView, error) 
 			return view, errors.New("save the address before testing")
 		}
 	}
-	if len(targets) == 0 {
+	var outbounds []OutboundProbeTarget
+	if includeOutbounds && onlyURL == "" {
+		outbounds = view.OutboundTargets
+	}
+	if len(targets) == 0 && len(outbounds) == 0 {
 		return view, nil
 	}
 	siteProbes.running, view.Running = true, true
-	go s.runSiteProbes(targets)
+	go func() {
+		defer func() {
+			siteProbes.Lock()
+			siteProbes.running = false
+			siteProbes.Unlock()
+		}()
+		if len(targets) != 0 {
+			s.runSiteProbes(targets)
+		}
+		if len(outbounds) != 0 {
+			s.runOutboundProbes(outbounds)
+		}
+	}()
 	return view, nil
 }
 
 func (s *SettingService) runSiteProbes(targets []SiteProbeTarget) {
-	defer func() {
-		siteProbes.Lock()
-		siteProbes.running = false
-		siteProbes.Unlock()
-	}()
 	ctx, stop := context.WithTimeout(context.Background(), 50*time.Second)
 	defer stop()
 	route, closeRoute, err := openSiteProbeRoute()

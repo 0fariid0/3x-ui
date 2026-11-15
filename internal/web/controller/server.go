@@ -54,6 +54,8 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.GET("/siteProbes", a.getSiteProbes)
 	g.POST("/siteProbes/save", a.saveSiteProbes)
 	g.POST("/siteProbes/run", a.runSiteProbes)
+	g.GET("/siteProbes/outboundOptions", a.getOutboundProbeOptions)
+	g.POST("/siteProbes/outbounds", a.saveOutboundProbes)
 	g.GET("/cpuHistory/:bucket", a.getCpuHistoryBucket)
 	g.GET("/history/:metric/:bucket", a.getMetricHistoryBucket)
 	g.GET("/trafficHistory", a.getTrafficHistory)
@@ -106,7 +108,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 func (a *ServerController) startTask(relay bool) {
 	c := global.GetWebServer().GetCron()
 	_, _ = c.AddFunc("@every 10m", func() {
-		if _, err := a.settingService.StartSiteProbes(""); err != nil {
+		if _, err := a.settingService.StartSiteProbes("", false); err != nil {
 			logger.Warning("scheduled site check:", err)
 		}
 	})

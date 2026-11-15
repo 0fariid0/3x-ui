@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
-import { Button, Input, Modal, Space, Tooltip } from 'antd';
+import { Button, Input, Modal, Radio, Select, Space, Tooltip } from 'antd';
 import {
-  ApiOutlined, ArrowDownOutlined, ArrowUpOutlined, DeleteOutlined, EditOutlined,
+  ArrowDownOutlined, ArrowUpOutlined, DeleteOutlined, EditOutlined,
   PlusOutlined, RetweetOutlined, SettingOutlined, StarFilled, StarOutlined,
 } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -13,7 +13,11 @@ import './SiteProbeCard.css';
 type Target = { url: string; name: string; starred: boolean };
 type Path = { status: 'ok' | 'http' | 'failed' | 'timeout' | 'dns' | 'private' | 'unavailable'; code?: number; delay?: number };
 type Result = { url: string; at: number; ping: Path };
-type View = { targets: Target[]; results: Result[]; running: boolean };
+type Mode = 'tcp' | 'http' | 'real';
+type OutboundTarget = { tag: string; mode: Mode };
+type OutboundResult = OutboundTarget & { at: number; ping: Path; effectiveMode?: Mode };
+type OutboundOption = { tag: string; protocol: string };
+type View = { targets: Target[]; results: Result[]; running: boolean; outboundTargets: OutboundTarget[]; outboundResults: OutboundResult[] };
 const key = ['overview', 'site-probes'] as const;
 const api = '/panel/api/server/siteProbes';
 
@@ -42,6 +46,7 @@ export default function SiteProbeCard() {
   const [open, setOpen] = useState(false);
   const [editor, setEditor] = useState<{ index?: number; name: string; url: string }>();
   const [error, setError] = useState('');
+  const [outboundTag, setOutboundTag] = useState<string>();
   const view = useQuery({
     queryKey: key,
     queryFn: async () => {
@@ -51,6 +56,15 @@ export default function SiteProbeCard() {
     },
     refetchInterval: q => q.state.data?.running ? 1500 : 30_000,
     refetchIntervalInBackground: false,
+  });
+  const outboundOptions = useQuery({
+    queryKey: [...key, 'outbound-options'],
+    enabled: open,
+    queryFn: async () => {
+      const msg = await HttpUtil.get<OutboundOption[]>(`${api}/outboundOptions`, undefined, { silent: true });
+      if (!msg.success || !msg.obj) throw new Error(msg.msg || 'Outbound list unavailable');
+      return msg.obj;
+    },
   });
   const action = useMutation({
     mutationFn: async ({ method, data }: { method: string; data: object }) => {
@@ -65,11 +79,21 @@ export default function SiteProbeCard() {
   const targets = view.data?.targets ?? [];
   const results = new Map(view.data?.results.map(result => [result.url, result]));
   const starred = targets.filter(row => row.starred);
+  const outbounds = view.data?.outboundTargets ?? [];
+  const outboundResults = new Map(view.data?.outboundResults?.map(result => [result.tag, result]));
+  const availableOutbounds = (outboundOptions.data ?? []).filter(row => !outbounds.some(o => o.tag === row.tag));
+  const modeOptions = [
+    { label: 'TCP', value: 'tcp' },
+    { label: 'HTTP', value: 'http' },
+    { label: t('pages.xray.outbound.modeRealDelay'), value: 'real' },
+  ] as const;
+  const modeLabel = (mode: Mode) => modeOptions.find(row => row.value === mode)?.label ?? mode;
   const running = !!view.data?.running;
   const pending = action.isPending;
   const testing = running || (pending && action.variables?.method === 'run');
   const save = (next: Target[]) => action.mutateAsync({ method: 'save', data: { targets: next } });
   const update = (next: Target[]) => void save(next).catch(() => {});
+  const updateOutbounds = (next: OutboundTarget[]) => action.mutate({ method: 'outbounds', data: { targets: next } });
   const run = (url = '') => action.mutate({ method: 'run', data: { url } });
   const title = l('تست اتصال سایت‌ها', 'Site connectivity');
   const runLabel = l('تست همه', 'Test all');
@@ -99,7 +123,6 @@ export default function SiteProbeCard() {
   return (
     <section className="site-probe-card" aria-label={title} aria-busy={testing}>
       <div className="site-probe-bar">
-        <strong><ApiOutlined /> {title}</strong>
         <div className="site-probe-favorites">
           {starred.map(target => {
             const result = results.get(target.url);
@@ -108,15 +131,23 @@ export default function SiteProbeCard() {
               <Word path={result?.ping} fa={fa} />
             </div>;
           })}
-          {!starred.length && <small>{l('برای نمایش، کنار سایت ستاره بزن.', 'Star sites to show them here.')}</small>}
+          {outbounds.map(target => {
+            const result = outboundResults.get(target.tag);
+            return <div className="site-probe-chip site-probe-chip--outbound" key={target.tag}
+              title={`${l('خروجی', 'Outbound')} · ${modeLabel(result?.effectiveMode ?? target.mode)}`}>
+              <bdi className="site-probe-name">{target.tag}</bdi>
+              <Word path={result?.ping} fa={fa} />
+            </div>;
+          })}
+          {!starred.length && !outbounds.length && <small>{l('یک سایت را ستاره‌دار کن یا خروجی اضافه کن.', 'Star a site or add an outbound.')}</small>}
         </div>
         <div className="site-probe-actions">
           <Button size="small" color="blue" variant="solid" aria-label={runLabel}
-            icon={<RetweetOutlined />} loading={testing} disabled={pending || testing || !targets.length}
+            icon={<RetweetOutlined />} loading={testing} disabled={pending || testing || (!targets.length && !outbounds.length)}
             onClick={() => run()}>
             {runLabel}
           </Button>
-          <Button size="small" color="purple" variant="filled" aria-label={settingsLabel}
+          <Button size="small" color="red" variant="filled" aria-label={settingsLabel}
             icon={<SettingOutlined />} onClick={() => setOpen(true)}>
             {l('تنظیمات', 'Settings')}
           </Button>
@@ -125,7 +156,7 @@ export default function SiteProbeCard() {
       {!open && error && <div role="alert" className="site-probe-error">{error}</div>}
 
       <Modal title={settingsLabel} open={open} footer={null} width={780}
-        onCancel={() => { setOpen(false); setEditor(undefined); setError(''); }}>
+        onCancel={() => { setOpen(false); setEditor(undefined); setOutboundTag(undefined); setError(''); }}>
         <div className="site-probe-modal">
           <p title={l('تست از ورودی مخصوص پنل اجرا می‌شود؛ قوانین مختص یک ورودی یا کاربر دیگر در این تست اعمال نمی‌شوند.', 'Rules restricted to other inbounds or users are outside this test.')}>{l(
             'هر ۱۰ دقیقه از مسیر تعیین‌شده در Xray تست می‌شود. اگر قانونی جور نشود، اتصال مستقیم است. عدد کنار هر سایت زمان پاسخ وب است.',
@@ -179,6 +210,45 @@ export default function SiteProbeCard() {
               </article>;
             })}
           </div>
+          <section className="site-probe-outbound-settings" aria-label={l('خروجی‌های تست', 'Outbound checks')}>
+            <strong>{l('خروجی‌ها', 'Outbounds')}</strong>
+            <p>{l('«تست همه» هر خروجی را با روش انتخاب‌شده بررسی می‌کند. برای خروجی‌های UDP، حالت TCP به HTTP تغییر می‌کند.',
+              'Test all uses the saved mode for each outbound. TCP falls back to HTTP for UDP outbounds.')}</p>
+            <div className="site-probe-outbound-add">
+              <Select aria-label={l('انتخاب خروجی', 'Select outbound')} value={outboundTag}
+                placeholder={l('یک خروجی انتخاب کن', 'Select an outbound')} loading={outboundOptions.isFetching}
+                disabled={pending || outbounds.length >= 12}
+                showSearch={{ optionFilterProp: 'label' }}
+                onChange={setOutboundTag} options={availableOutbounds.map(({ tag, protocol }) => ({ value: tag, label: `${tag} · ${protocol}` }))} />
+              <Button icon={<PlusOutlined />} disabled={pending || outbounds.length >= 12 || !availableOutbounds.some(o => o.tag === outboundTag)}
+                onClick={() => {
+                  if (!outboundTag) return;
+                  updateOutbounds([...outbounds, { tag: outboundTag, mode: 'tcp' }]);
+                  setOutboundTag(undefined);
+                }}>{l('افزودن خروجی', 'Add outbound')}</Button>
+            </div>
+            {outboundOptions.isError && <div role="alert" className="site-probe-error">{outboundOptions.error.message}</div>}
+            <div className="site-probe-list">
+              {outbounds.map(target => {
+                const result = outboundResults.get(target.tag);
+                return <div className="site-probe-outbound-row" key={target.tag}>
+                  <bdi className="site-probe-name" title={target.tag}>{target.tag}</bdi>
+                  <Space size={6} wrap>
+                    <Radio.Group size="small" buttonStyle="solid" optionType="button"
+                      aria-label={`${l('نوع تست', 'Test mode')}: ${target.tag}`}
+                      disabled={pending} value={target.mode} options={[...modeOptions]}
+                      onChange={e => updateOutbounds(outbounds.map(row => row.tag === target.tag ? { ...row, mode: e.target.value as Mode } : row))} />
+                    <Word path={result?.ping} fa={fa} />
+                    {result?.effectiveMode && result.effectiveMode !== target.mode &&
+                      <small title={l('روش اجراشده', 'Actual test mode')}>{modeLabel(result.effectiveMode)}</small>}
+                    <Button type="text" size="small" danger icon={<DeleteOutlined />} disabled={pending}
+                      aria-label={`${t('delete')}: ${target.tag}`}
+                      onClick={() => updateOutbounds(outbounds.filter(row => row.tag !== target.tag))} />
+                  </Space>
+                </div>;
+              })}
+            </div>
+          </section>
         </div>
       </Modal>
     </section>

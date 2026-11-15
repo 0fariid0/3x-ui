@@ -11,10 +11,8 @@
   gap: 12px;
   font-size: 12px;
 }
-.site-probe-bar strong,
 .site-probe-actions { flex: none; }
 .site-probe-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
-.site-probe-bar strong .anticon { color: var(--ant-color-primary); margin-inline-end: 3px; }
 .site-probe-favorites {
   flex: 1;
   display: flex;
@@ -40,6 +38,11 @@
 }
 .site-probe-chip:nth-child(3n + 2) { --probe-accent: #a583ee; }
 .site-probe-chip:nth-child(3n + 3) { --probe-accent: #2bb8a4; }
+.site-probe-chip.site-probe-chip--outbound {
+  --probe-accent: #368cf5;
+  background: color-mix(in srgb, var(--probe-accent) 17%, var(--ant-color-bg-container));
+  border-color: color-mix(in srgb, var(--probe-accent) 44%, var(--ant-color-border-secondary));
+}
 .site-probe-chip:hover {
   border-color: color-mix(in srgb, var(--probe-accent) 36%, var(--ant-color-border-secondary));
 }
@@ -77,10 +80,29 @@
 .site-probe-star { color: var(--ant-color-warning); }
 .site-probe-editor { display: grid; gap: 6px; }
 .site-probe-error { color: var(--ant-color-error-text); }
+.site-probe-outbound-settings { display: grid; gap: 8px; border-top: 1px solid var(--ant-color-border-secondary); padding-top: 12px; }
+.site-probe-outbound-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.site-probe-outbound-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  gap: 6px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #368cf5 11%, var(--ant-color-bg-container));
+}
 @media (max-width: 600px) {
-  .site-probe-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
-  .site-probe-bar strong { min-width: 0; }
-  .site-probe-favorites { grid-row: 2; grid-column: 1 / -1; }
+  .site-probe-bar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .site-probe-actions { grid-row: 1; }
+  .site-probe-favorites {
+    grid-row: 2;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 5px;
+    max-height: 61px;
+    overflow: auto;
+  }
   .site-probe-row { grid-template-columns: minmax(0, 1fr) auto; }
   .site-probe-results { grid-row: 2; grid-column: 1 / -1; }
 }

@@ -1,3 +1,8 @@
+## v3.9.32 — outbound checks on the dashboard
+
+- Test selected Xray outbounds alongside sites with a saved mode for each outbound.
+- Distinguish outbound chips in blue and wrap dashboard results onto two visible rows on phones.
+
 ## v3.9.31 — dashboard site check shortcuts
 
 - Start all saved site checks directly from the dashboard, or open settings via a separate button.
